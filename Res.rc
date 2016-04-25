@@ -1,0 +1,38 @@
+#include <winver.h>
+#include <winuser.h>
+#include "Res.h"
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION    1,0,0,0
+  PRODUCTVERSION 1,0,0,0
+  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef DEBUG
+  FILEFLAGS VS_FF_DEBUG
+#else
+  FILEFLAGS 0x0
+#endif
+  FILEOS VOS__WINDOWS32
+  FILETYPE VFT_APP
+  FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904B0"
+		BEGIN
+			VALUE "FileDescription", "SnK HotkeySuite"
+			VALUE "FileVersion", "1.0.0.0"
+			VALUE "LegalCopyright", "Copyright (c) 2016 Lcferrum"
+			VALUE "OriginalFilename", "HotkeySuite.exe"
+			VALUE "ProductName", "SnK HotkeySuite"
+			VALUE "ProductVersion", "1.0.0.0"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x409, 1200
+	END
+END
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "HotkeySuite.manifest" 
+
+ID_HS_TRAY_ICO ICON DISCARDABLE "snoopy.ico"

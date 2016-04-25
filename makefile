@@ -30,18 +30,20 @@ CFLAGS=-std=c++11 -Wno-write-strings -D_WIN32_WINNT=0x0502 -DNOMINMAX -DUNICODE 
 #LDFLAGS=-static-libgcc -static-libstdc++ -s $(WNDSUBSYS)
 LDFLAGS=-static-libgcc -static-libstdc++ -s
 UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
-SRC=Suite.cpp
-OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(SRC)))
+SRC=Suite.cpp Res.rc
+OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
 
 # Compiler specific section
 ifeq ($(CC),x86_64-w64-mingw32-g++)
 	LDFLAGS+=-municode
 	WNDSUBSYS=-mwindows
+	WINDRES=x86_64-w64-mingw32-windres
 endif
 ifeq ($(CC),i686-w64-mingw32-g++)
 	LDFLAGS+=-municode
 	WNDSUBSYS=-mwindows
+	WINDRES=i686-w64-mingw32-windres
 endif
 # Extra options for outdated clang++/g++ with upstream includes to generate binaries compatible with Win 9x/NT4
 # i386 is minimum system requirement for Windows 95 (MinGW 4.7.2 default arch)
@@ -51,6 +53,7 @@ ifeq ($(CC),clang++)
 	INC=-I$(UPSTREAM_INC)
 	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WMAIN
 	WNDSUBSYS=-Wl,--subsystem,windows
+	WINDRES=windres
 	ifndef DEBUG
 		CFLAGS+=-Wno-unused-value
 	endif
@@ -59,6 +62,7 @@ ifeq ($(CC),g++)
 	INC=-I$(UPSTREAM_INC)
 	CFLAGS+=-Wno-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WMAIN
 	WNDSUBSYS=-mwindows
+	WINDRES=windres
 endif
 
 .PHONY: all clean upx
@@ -74,6 +78,9 @@ $(TARGET): $(OBJ)
 
 %.o: %.S
 	$(CC) -c -o $@ $< $(CFLAGS) $(INC)
+	
+%.o: %.rc
+	$(WINDRES) $< $@
 	
 upx:
 	$(UPX) $(TARGET)

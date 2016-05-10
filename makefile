@@ -27,10 +27,9 @@ endif
 RM=rm -f
 UPX=upx
 CFLAGS=-std=c++11 -Wno-write-strings -D_WIN32_WINNT=0x0502 -DNOMINMAX -DUNICODE -D_UNICODE $(DEBUG)
-#LDFLAGS=-static-libgcc -static-libstdc++ -s $(WNDSUBSYS)
-LDFLAGS=-static-libgcc -static-libstdc++ -s
+LDFLAGS=-static-libgcc -static-libstdc++ -s $(WNDSUBSYS)
 UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
-SRC=Suite.cpp Res.rc
+SRC=Suite.cpp TaskbarNotificationAreaIcon.cpp Res.rc
 OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
 
@@ -51,7 +50,7 @@ endif
 # It's assumed that g++ (MinGW) version is 4.7.2, clang++ (LLVM) version is 3.6.2 and includes are from MinGW-w64 4.9.2
 ifeq ($(CC),clang++)
 	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WMAIN
+	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WINMAIN
 	WNDSUBSYS=-Wl,--subsystem,windows
 	WINDRES=windres
 	ifndef DEBUG
@@ -60,7 +59,7 @@ ifeq ($(CC),clang++)
 endif
 ifeq ($(CC),g++)
 	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-Wno-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WMAIN
+	CFLAGS+=-Wno-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WINMAIN
 	WNDSUBSYS=-mwindows
 	WINDRES=windres
 endif

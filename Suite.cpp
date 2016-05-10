@@ -1,26 +1,27 @@
+#include "TaskbarNotificationAreaIcon.h"
+#include "Res.h"
 #include <cstdio>
 #include <cwchar>
 #include <iostream>
+#include <windows.h>
 
-#ifdef OBSOLETE_WMAIN
-typedef struct {
-	int newmode;
-} _startupinfo;
-#undef _CRT_glob
-extern int _CRT_glob;
-extern "C" void __wgetmainargs(int*, wchar_t***, wchar_t***, int, _startupinfo*);
-
-int main()
+#ifdef OBSOLETE_WINMAIN
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmdShow)
 {
-	wchar_t **enpv, **argv;
-	int argc;
-	_startupinfo si;
-	__wgetmainargs(&argc, &argv, &enpv, _CRT_glob, &si);
+	LPWSTR lpCmdLine=GetCommandLineW();
 #else
-extern "C" int wmain(int argc, wchar_t* argv[])
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 #endif
-	std::wcout<<L"Let's pretend that it is WinMain!"<<std::endl;
+	MessageBox(NULL, L"This is really WinMain!", L"SNK_HS", MB_OK);
 	
-	return 0;
+	TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTRAYICO, L"SNK_HS", ID_HSTRAYICO);
+	
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0)>0) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	} 
+	
+	return msg.wParam;
 }

@@ -1,4 +1,5 @@
 #include "TaskbarNotificationAreaIcon.h"
+#include "Res.h"
 
 #define ICON_UID	0	//Only one icon allowed
 #define ICON_CLASS	L"SnK_HotkeySuite_IconClass"
@@ -26,11 +27,11 @@ TskbrNtfAreaIcon::~TskbrNtfAreaIcon()
 		DestroyWindow(icon_ntfdata.hWnd);
 }
 
-//Using first version of NOTIFYICONDATA to be copatible with pre-Win2000 OS versions
+//Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
 TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid):
 	valid(false), app_instance(hInstance), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
-		NULL, 												//hWnd
+		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID
 		NIF_MESSAGE|NIF_ICON|NIF_TIP, 						//uFlags
 		icon_wm,											//uCallbackMessage
@@ -47,12 +48,13 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		0,									//hIcon
 		0,									//hCursor
 		0,									//hbrBackground
-		0,									//lpszMenuName
+		MAKEINTRESOURCE(IDR_ICONMENU),		//lpszMenuName
 		ICON_CLASS,							//lpszClassName
 		0									//hIconSm
 	};
 
-    RegisterClassEx(&wcex);	//Won't check return parameter because this thing fails if class already registered (and we won't unregister it)
+    if (!RegisterClassEx(&wcex)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)	//Exit only if registration failed not because of already registered class
+		return;
 	
 	if (!(icon_ntfdata.hWnd=CreateWindow(ICON_CLASS, L"", WS_POPUP, 
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, 0, hInstance, 0)))
@@ -108,14 +110,31 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 			if (wParam!=ICON_UID)
 				return 0;
 			
-			switch (LOWORD(lParam)) {
-				case WM_RBUTTONUP:
-					MessageBox(NULL, L"WM_RBUTTONUP", L"SNK_HS", MB_OK);
-					break;
-				case WM_LBUTTONUP:
-					MessageBox(NULL, L"WM_LBUTTONUP", L"SNK_HS", MB_OK);
-					PostQuitMessage(0);
-					break;
+			if (LOWORD(lParam)==WM_RBUTTONUP) {
+				UINT menu_id;
+				POINT cur_mouse_pt;
+				SetMenuDefaultItem(GetSubMenu(GetMenu(hWnd), 0), ID_EXIT, FALSE);
+				GetCursorPos(&cur_mouse_pt);
+				SetForegroundWindow(hWnd);
+				menu_id=TrackPopupMenu(GetSubMenu(GetMenu(hWnd), 0), TPM_RETURNCMD|TPM_NONOTIFY|TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
+				SendMessage(hWnd, WM_NULL, 0, 0);
+				switch (menu_id) {
+					case ID_EXIT:
+						MessageBox(NULL, L"ID_EXIT", L"SNK_HS", MB_OK);
+						PostQuitMessage(0);
+						break;
+					case ID_STOP_START:
+						MessageBox(NULL, L"ID_STOP_START", L"SNK_HS", MB_OK);
+						break;
+					case ID_EDIT_SHK:
+						MessageBox(NULL, L"ID_EDIT_SHK", L"SNK_HS", MB_OK);
+						break;
+					case ID_EDIT_LHK:
+						MessageBox(NULL, L"ID_EDIT_LHK", L"SNK_HS", MB_OK);
+						break;
+				}
+			} else if (LOWORD(lParam)==WM_LBUTTONDBLCLK) {
+				MessageBox(NULL, L"WM_LBUTTONDBLCLK", L"SNK_HS", MB_OK);
 			}
 			
 			return 1;

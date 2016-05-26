@@ -50,7 +50,7 @@ endif
 # It's assumed that g++ (MinGW) version is 4.7.2, clang++ (LLVM) version is 3.6.2 and includes are from MinGW-w64 4.9.2
 ifeq ($(CC),clang++)
 	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WINMAIN
+	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
 	WNDSUBSYS=-Wl,--subsystem,windows
 	WINDRES=windres
 	ifndef DEBUG
@@ -59,7 +59,7 @@ ifeq ($(CC),clang++)
 endif
 ifeq ($(CC),g++)
 	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-Wno-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WINMAIN
+	CFLAGS+=-Wno-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
 	WNDSUBSYS=-mwindows
 	WINDRES=windres
 endif

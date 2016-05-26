@@ -35,7 +35,7 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		ICON_UID, 											//uID
 		NIF_MESSAGE|NIF_ICON|NIF_TIP, 						//uFlags
 		icon_wm,											//uCallbackMessage
-		LoadIcon(hInstance, MAKEINTRESOURCE(icon_resid))	//hIcon (szTip is initialized with NULLs)
+		LoadIcon(hInstance, MAKEINTRESOURCE(icon_resid))	//hIcon (szTip and uVersion are initialized with NULLs)
 	}
 {
 	WNDCLASSEX wcex={
@@ -94,50 +94,55 @@ void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
 LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	if (instance&&instance->valid&&instance->icon_ntfdata.hWnd==hWnd) {
-		//WM_SETTINGCHANGE (with wParam set to SPI_SETWORKAREA) and WM_TASKBARCREATED signal that icon should be recreated
-		if (message==WM_SETTINGCHANGE) {
-			if (wParam==SPI_SETWORKAREA)
-				Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
-			return 0;
-		}
-		if (message==WmTaskbarCreated) {
-			Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
-			return 0;
-		}
-			
-		//Various button clicks on task bar icon
-		if (message==instance->icon_ntfdata.uCallbackMessage) {
-			if (wParam!=ICON_UID)
+		switch (message) {
+			case WM_CREATE:
 				return 0;
-			
-			if (LOWORD(lParam)==WM_RBUTTONUP) {
-				UINT menu_id;
-				POINT cur_mouse_pt;
-				SetMenuDefaultItem(GetSubMenu(GetMenu(hWnd), 0), ID_EXIT, FALSE);
-				GetCursorPos(&cur_mouse_pt);
-				SetForegroundWindow(hWnd);
-				menu_id=TrackPopupMenu(GetSubMenu(GetMenu(hWnd), 0), TPM_RETURNCMD|TPM_NONOTIFY|TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
-				SendMessage(hWnd, WM_NULL, 0, 0);
-				switch (menu_id) {
+			case WM_SETTINGCHANGE:		//WM_SETTINGCHANGE with wParam set to SPI_SETWORKAREA signal that icon should be recreated
+				if (wParam==SPI_SETWORKAREA)
+					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
+				return 0;
+			case WM_COMMAND:
+				switch (LOWORD(wParam)) {
 					case ID_EXIT:
 						MessageBox(NULL, L"ID_EXIT", L"SNK_HS", MB_OK);
 						PostQuitMessage(0);
-						break;
+						return 0;
 					case ID_STOP_START:
 						MessageBox(NULL, L"ID_STOP_START", L"SNK_HS", MB_OK);
-						break;
+						return 0;
 					case ID_EDIT_SHK:
 						MessageBox(NULL, L"ID_EDIT_SHK", L"SNK_HS", MB_OK);
-						break;
+						return 0;
 					case ID_EDIT_LHK:
 						MessageBox(NULL, L"ID_EDIT_LHK", L"SNK_HS", MB_OK);
-						break;
+						return 0;
 				}
-			} else if (LOWORD(lParam)==WM_LBUTTONDBLCLK) {
-				MessageBox(NULL, L"WM_LBUTTONDBLCLK", L"SNK_HS", MB_OK);
-			}
-			
-			return 1;
+				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations
+			default:
+				//Non-const cases goes here
+				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Taskbar notification area icon various clicks
+					//For the first version of NOTIFYICONDATA lParam (as a whole, not just LOWORD) holds the mouse or keyboard message and wParam holds icon ID
+					if (wParam==ICON_UID) {
+						switch (lParam) {
+							case WM_RBUTTONUP:
+								POINT cur_mouse_pt;
+								SetMenuDefaultItem(GetSubMenu(GetMenu(hWnd), 0), ID_EXIT, FALSE);
+								GetCursorPos(&cur_mouse_pt);
+								SetForegroundWindow(hWnd);
+								TrackPopupMenu(GetSubMenu(GetMenu(hWnd), 0), TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
+								SendMessage(hWnd, WM_NULL, 0, 0);
+								return 0;
+							case WM_LBUTTONDBLCLK:
+								MessageBox(NULL, L"WM_LBUTTONDBLCLK", L"SNK_HS", MB_OK);
+								return 0;
+						}
+					}
+					//Let DefWindowProc handle the rest of uCallbackMessage variations
+				} else if (message==WmTaskbarCreated) {	//WM_TASKBARCREATED signal that icon should be recreated
+					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
+					return 0;
+				}
+				//Let DefWindowProc handle all other messages
 		}
 	}
 	

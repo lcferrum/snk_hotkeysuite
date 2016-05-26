@@ -120,8 +120,8 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations
 			default:
 				//Non-const cases goes here
-				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Taskbar notification area icon various clicks
-					//For the first version of NOTIFYICONDATA lParam (as a whole, not just LOWORD) holds the mouse or keyboard message and wParam holds icon ID
+				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon
+					//For the first version of NOTIFYICONDATA lParam (as a whole, not just LOWORD) holds the mouse or keyboard messages and wParam holds icon ID
 					if (wParam==ICON_UID) {
 						switch (lParam) {
 							case WM_RBUTTONUP:

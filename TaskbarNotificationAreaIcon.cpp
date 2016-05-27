@@ -121,7 +121,7 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 			case WM_COMMAND:
 				if (OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))
 					return 0;
-				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations
+				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations if OnWmCommand returned FALSE
 			default:
 				//Non-const cases goes here
 				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon

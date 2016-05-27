@@ -1,7 +1,5 @@
 #include "TaskbarNotificationAreaIcon.h"
 #include "Res.h"
-#include <cstdio>
-#include <cwchar>
 #include <iostream>
 #include <windows.h>
 

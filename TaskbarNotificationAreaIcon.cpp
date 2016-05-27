@@ -1,19 +1,23 @@
 #include "TaskbarNotificationAreaIcon.h"
-#include "Res.h"
 
 #define ICON_UID	0	//Only one icon allowed
-#define ICON_CLASS	L"SnK_HotkeySuite_IconClass"
 
 std::unique_ptr<TskbrNtfAreaIcon> TskbrNtfAreaIcon::instance;
 UINT TskbrNtfAreaIcon::WmTaskbarCreated=RegisterWindowMessage(L"TaskbarCreated");
+std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> TskbrNtfAreaIcon::OnWmCommand;
 
-TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid)
+TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid)
+{
+	instance.reset(new TskbrNtfAreaIcon(hInstance, icon_wm, icon_tooltip, icon_resid, icon_class, icon_menuid, default_menuid));
+	return instance.get();
+}
+
+TskbrNtfAreaIcon* TskbrNtfAreaIcon::GetInstance()
 {
 	if (instance)
+		return instance.get();
+	else
 		return NULL;
-	
-	instance.reset(new TskbrNtfAreaIcon(hInstance, icon_wm, icon_tooltip, icon_resid));
-	return instance.get();
 }
 
 TskbrNtfAreaIcon::~TskbrNtfAreaIcon() 
@@ -28,8 +32,8 @@ TskbrNtfAreaIcon::~TskbrNtfAreaIcon()
 }
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
-TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid):
-	valid(false), app_instance(hInstance), icon_ntfdata{
+TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid):
+	valid(false), app_instance(hInstance), default_menuid(default_menuid), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
 		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID
@@ -48,15 +52,18 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		0,									//hIcon
 		0,									//hCursor
 		0,									//hbrBackground
-		MAKEINTRESOURCE(IDR_ICONMENU),		//lpszMenuName
-		ICON_CLASS,							//lpszClassName
+		MAKEINTRESOURCE(icon_menuid),		//lpszMenuName
+		icon_class,							//lpszClassName
 		0									//hIconSm
 	};
 
-    if (!RegisterClassEx(&wcex)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)	//Exit only if registration failed not because of already registered class
+	//Exit only if registration failed not because of already registered class
+	//This is done because during a single app run we can try to create taskbar icon several times
+	//E.g. first attempt will fail somewhere after class registration, so subsequent attempt will have already registered class at it's disposition
+	if (!RegisterClassEx(&wcex)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)
 		return;
 	
-	if (!(icon_ntfdata.hWnd=CreateWindow(ICON_CLASS, L"", WS_POPUP, 
+	if (!(icon_ntfdata.hWnd=CreateWindow(icon_class, L"", WS_POPUP, 
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, 0, hInstance, 0)))
 		return;
 		
@@ -66,12 +73,22 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		return;
 	
 	valid=true;
+	
+	icon_menu=GetSubMenu(GetMenu(icon_ntfdata.hWnd), 0);
+	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);
 }
 
 bool TskbrNtfAreaIcon::IsValid()
 {
 	return valid;
 }
+
+
+HMENU TskbrNtfAreaIcon::GetIconMenu()
+{
+	return icon_menu;
+}
+
 
 void TskbrNtfAreaIcon::ChangeIconTooltip(const wchar_t* icon_tooltip)
 {
@@ -102,21 +119,8 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
 			case WM_COMMAND:
-				switch (LOWORD(wParam)) {
-					case ID_EXIT:
-						MessageBox(NULL, L"ID_EXIT", L"SNK_HS", MB_OK);
-						PostQuitMessage(0);
-						return 0;
-					case ID_STOP_START:
-						MessageBox(NULL, L"ID_STOP_START", L"SNK_HS", MB_OK);
-						return 0;
-					case ID_EDIT_SHK:
-						MessageBox(NULL, L"ID_EDIT_SHK", L"SNK_HS", MB_OK);
-						return 0;
-					case ID_EDIT_LHK:
-						MessageBox(NULL, L"ID_EDIT_LHK", L"SNK_HS", MB_OK);
-						return 0;
-				}
+				if (OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))
+					return 0;
 				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations
 			default:
 				//Non-const cases goes here
@@ -126,14 +130,14 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 						switch (lParam) {
 							case WM_RBUTTONUP:
 								POINT cur_mouse_pt;
-								SetMenuDefaultItem(GetSubMenu(GetMenu(hWnd), 0), ID_EXIT, FALSE);
 								GetCursorPos(&cur_mouse_pt);
 								SetForegroundWindow(hWnd);
-								TrackPopupMenu(GetSubMenu(GetMenu(hWnd), 0), TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
+								TrackPopupMenu(instance->icon_menu, TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
 								SendMessage(hWnd, WM_NULL, 0, 0);
 								return 0;
 							case WM_LBUTTONDBLCLK:
-								MessageBox(NULL, L"WM_LBUTTONDBLCLK", L"SNK_HS", MB_OK);
+								if (OnWmCommand)
+									OnWmCommand(instance.get(), instance->default_menuid, 0);
 								return 0;
 						}
 					}

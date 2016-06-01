@@ -5,6 +5,12 @@
 #include <functional>
 #include <windows.h>
 
+//This is singleton class
+//Why not use ordinary class or maybe simple (namespaced) include?
+//We are keeping this thing as a class because it represents not a collection of functions but a complete object that provides taskbar icon functionality
+//Not using singleton means supporting several instances of one class - and each instance will represent different window
+//But because of static WNDPROC callback, static hwnd-to-object map variable should be used to keep track for which object WNDPROC is called
+//So we are using singleton just to keep things simple and omit this mapping
 class TskbrNtfAreaIcon {
 private:
 	static std::unique_ptr<TskbrNtfAreaIcon> instance;

@@ -86,7 +86,7 @@ bool TskbrNtfAreaIcon::IsValid()
 
 HMENU TskbrNtfAreaIcon::GetIconMenu()
 {
-	return icon_menu;
+	return icon_menu;	//Is set to NULL if instance is not valid
 }
 
 
@@ -106,6 +106,27 @@ void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
 	
 	icon_ntfdata.hIcon=LoadIcon(app_instance, MAKEINTRESOURCE(icon_resid));	
 	Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata);
+}
+
+void TskbrNtfAreaIcon::Exit()
+{
+	PostQuitMessage(0);
+}
+
+BOOL TskbrNtfAreaIcon::ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCWSTR lpNewItem)
+{
+	if (!valid)
+		return FALSE;
+	
+	return ModifyMenu(icon_menu, uPosition, uFlags, uIDNewItem, lpNewItem);
+}
+
+BOOL TskbrNtfAreaIcon::EnableIconMenuItem(UINT uIDEnableItem, UINT uEnable)
+{
+	if (!valid)
+		return FALSE;
+	
+	return EnableMenuItem(icon_menu, uIDEnableItem, uEnable);
 }
 
 LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

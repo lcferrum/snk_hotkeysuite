@@ -30,7 +30,10 @@ public:
 	bool IsValid();
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
 	void ChangeIcon(UINT icon_resid);
+	void Exit();
 	HMENU GetIconMenu();
+	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
+	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT  uEnable);
 	
 	static std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> OnWmCommand;
 	

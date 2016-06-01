@@ -1,4 +1,5 @@
 #include "TaskbarNotificationAreaIcon.h"
+#include "HotkeyEngine.h"
 #include "Res.h"
 #include <iostream>
 #include <windows.h>

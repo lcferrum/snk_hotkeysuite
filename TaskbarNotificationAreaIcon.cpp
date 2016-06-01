@@ -33,7 +33,7 @@ TskbrNtfAreaIcon::~TskbrNtfAreaIcon()
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
 TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid):
-	valid(false), app_instance(hInstance), default_menuid(default_menuid), icon_ntfdata{
+	valid(false), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
 		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID

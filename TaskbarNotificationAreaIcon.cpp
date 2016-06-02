@@ -16,12 +16,12 @@ TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_
 
 TskbrNtfAreaIcon::~TskbrNtfAreaIcon() 
 {
-	Close();
+	Close();	//Instance still exists while this function is called
 }
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
 TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid):
-	valid(false), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_ntfdata{
+	valid(false), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_atom(0), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
 		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID
@@ -45,20 +45,24 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		0									//hIconSm
 	};
 
-	//Exit only if registration failed not because of already registered class
-	//This is done because during a single app run we can try to create taskbar icon several times
-	//E.g. first attempt will fail somewhere after class registration, so subsequent attempt will have already registered class at it's disposition
-	if (!RegisterClassEx(&wcex)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)
+	//Fail on all error including already registered class
+	//Registered class could have been registered elsewhere with totally unpredictable WNDCLASSEX
+	if (!(icon_atom=RegisterClassEx(&wcex)))
 		return;
 	
-	if (!(icon_ntfdata.hWnd=CreateWindow(icon_class, L"", WS_POPUP, 
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, 0, hInstance, 0)))
+	if (!(icon_ntfdata.hWnd=CreateWindow(MAKEINTATOM(icon_atom), L"", WS_POPUP,					//This thing internally calls WNDPROC with WM_CREATE message without posting it to message queue
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, 0, hInstance, 0))) {	//But instance is not ready yet when WNDPROC is called because window is created inside constructor
+		UnregisterClass(MAKEINTATOM(icon_atom), hInstance);
 		return;
+	}
 		
 	wcsncpy(icon_ntfdata.szTip, icon_tooltip, 63);	//First version of NOTIFYICONDATA only allowes szTip no more than 64 characters in length (including NULL-terminator)
 	
-	if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata))
+	if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata)) {
+		DestroyWindow(icon_ntfdata.hWnd);			//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue (again, instance not ready - message will be ignored)
+		UnregisterClass(MAKEINTATOM(icon_atom), hInstance);
 		return;
+	}
 	
 	icon_menu=GetSubMenu(GetMenu(icon_ntfdata.hWnd), 0);
 	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);
@@ -100,29 +104,27 @@ void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
 }
 
 //Calling this function won't exit message loop!
-//It just destroyes window and icon
+//It just destroyes window, icon and unregisters class
 void TskbrNtfAreaIcon::Close()
 {
-	if (valid) {
-		icon_ntfdata.uFlags=0;
-		Shell_NotifyIcon(NIM_DELETE, &icon_ntfdata);
-		valid=false;
-	}
+	if (!valid)
+		return;
 	
-	if (icon_ntfdata.hWnd) {	//Even if instance is not valid window could have been created succesfully
-		DestroyWindow(icon_ntfdata.hWnd);	//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue
-		icon_ntfdata.hWnd=NULL;
-	}
+	icon_ntfdata.uFlags=0;
+	Shell_NotifyIcon(NIM_DELETE, &icon_ntfdata);
+	DestroyWindow(icon_ntfdata.hWnd);					//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue
+	UnregisterClass(MAKEINTATOM(icon_atom), app_instance);
+	valid=false;
 }
 
-//Calling this function will destroy window and icon and then exit message loop
+//Calling this function will destroy window, icon, unregister class and then exit message loop
 //It is equivalent to calling PostQuitMessage() inside WM_DESTROY message handler
 void TskbrNtfAreaIcon::CloseAndQuit()
 {
 	Close();
 	
-	//This thing will prevent any MessageBoxes from showing until message loop have exited 
-	//Any code after it will be executed as usual
+	//PostQuitMessage() will prevent any MessageBoxes from showing until message loop have exited 
+	//Any other code after it will be executed as usual
 	PostQuitMessage(0);
 }
 
@@ -144,10 +146,11 @@ BOOL TskbrNtfAreaIcon::EnableIconMenuItem(UINT uIDEnableItem, UINT uEnable)
 
 LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	if (instance&&instance->valid&&instance->icon_ntfdata.hWnd==hWnd) {
+	//Why checking instance and hWnd?
+	//First of all because some message handlers use instance and theoretically it can be not ready yet when handler is called (e.g. WM_CREATE)
+	//Second, someone can have a bright idea to reuse icon window class registered here for some other window - we don't want to process alien messages
+	if (instance&&instance->icon_ntfdata.hWnd==hWnd) {
 		switch (message) {
-			case WM_CREATE:
-				return 0;
 			case WM_SETTINGCHANGE:		//WM_SETTINGCHANGE with wParam set to SPI_SETWORKAREA signal that icon should be recreated
 				if (wParam==SPI_SETWORKAREA)
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);

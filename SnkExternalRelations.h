@@ -1,0 +1,6 @@
+#ifndef SNKEXTERNALRELATIONS_H
+#define SNKEXTERNALRELATIONS_H
+
+#include <windows.h>
+
+#endif //SNKEXTERNALRELATIONS_H

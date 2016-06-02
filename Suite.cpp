@@ -1,4 +1,5 @@
 #include "TaskbarNotificationAreaIcon.h"
+#include "SnkExternalRelations.h"
 #include "HotkeyEngine.h"
 #include "Res.h"
 #include <iostream>
@@ -18,6 +19,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	TskbrNtfAreaIcon::WmCommandFn OnWmCommand=[&snkhs_running](TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam){
 		switch (LOWORD(wParam)) {
 			case IDM_EXIT:
+				//We can just use PostQuitMessage() and wait for TskbrNtfAreaIcon destructor to destroy icon at the end of the program
+				//But in this case icon will be briefly present after the end of message loop till the end of WinMain, though being unresponsive
+				//It will be better to destroy the icon right away and then exit message loop
+				//And after that do all other uninitialization without icon being visible for unknown purpose
 				sender->CloseAndQuit();
 				return true;
 			case IDM_STOP_START:
@@ -57,6 +62,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+	
+	Sleep(5000);
 	
 	return msg.wParam;
 }

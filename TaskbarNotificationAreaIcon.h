@@ -24,6 +24,7 @@ private:
 	HINSTANCE app_instance;
 	HMENU icon_menu;
 	UINT default_menuid;
+	ATOM icon_atom;
 	NOTIFYICONDATA icon_ntfdata;
 	
 	TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid);

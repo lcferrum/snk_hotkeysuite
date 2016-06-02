@@ -6,29 +6,17 @@ std::unique_ptr<TskbrNtfAreaIcon> TskbrNtfAreaIcon::instance;
 UINT TskbrNtfAreaIcon::WmTaskbarCreated=RegisterWindowMessage(L"TaskbarCreated");
 std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> TskbrNtfAreaIcon::OnWmCommand;
 
-TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid)
+TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand)
 {
+	instance.reset(nullptr);	//Before assigning new OnWmCommand make sure that previous instance is destroyed
+	TskbrNtfAreaIcon::OnWmCommand=std::move(OnWmCommand);
 	instance.reset(new TskbrNtfAreaIcon(hInstance, icon_wm, icon_tooltip, icon_resid, icon_class, icon_menuid, default_menuid));
 	return instance.get();
 }
 
-TskbrNtfAreaIcon* TskbrNtfAreaIcon::GetInstance()
-{
-	if (instance)
-		return instance.get();
-	else
-		return NULL;
-}
-
 TskbrNtfAreaIcon::~TskbrNtfAreaIcon() 
 {
-	if (valid) {
-		icon_ntfdata.uFlags=0;
-		Shell_NotifyIcon(NIM_DELETE, &icon_ntfdata);
-	}
-	
-	if (icon_ntfdata.hWnd)
-		DestroyWindow(icon_ntfdata.hWnd);
+	Close();
 }
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
@@ -72,10 +60,10 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata))
 		return;
 	
-	valid=true;
-	
 	icon_menu=GetSubMenu(GetMenu(icon_ntfdata.hWnd), 0);
 	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);
+	
+	valid=true;
 }
 
 bool TskbrNtfAreaIcon::IsValid()
@@ -86,7 +74,10 @@ bool TskbrNtfAreaIcon::IsValid()
 
 HMENU TskbrNtfAreaIcon::GetIconMenu()
 {
-	return icon_menu;	//Is set to NULL if instance is not valid
+	if (valid)
+		return icon_menu;
+	else
+		return NULL;
 }
 
 
@@ -108,8 +99,30 @@ void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
 	Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata);
 }
 
-void TskbrNtfAreaIcon::Exit()
+//Calling this function won't exit message loop!
+//It just destroyes window and icon
+void TskbrNtfAreaIcon::Close()
 {
+	if (valid) {
+		icon_ntfdata.uFlags=0;
+		Shell_NotifyIcon(NIM_DELETE, &icon_ntfdata);
+		valid=false;
+	}
+	
+	if (icon_ntfdata.hWnd) {	//Even if instance is not valid window could have been created succesfully
+		DestroyWindow(icon_ntfdata.hWnd);	//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue
+		icon_ntfdata.hWnd=NULL;
+	}
+}
+
+//Calling this function will destroy window and icon and then exit message loop
+//It is equivalent to calling PostQuitMessage() inside WM_DESTROY message handler
+void TskbrNtfAreaIcon::CloseAndQuit()
+{
+	Close();
+	
+	//This thing will prevent any MessageBoxes from showing until message loop have exited 
+	//Any code after it will be executed as usual
 	PostQuitMessage(0);
 }
 

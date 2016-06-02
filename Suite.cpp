@@ -13,11 +13,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 {
 #endif
 	bool snkhs_running=true;
+	TskbrNtfAreaIcon* TaskbarIcon;
 	
-	TskbrNtfAreaIcon::OnWmCommand=[&snkhs_running](TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam){
+	TskbrNtfAreaIcon::WmCommandFn OnWmCommand=[&snkhs_running](TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam){
 		switch (LOWORD(wParam)) {
 			case IDM_EXIT:
-				sender->Exit();
+				sender->CloseAndQuit();
 				return true;
 			case IDM_STOP_START:
 				if (snkhs_running) {
@@ -41,20 +42,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	};
 	
-	if (!TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START)->IsValid()) {
+	TaskbarIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, std::move(OnWmCommand));
+	if (!TaskbarIcon->IsValid()) {
 		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_OK);
 		return 0;
 	}
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
 	//So it's ok to customize menu here
-	TskbrNtfAreaIcon::GetInstance()->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
+	TaskbarIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)) {
+	while (GetMessage(&msg, NULL, 0, 0)>0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-	} 
+	}
 	
 	return msg.wParam;
 }

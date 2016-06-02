@@ -12,9 +12,12 @@
 //But because of static WNDPROC callback, static hwnd-to-object map variable should be used to keep track for which object WNDPROC is called
 //So we are using singleton just to keep things simple and omit this mapping
 class TskbrNtfAreaIcon {
+public:
+	typedef std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> WmCommandFn;
 private:
 	static std::unique_ptr<TskbrNtfAreaIcon> instance;
 	static UINT WmTaskbarCreated;
+	static WmCommandFn OnWmCommand;
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	
 	bool valid;
@@ -25,17 +28,15 @@ private:
 	
 	TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid);
 public:
-	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid);	
-	static TskbrNtfAreaIcon* GetInstance();	
+	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand);	
 	bool IsValid();
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
 	void ChangeIcon(UINT icon_resid);
-	void Exit();
+	void Close();
+	void CloseAndQuit();
 	HMENU GetIconMenu();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
 	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT  uEnable);
-	
-	static std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> OnWmCommand;
 	
 	~TskbrNtfAreaIcon();
 	TskbrNtfAreaIcon(const TskbrNtfAreaIcon&)=delete;				//Get rid of default copy constructor

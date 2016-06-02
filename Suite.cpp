@@ -13,10 +13,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmd
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 #endif
-	bool snkhs_running=true;
-	TskbrNtfAreaIcon* TaskbarIcon;
+	TskbrNtfAreaIcon* SnkIcon=NULL;
+	HotkeyEngine* SnkHotkey=NULL;
 	
-	TskbrNtfAreaIcon::WmCommandFn OnWmCommand=[&snkhs_running](TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam){
+	TskbrNtfAreaIcon::WmCommandFn OnWmCommand=[&SnkHotkey](TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam){
 		switch (LOWORD(wParam)) {
 			case IDM_EXIT:
 				//We can just use PostQuitMessage() and wait for TskbrNtfAreaIcon destructor to destroy icon at the end of the program
@@ -26,14 +26,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				sender->CloseAndQuit();
 				return true;
 			case IDM_STOP_START:
-				if (snkhs_running) {
-					sender->ChangeIconTooltip(L"SNK_HS: STOPPED");
-					sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
-					snkhs_running=false;
-				} else {
-					sender->ChangeIconTooltip(L"SNK_HS: RUNNING");
-					sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Stop"); 
-					snkhs_running=true;
+				if (SnkHotkey) {
+					if (SnkHotkey->IsRunning()) {
+						SnkHotkey->Stop();
+						sender->ChangeIconTooltip(L"SNK_HS: STOPPED");
+						sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
+					} else {
+						if (SnkHotkey->Start()) {
+							sender->ChangeIconTooltip(L"SNK_HS: RUNNING");
+							sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Stop"); 
+						}
+					}
 				}
 				return true;
 			case IDM_EDIT_SHK:
@@ -47,23 +50,33 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	};
 	
-	TaskbarIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, std::move(OnWmCommand));
-	if (!TaskbarIcon->IsValid()) {
+	HotkeyEngine::KeyPressFn OnKeyPress=[](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+		if (wParam==WM_KEYUP)
+			MessageBeep(MB_ICONINFORMATION);
+		return false; 
+	};
+	
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, std::move(OnWmCommand));
+	if (!SnkIcon->IsValid()) {
 		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_OK);
 		return 0;
 	}
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
-	//So it's ok to customize menu here
-	TaskbarIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
+	//So it's ok to customize menu here and initialize everything else
+	SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
+	SnkHotkey=HotkeyEngine::MakeInstance(hInstance, std::move(OnKeyPress));
+	if (!SnkHotkey->Start()) {
+		SnkIcon->ChangeIconTooltip(L"SNK_HS: STOPPED");
+		SnkIcon->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
+	}
 	
+	//Main thread's message loop
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)>0) {
+	while (GetMessage(&msg, NULL, 0, 0)>0) {	//GetMessage returns -1 if error and 0 if WM_QUIT so continue only on positive result
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-	
-	Sleep(5000);
 	
 	return msg.wParam;
 }

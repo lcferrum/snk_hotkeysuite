@@ -4,7 +4,7 @@
 
 std::unique_ptr<TskbrNtfAreaIcon> TskbrNtfAreaIcon::instance;
 UINT TskbrNtfAreaIcon::WmTaskbarCreated=RegisterWindowMessage(L"TaskbarCreated");
-std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> TskbrNtfAreaIcon::OnWmCommand;
+TskbrNtfAreaIcon::WmCommandFn TskbrNtfAreaIcon::OnWmCommand;
 
 TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand)
 {
@@ -33,7 +33,7 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	WNDCLASSEX wcex={
 		sizeof(WNDCLASSEX),					//cbSize
 		CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS,	//style
-		(WNDPROC)WindowProc,				//lpfnWndProc
+		WindowProc,							//lpfnWndProc
 		0,									//cbClsExtra
 		0,									//cbWndExtra
 		hInstance,							//hInstance

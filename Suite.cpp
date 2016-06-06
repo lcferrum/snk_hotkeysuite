@@ -5,6 +5,15 @@
 #include <iostream>
 #include <windows.h>
 
+#define SC_LCONTROL 0x01D
+#define SC_RCONTROL 0x11D
+#define SC_LSHIFT 0x02A
+#define SC_RSHIFT 0x136 // Must be extended, at least on WinXP, or there will be problems, e.g. SetModifierLRState().
+#define SC_LALT 0x038
+#define SC_RALT 0x138
+#define SC_LWIN 0x15B
+#define SC_RWIN 0x15C
+
 #ifdef OBSOLETE_WWINMAIN
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmdShow)
 {
@@ -50,9 +59,36 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	};
 	
-	HotkeyEngine::KeyPressFn OnKeyPress=[](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
-		if (wParam==WM_KEYUP)
+	//OnKeyPress and state are accessed from hook thread - don't touch them in main thread if hook thread is running
+	DWORD state=0x0;
+	HotkeyEngine::KeyPressFn OnKeyPress=[&state](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
+		DWORD vk=kb_event->vkCode;
+		
+		if (vk==VK_LCONTROL||vk==VK_RCONTROL||vk==VK_CONTROL) {
+			if (key_up)
+				state&=~0x1;
+			else
+				state|=0x1;
+		}
+		
+		if (vk==VK_LMENU||vk==VK_RMENU||vk==VK_MENU) {
+			if (key_up)
+				state&=~0x2;
+			else
+				state|=0x2;
+		}
+		
+		if (vk==VK_BACK) {
+			if (key_up)
+				state&=~0x4;
+			else
+				state|=0x4;
+		}
+		
+		if (!key_up&&state==0x7)
 			MessageBeep(MB_ICONINFORMATION);
+		
 		return false; 
 	};
 	

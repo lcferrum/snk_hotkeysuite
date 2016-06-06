@@ -59,9 +59,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	};
 	
-	//OnKeyPress and state are accessed from hook thread - don't touch them in main thread if hook thread is running
+	//OnCtrlAltBS, OnCtrlShiftTld and state are accessed from hook thread - don't touch them in main thread if hook thread is running
 	DWORD state=0x0;
-	HotkeyEngine::KeyPressFn OnKeyPress=[&state](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+	HotkeyEngine::KeyPressFn OnCtrlAltBS=[&state](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
 		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
 		DWORD vk=kb_event->vkCode;
 		
@@ -91,6 +91,50 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		
 		return false; 
 	};
+	DWORD tilde_en_US=LOBYTE(VkKeyScanEx(L'~', LoadKeyboardLayout(L"00000409", 0)));
+	DWORD tilde_cur=LOBYTE(VkKeyScanEx(L'~', GetKeyboardLayout(0)));
+	DWORD tilde_any=255;
+	if (DWORD hkl_len=GetKeyboardLayoutList(0, NULL)) {
+		HKL hkl_lst[hkl_len];
+		GetKeyboardLayoutList(hkl_len, hkl_lst);
+		for (int hkl_i=0; hkl_i<hkl_len; hkl_i++)
+			if ((tilde_any=LOBYTE(VkKeyScanEx(L'~', hkl_lst[hkl_i])))!=255) break;
+	}
+	HotkeyEngine::KeyPressFn OnCtrlShiftTld=[&state, tilde_any](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
+		DWORD vk=kb_event->vkCode;
+		
+		if (vk==VK_LCONTROL||vk==VK_RCONTROL||vk==VK_CONTROL) {
+			if (key_up)
+				state&=~0x1;
+			else
+				state|=0x1;
+		}
+		
+		if (vk==VK_LSHIFT||vk==VK_RSHIFT||vk==VK_SHIFT) {
+			if (key_up)
+				state&=~0x2;
+			else
+				state|=0x2;
+		}
+		
+		//if (vk==VK_OEM_3) {		//In reality it's not tilde character but rather "key that on en-US layout OFTEN has tilde on it"
+		//if (vk==tilde_en_US) {	//"key that on en-US layout ACTUALLY corresponds to tilde"
+		//if (vk==tilde_cur) {		//"key that on CURRENT layout corresponds to tilde"
+		if (vk==tilde_any) {		//"key that on SOME of the installed layouts (starting from system) corresponds to tilde"
+			if (key_up)
+				state&=~0x4;
+			else
+				state|=0x4;
+		}
+		
+		if (!key_up&&state==0x7) {
+			MessageBeep(MB_ICONINFORMATION);
+			return true;
+		}
+		
+		return false; 
+	};
 	
 	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, std::move(OnWmCommand));
 	if (!SnkIcon->IsValid()) {
@@ -102,7 +146,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//So it's ok to customize menu here and initialize everything else
 	SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
-	if (!SnkHotkey->StartNew(std::move(OnKeyPress))) {
+	if (!SnkHotkey->StartNew(std::move(OnCtrlShiftTld))) {
 		SnkIcon->ChangeIconTooltip(L"SNK_HS: STOPPED");
 		SnkIcon->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 	}

@@ -125,16 +125,34 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		
 		return false; 
 	};
-	DWORD tilde_en_US=LOBYTE(VkKeyScanEx(L'~', LoadKeyboardLayout(L"00000409", 0)));
-	DWORD tilde_cur=LOBYTE(VkKeyScanEx(L'~', GetKeyboardLayout(0)));
-	DWORD tilde_any=255;
-	if (DWORD hkl_len=GetKeyboardLayoutList(0, NULL)) {
-		HKL hkl_lst[hkl_len];
-		GetKeyboardLayoutList(hkl_len, hkl_lst);
-		for (int hkl_i=0; hkl_i<hkl_len; hkl_i++)
-			if ((tilde_any=LOBYTE(VkKeyScanEx(L'~', hkl_lst[hkl_i])))!=255) break;
+	
+	//Code below gets VK that contains tilde character
+	//First it checks default layout (which is appended to the end of the list) and then other layouts starting from the last
+	//Layout list is unorganized and doesn't follow system layout priority so default layout doesn't have predefined index
+	//That's why we check default layout separately but at the same time as part of general layout list check loop
+	//Downside - one  excessive check (because default layout is also present in layout list) but in return we have more uniform code
+	//If actual VK not found - common VK_OEM_3 (top-left key) is used instead
+	//Some examples:
+	//Default ЙЦУКЕН ru-RU layout (no tilde) and additional QWERTY en-US layout (tilde on top-left key): vk_tilde=VK_OEM_3 (top-left key)
+	//Default QWERTZ cs-CZ layout (tilde on "1" key) and additional QWERTY cs-CZ layout (tilde on top-left key): vk_tilde=0x31 ("1" key)
+	//Only QWERTZ de-DE layout (tilde on "plus" key): vk_tilde=VK_OEM_PLUS ("plus" key)
+	//Only QWERTY it-IT layout (no tilde): vk_tilde=VK_OEM_3 (top-left key)
+	DWORD vk_tilde;
+	int hkl_len=GetKeyboardLayoutList(0, NULL);
+	HKL hkl_lst[hkl_len+1];
+	if (hkl_len) GetKeyboardLayoutList(hkl_len, hkl_lst);
+	hkl_lst[hkl_len]=GetKeyboardLayout(0);
+	while ((vk_tilde=LOBYTE(VkKeyScanEx(L'~', hkl_lst[hkl_len])))==255&&hkl_len--||(vk_tilde=VK_OEM_3, 0));
+	
+	{
+		int lol[]={255, 255, 255};
+		int lil=2;
+		int kek;
+		while ((kek=lol[lil])==255&&(lil--||(kek=666, 0)));
+		MessageBox(NULL, std::to_wstring(kek).c_str(), L"TST", MB_OK);
 	}
-	HotkeyEngine::KeyPressFn OnCtrlShiftTld=[&state, tilde_any](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+	
+	HotkeyEngine::KeyPressFn OnCtrlShiftTld=[&state, vk_tilde](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
 		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
 		DWORD vk=kb_event->vkCode;
 		
@@ -152,10 +170,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				state|=0x2;
 		}
 		
-		//if (vk==VK_OEM_3) {		//In reality it's not tilde character but rather "key that on en-US layout OFTEN has tilde on it"
-		//if (vk==tilde_en_US) {	//"key that on en-US layout ACTUALLY corresponds to tilde"
-		//if (vk==tilde_cur) {		//"key that on CURRENT layout corresponds to tilde"
-		if (vk==tilde_any) {		//"key that on SOME of the installed layouts (starting from system) corresponds to tilde"
+		if (vk==vk_tilde) {
 			if (key_up)
 				state&=~0x4;
 			else
@@ -170,6 +185,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		return false; 
 	};
 	
+	int counter=0;
+	
+	HotkeyEngine::KeyPressFn OnTld=[&counter, vk_tilde](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
+		DWORD vk=kb_event->vkCode;
+		
+		if (!key_up&&vk==vk_tilde) counter++;
+		
+		return false;
+	};
+	
 	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, std::move(OnWmCommand));
 	if (!SnkIcon->IsValid()) {
 		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_OK);
@@ -180,7 +206,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//So it's ok to customize menu here and initialize everything else
 	SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
-	if (!SnkHotkey->StartNew(std::move(OnCtrlShiftEsc))) {
+	if (!SnkHotkey->StartNew(std::move(OnTld))) {
 		SnkIcon->ChangeIconTooltip(L"SNK_HS: STOPPED");
 		SnkIcon->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 	}
@@ -191,6 +217,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+	
+	MessageBox(NULL, std::to_wstring(counter).c_str(), L"SNK_HS", MB_OK);
 	
 	return 0;	//Instead of returning WM_QUIT wParam, always return 0 
 }

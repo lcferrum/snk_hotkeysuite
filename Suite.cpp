@@ -59,7 +59,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	};
 	
-	//OnCtrlAltBS, OnCtrlShiftTld and state are accessed from hook thread - don't touch them in main thread if hook thread is running
+	//OnCtrlAltBS, OnCtrlShiftTld, OnCtrlShiftEsc and state are accessed from hook thread - don't touch them in main thread if hook thread is running
 	DWORD state=0x0;
 	HotkeyEngine::KeyPressFn OnCtrlAltBS=[&state](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
 		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
@@ -86,8 +86,42 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				state|=0x4;
 		}
 		
-		if (!key_up&&state==0x7)
+		if (!key_up&&state==0x7) {
 			MessageBeep(MB_ICONINFORMATION);
+			return true;
+		}
+		
+		return false; 
+	};
+	HotkeyEngine::KeyPressFn OnCtrlShiftEsc=[&state](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 
+		bool key_up=wParam==WM_KEYUP||wParam==WM_SYSKEYUP;
+		DWORD vk=kb_event->vkCode;
+		
+		if (vk==VK_LCONTROL||vk==VK_RCONTROL||vk==VK_CONTROL) {
+			if (key_up)
+				state&=~0x1;
+			else
+				state|=0x1;
+		}
+		
+		if (vk==VK_LSHIFT||vk==VK_RSHIFT||vk==VK_SHIFT) {
+			if (key_up)
+				state&=~0x2;
+			else
+				state|=0x2;
+		}
+		
+		if (vk==VK_ESCAPE) {
+			if (key_up)
+				state&=~0x4;
+			else
+				state|=0x4;
+		}
+		
+		if (!key_up&&state==0x7) {
+			MessageBeep(MB_ICONINFORMATION);
+			return true;
+		}
 		
 		return false; 
 	};
@@ -146,7 +180,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//So it's ok to customize menu here and initialize everything else
 	SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
-	if (!SnkHotkey->StartNew(std::move(OnCtrlShiftTld))) {
+	if (!SnkHotkey->StartNew(std::move(OnCtrlShiftEsc))) {
 		SnkIcon->ChangeIconTooltip(L"SNK_HS: STOPPED");
 		SnkIcon->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 	}

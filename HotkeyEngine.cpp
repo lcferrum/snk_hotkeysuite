@@ -5,10 +5,8 @@
 std::unique_ptr<HotkeyEngine> HotkeyEngine::instance;
 HotkeyEngine::KeyPressFn HotkeyEngine::OnKeyPress;
 
-HotkeyEngine* HotkeyEngine::MakeInstance(HINSTANCE hInstance, KeyPressFn OnKeyPress)
+HotkeyEngine* HotkeyEngine::MakeInstance(HINSTANCE hInstance)
 {
-	instance.reset(nullptr);	//Before assigning new OnKeyPress make sure that previous instance is destroyed
-	HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
 	instance.reset(new HotkeyEngine(hInstance));
 	return instance.get();
 }
@@ -43,8 +41,7 @@ void HotkeyEngine::Stop()
 bool HotkeyEngine::Start()
 {
 	if (!running) {
-		//Array for two manual-reset unsignalled events
-		HANDLE success_fail[2];
+		HANDLE success_fail[2];	//Array for two manual-reset unsignalled events
 												
 		if ((success_fail[0]=CreateEvent(NULL, TRUE, FALSE, NULL))) {		//Success event
 			if ((success_fail[1]=CreateEvent(NULL, TRUE, FALSE, NULL))) {	//Fail event
@@ -75,6 +72,15 @@ bool HotkeyEngine::Start()
 	return false;
 }
 
+bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress)
+{
+	if (!running) {
+		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		return Start();
+	} else
+		return false;
+}
+
 DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 {
 	HANDLE* success_fail=(HANDLE*)lpParameter;	//Success and fail events
@@ -91,9 +97,9 @@ DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 	//Though it can be pretty castrated
 	//Only GetMessage is needed because hook callback is actually called inside this one function
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)>0); //GetMessage returns -1 if error and 0 if WM_QUIT so continue only on positive result
+	while (GetMessage(&msg, NULL, 0, 0)); //GetMessage returns 0 if WM_QUIT, and we are ignoring -1 (error) so not have to check if hook thread has killed itself
 	
-	//WM_QUIT on error happened - unhook and exit thread (exit code = 0)
+	//WM_QUIT happened - unhook and exit thread (exit code = 0)
 	UnhookWindowsHookEx(kb_hook);
 	return 0;
 }

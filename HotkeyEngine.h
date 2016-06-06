@@ -23,10 +23,11 @@ private:
 	
 	HotkeyEngine(HINSTANCE hInstance);
 public:
-	static HotkeyEngine* MakeInstance(HINSTANCE hInstance, KeyPressFn OnKeyPress);	
+	static HotkeyEngine* MakeInstance(HINSTANCE hInstance);	
 	bool IsRunning();
 	void Stop();
 	bool Start();
+	bool StartNew(KeyPressFn OnKeyPress);
 	
 	~HotkeyEngine();
 	HotkeyEngine(const HotkeyEngine&)=delete;				//Get rid of default copy constructor

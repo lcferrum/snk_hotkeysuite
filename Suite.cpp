@@ -65,18 +65,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
 	//So it's ok to customize menu here and initialize everything else
 	SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
-	SnkHotkey=HotkeyEngine::MakeInstance(hInstance, std::move(OnKeyPress));
-	if (!SnkHotkey->Start()) {
+	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
+	if (!SnkHotkey->StartNew(std::move(OnKeyPress))) {
 		SnkIcon->ChangeIconTooltip(L"SNK_HS: STOPPED");
 		SnkIcon->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 	}
 	
 	//Main thread's message loop
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)>0) {	//GetMessage returns -1 if error and 0 if WM_QUIT so continue only on positive result
+	while (GetMessage(&msg, NULL, 0, 0)>0) {	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT so continue only on positive result
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
 	
-	return msg.wParam;
+	return 0;	//Instead of returning WM_QUIT wParam, always return 0 
 }

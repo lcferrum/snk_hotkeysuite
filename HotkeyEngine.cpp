@@ -93,8 +93,7 @@ DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 		return 1;
 	}
 	
-	//For hook to work thread should have message loop
-	//Though it can be pretty castrated
+	//For hook to work thread should have message loop though it can be pretty castrated
 	//Only GetMessage is needed because hook callback is actually called inside this one function
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0)); //GetMessage returns 0 if WM_QUIT, and we are ignoring -1 (error) so not have to check if hook thread has killed itself
@@ -110,9 +109,8 @@ LRESULT CALLBACK HotkeyEngine::LowLevelKeyboardProc(int nCode, WPARAM wParam, LP
 	if (nCode<0)
 		return CallNextHookEx(NULL, nCode, wParam, lParam);
 
-	//Ignore keyboard events if for some reason instance is unitialized (so to prevent accessing NULL object)
 	//And let CallNextHookEx handle the keyboard event if OnKeyPress returned FALSE
-	if (instance&&OnKeyPress&&OnKeyPress(instance.get(), wParam, (KBDLLHOOKSTRUCT*)lParam))	
+	if (OnKeyPress&&OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))	
 		return 1;	//We should return non-zero value if event is processed
 	else
 		return CallNextHookEx(NULL, nCode, wParam, lParam);

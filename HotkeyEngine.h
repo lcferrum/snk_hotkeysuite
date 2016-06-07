@@ -9,7 +9,7 @@
 //Thoughts are the same - things are pretty incapsulated but only one instance is allowed to keep things simple giving customization options
 class HotkeyEngine {
 public:
-	typedef std::function<bool(HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)> KeyPressFn;
+	typedef std::function<bool(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)> KeyPressFn;
 private:
 	static std::unique_ptr<HotkeyEngine> instance;
 	static KeyPressFn OnKeyPress;

@@ -142,14 +142,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	HKL hkl_lst[hkl_len+1];
 	if (hkl_len) GetKeyboardLayoutList(hkl_len, hkl_lst);
 	hkl_lst[hkl_len]=GetKeyboardLayout(0);
-	while ((vk_tilde=LOBYTE(VkKeyScanEx(L'~', hkl_lst[hkl_len])))==255&&hkl_len--||(vk_tilde=VK_OEM_3, 0));
-	
-	{
-		int lol[]={255, 255, 255};
-		int lil=2;
-		int kek;
-		while ((kek=lol[lil])==255&&(lil--||(kek=666, 0)));
-		MessageBox(NULL, std::to_wstring(kek).c_str(), L"TST", MB_OK);
+	while ((vk_tilde=LOBYTE(VkKeyScanEx(L'~', hkl_lst[hkl_len])))==255) {
+		if (!hkl_len) {
+			vk_tilde=VK_OEM_3;
+			break;
+		}
+		hkl_len--;
 	}
 	
 	HotkeyEngine::KeyPressFn OnCtrlShiftTld=[&state, vk_tilde](HotkeyEngine* sender, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event){ 

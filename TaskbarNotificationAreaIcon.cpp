@@ -119,13 +119,13 @@ void TskbrNtfAreaIcon::Close()
 
 //Calling this function will destroy window, icon, unregister class and then exit message loop
 //It is equivalent to calling PostQuitMessage() inside WM_DESTROY message handler
-void TskbrNtfAreaIcon::CloseAndQuit()
+void TskbrNtfAreaIcon::CloseAndQuit(int exit_code)
 {
 	Close();
 	
 	//PostQuitMessage() will prevent any MessageBoxes from showing until message loop have exited 
 	//Any other code after it will be executed as usual
-	PostQuitMessage(0);
+	PostQuitMessage(exit_code);
 }
 
 BOOL TskbrNtfAreaIcon::ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCWSTR lpNewItem)

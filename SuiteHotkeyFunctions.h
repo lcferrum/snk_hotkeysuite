@@ -11,6 +11,12 @@ private:
 	bool OnCtrlShift(DWORD vk, bool key_up);
 	bool OnTargetKey(DWORD vk, DWORD hk_binded_vk, bool key_up);
 	
+	//Using std::function with std::bind is alternative to this:
+	//	bool (KeyTriplet::*OnModKey)(DWORD vk, bool key_up);
+	//	OnModKey=OnCtrlAlt;
+	//Sure assignment here is cleaner than std::bind monstrosity but pointers to member function are ugly
+	//And calling these pointers is even uglier:
+	//	(this->*OnModKey)(vk, key_up);
 	std::function<bool(DWORD vk, bool key_up)> OnModKey;
 	DWORD hk_binded_vk;
 	bool hk_long_press;

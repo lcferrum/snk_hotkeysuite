@@ -53,24 +53,29 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 			OnKeyTriplet.SetCtrlShift();
 			break;
 	}
-	//OnKeyTriplet can be passed as refernce (wrapped in std::ref) or as pointer
+	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
 	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::OnKeyPress, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
 		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_OK);
-		return 1;
+		return 2;
 	}
 	//SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	
 	//Main thread's message loop
+	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT 
+	//So continue on any non-zero result skipping errors
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)>0) {	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT so continue only on positive result
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+	BOOL res;
+	while ((res=GetMessage(&msg, NULL, 0, 0))) {
+		if (res>0) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
 	
 	//Manually uninitializng some components to make sure right unintializtion order
 	SnkHotkey->Stop();
 	
-	return 0;	//Instead of returning WM_QUIT wParam, always return 0 
+	return msg.wParam;
 }
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
@@ -142,6 +147,6 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	
 	//We get there after break which happens instead of return in all cases where hk_engine should have restarted but failed
 	MessageBox(NULL, L"Failed to restart keyboard hook!", L"SNK_HS", MB_OK);
-	sender->CloseAndQuit();
+	sender->CloseAndQuit(3);
 	return true;
 }

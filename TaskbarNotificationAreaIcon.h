@@ -34,7 +34,8 @@ public:
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
 	void ChangeIcon(UINT icon_resid);
 	void Close();
-	void CloseAndQuit();
+	void CloseAndQuit(int exit_code);
+	void CloseAndQuit() { return CloseAndQuit(0); }
 	HMENU GetIconMenu();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
 	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT  uEnable);

@@ -25,7 +25,7 @@ private:
 public:
 	static HotkeyEngine* MakeInstance(HINSTANCE hInstance);	
 	bool IsRunning();
-	void Stop();
+	bool Stop();
 	bool Start();
 	bool StartNew(KeyPressFn OnKeyPress);
 	

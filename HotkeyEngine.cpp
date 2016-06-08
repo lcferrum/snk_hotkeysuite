@@ -25,10 +25,10 @@ bool HotkeyEngine::IsRunning()
 	return running;
 }
 
-void HotkeyEngine::Stop()
+bool HotkeyEngine::Stop()
 {
 	if (!running)
-		return;
+		return false;
 	
 	if (!PostThreadMessage(hook_thread_id, WM_QUIT, 0, 0)||									//Post WM_QUIT to hook thread to exit it
 		WaitForSingleObject(hook_thread_handle, OBJECT_WAIT_TIMEOUT)!=WAIT_OBJECT_0)		//Wait for thread to exit
@@ -36,6 +36,7 @@ void HotkeyEngine::Stop()
 	CloseHandle(hook_thread_handle);
 	
 	running=false;
+	return true;
 }
 
 bool HotkeyEngine::Start()

@@ -144,6 +144,22 @@ BOOL TskbrNtfAreaIcon::EnableIconMenuItem(UINT uIDEnableItem, UINT uEnable)
 	return EnableMenuItem(icon_menu, uIDEnableItem, uEnable);
 }
 
+DWORD TskbrNtfAreaIcon::CheckIconMenuItem(UINT uIDCheckItem, UINT uCheck)
+{
+	if (!valid)
+		return -1;
+	
+	return CheckMenuItem(icon_menu, uIDCheckItem, uCheck);
+}
+
+BOOL TskbrNtfAreaIcon::CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT idCheck, UINT uFlags)
+{
+	if (!valid)
+		return FALSE;
+	
+	return CheckMenuRadioItem(icon_menu, idFirst, idLast, idCheck, uFlags);
+}
+
 LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	//Why checking instance and hWnd?

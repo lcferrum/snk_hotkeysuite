@@ -38,6 +38,8 @@ public:
 	HMENU GetIconMenu();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
 	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT  uEnable);
+	DWORD CheckIconMenuItem(UINT uIDCheckItem, UINT uCheck);
+	BOOL CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT idCheck, UINT uFlags);
 	
 	~TskbrNtfAreaIcon();
 	TskbrNtfAreaIcon(const TskbrNtfAreaIcon&)=delete;				//Get rid of default copy constructor

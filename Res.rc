@@ -43,8 +43,18 @@ BEGIN
 	BEGIN
 		MENUITEM "Stop", IDM_STOP_START
 		MENUITEM SEPARATOR
-		MENUITEM "Edit command for single hotkey press", IDM_EDIT_SHK
-		MENUITEM "Edit command for long hotkey press", IDM_EDIT_LHK
+		MENUITEM "Edit single hotkey press...", IDM_EDIT_SHK
+		MENUITEM "Edit long hotkey press...", IDM_EDIT_LHK
+		POPUP "Settings"
+		BEGIN
+			MENUITEM "Long hotkey press", IDM_SET_EN_LHK
+			MENUITEM SEPARATOR
+			MENUITEM "Use Ctrl+Alt", IDM_SET_CTRL_ALT
+			MENUITEM "Use Shift+Alt", IDM_SET_SHIFT_ALT
+			MENUITEM "Use Ctrl+Shift", IDM_SET_CTRL_SHIFT
+			MENUITEM SEPARATOR
+			MENUITEM "Change hotkey combination...", IDM_SET_CUSTOM
+		END
 		MENUITEM SEPARATOR
 		MENUITEM "Exit", IDM_EXIT
 	END

@@ -160,6 +160,14 @@ BOOL TskbrNtfAreaIcon::CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT id
 	return CheckMenuRadioItem(icon_menu, idFirst, idLast, idCheck, uFlags);
 }
 
+HWND TskbrNtfAreaIcon::GetIconWindow()
+{
+	if (valid)
+		return icon_ntfdata.hWnd;
+	else
+		return NULL;
+}
+
 LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	//Why checking instance and hWnd?

@@ -111,3 +111,27 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 	
 	return false; 
 }
+
+bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
+{
+	if (wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN)
+		//Don't bind ENTER and SPACE because these keys could have been used just to close dialog
+		//Also ignoring Ctrl, Alt and Shift
+		switch (kb_event->vkCode) {
+			case VK_SPACE:
+			case VK_RETURN:
+			case VK_LMENU:
+			case VK_RMENU:
+			case VK_MENU:
+			case VK_LSHIFT:
+			case VK_RSHIFT:
+			case VK_SHIFT:
+			case VK_LCONTROL:
+			case VK_RCONTROL:
+			case VK_CONTROL:
+				break;
+			default:
+				PostMessage(dlg_hwnd, bind_wm, kb_event->vkCode, 0);
+		}
+	return false;
+}

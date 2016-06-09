@@ -34,4 +34,6 @@ public:
 	bool OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
 };
 
+bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+
 #endif //SUITEHOTKEYFUNCTIONS_H

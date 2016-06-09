@@ -5,6 +5,8 @@
 #include "Res.h"
 #include <memory>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <windows.h>
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
@@ -28,7 +30,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
 		std::bind(IconMenuProc, std::ref(SnkHotkey), &Settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (!SnkIcon->IsValid()) {
-		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_OK);
+		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_ICONERROR|MB_OK);
 		return 1;
 	}
 	
@@ -55,7 +57,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	}
 	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
 	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::OnKeyPress, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
-		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_OK);
+		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
 		return 2;
 	}
 	//SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
@@ -78,10 +80,51 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	return msg.wParam;
 }
 
+INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	std::wstringstream hex_vk;
+	switch (uMsg) {
+		case WM_INITDIALOG:
+			SetDlgItemText(hwndDlg, IDC_VK_VIEWER, L"0x00");
+			SetWindowLongPtr(hwndDlg, DWLP_USER, 0);
+			//If we fail with startin binding keyboard hook - exit immediately with 0 result
+			//Callee will determine that it was error because HotkeyEngine::Stop() will return false
+			//It's callee responsibility to stop this hook
+			if (!((HotkeyEngine*)lParam)->StartNew(std::bind(BindKey, hwndDlg, WM_BINDVK, std::placeholders::_1, std::placeholders::_2)))
+				EndDialog(hwndDlg, 0);
+			return TRUE;
+		case WM_BINDVK:
+			hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(2)<<wParam<<L" ("<<(wchar_t)MapVirtualKey(wParam, MAPVK_VK_TO_CHAR)<<L")";
+			SetDlgItemText(hwndDlg, IDC_VK_VIEWER, hex_vk.str().c_str());
+			SetWindowLongPtr(hwndDlg, DWLP_USER, wParam);
+			return TRUE;
+		case WM_CLOSE:
+			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
+			EndDialog(hwndDlg, 0);
+			return TRUE;
+		case WM_COMMAND:
+			//Handler for dialog controls
+			if (HIWORD(wParam)==BN_CLICKED) {
+				switch (LOWORD(wParam)) {
+					case IDC_CONFIRM_VK:
+						EndDialog(hwndDlg, GetWindowLongPtr(hwndDlg, DWLP_USER));
+						return TRUE;
+					case IDC_CANCEL_VK:
+						EndDialog(hwndDlg, 0);
+						return TRUE;
+				}
+			}
+			return FALSE;
+		default:
+			return FALSE;
+	}
+}
+
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
 {
 	//Not checking if hk_engine is NULL in menu handlers - handlers won't be called until message loop is fired which happens after creation of hk_engine
 	bool hk_was_running=false;
+	DWORD bind_vk=0;
 	switch (LOWORD(wParam)) {
 		case IDM_EXIT:
 			//We can just use PostQuitMessage() and wait for TskbrNtfAreaIcon destructor to destroy icon at the end of the program
@@ -141,12 +184,33 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			hk_triplet->SetCtrlShift();
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
+		case IDM_SET_CUSTOM:
+			//First disable this menu item so binding dialog won't be called second time
+			//Other menu item can be clicked - they'll restart binding keyboard hook like it was hotkey hook
+			sender->EnableIconMenuItem(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_GRAYED);
+			hk_was_running=hk_engine->Stop();
+			//Several words on InitCommonControls() and InitCommonControlsEx()
+			//"Common" name is somewhat misleading
+			//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls
+			//So there is no need to initialize them with InitCommonControls() or InitCommonControlsEx() functions
+			//Though ICC_STANDARD_CLASSES can be passed to InitCommonControlsEx, it actually does nothing - "standard" controls are really initialized by the system
+			//Also these functions has nothing to do with "Win XP"/"ComCtl32 v6+" style - just supply proper manifest to make "standard" controls use it
+			//IDD_BINDINGDLG uses only "standard" controls
+			//Return result for IDD_BINDINGDLG is VK to bind or 0 if binding was canceled
+			bind_vk=DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialogProc, (LPARAM)hk_engine);
+			//Inside dialog's DLGPROC we are starting new binding keyboard hook
+			//If this fail - HotkeyEngine::Stop() will return false because hook wasn't started
+			if (!hk_engine->Stop()) break;
+			if (bind_vk) hk_triplet->SetBindedVK(bind_vk);
+			if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+			sender->EnableIconMenuItem(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_ENABLED);
+			return true;
 		default:
 			return false;
 	}
 	
 	//We get there after break which happens instead of return in all cases where hk_engine should have restarted but failed
-	MessageBox(NULL, L"Failed to restart keyboard hook!", L"SNK_HS", MB_OK);
+	MessageBox(NULL, L"Failed to restart keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
 	sender->CloseAndQuit(3);
 	return true;
 }

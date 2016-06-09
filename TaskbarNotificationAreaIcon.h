@@ -37,6 +37,7 @@ public:
 	void CloseAndQuit(int exit_code);
 	void CloseAndQuit() { return CloseAndQuit(0); }
 	HMENU GetIconMenu();
+	HWND GetIconWindow();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
 	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT  uEnable);
 	DWORD CheckIconMenuItem(UINT uIDCheckItem, UINT uCheck);

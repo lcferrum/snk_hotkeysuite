@@ -233,25 +233,53 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	return true;
 }
 
-wchar_t GetOemChar(wchar_t def_char, DWORD oem_vk)
+std::wstring GetHexVk(DWORD vk)
 {
-	//Code below checks if default char for OEM key is actually present on this key
-	//If yes - default char is returned, if no - actual char for this key is returned
-	//First it checks default layout (which is appended to the end of the list) and then other layouts starting from the last
-	//Layout list is unorganized and doesn't follow system layout priority so default layout doesn't have predefined index
-	//That's why we check default layout separately but at the same time as part of general layout list check loop
-	//Downside - one  excessive check (because default layout is also present in layout list) but in return we have more uniform code
-	DWORD actual_vk;
-	int hkl_len=GetKeyboardLayoutList(0, NULL);
-	HKL hkl_lst[hkl_len+1];
-	if (hkl_len) GetKeyboardLayoutList(hkl_len, hkl_lst);
-	hkl_lst[hkl_len]=GetKeyboardLayout(0);
-	while ((actual_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[hkl_len])))==255&&hkl_len--);
+	std::wstringstream hex_vk;
+	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(2)<<vk;
+	return hex_vk.str();
+}
+
+std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk)
+{
+	//Actual purpose of GetOemChar is to force default OEM vk meaning to maintain some consistency between various installed layouts
+	//Also we have to ensure that this OEM vk stays on the same physical place on hw kb
+	//For example we can have user with QWERTY/ЙЦУКЕН layout for which VK_OEM_3 can be either "~`" or "Ё" depending on layout
+	//Using this function we can force VK_OEM_3 to be always displayed as [ ~ ] for such user
+	//And if he opts to uninstall QWERTY layout this function will display VK_OEM_3 as [ Ё ]
 	
-	if (actual_vk==oem_vk)
-		return def_char;
-	else
-		return (wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR);
+	//Note on virtual keys VS scan codes
+	//Scan code represents unique ID of key on hw keyboard and it is independent from layout
+	//E.g. QWERTY layout 'Q' key has scan code 0x10, while on AZERTY this code results in 'A' key, which is indeed occupies QWERTY's 'Q' key space
+	//Virtual key represents meaning of the key pressed but position of this key on hw kb depends on selected layout
+	//E.g. pressing 'Q' key on QWERTY layout we get 0x51 vk and on AZERTY layout 'Q' key will have the same 0x51 vk, though their scan codes (and physical position) will be different
+	//And now we have OEM virtual keys
+	//Not only their physical postion on hw kb will depend on currently selected layout, but their actual meaning will also change
+	//E.g. VK_OEM_6 on QWERTY US layout represents "}]" key and is located under backspace
+	//But on German QWERTZ layout VK_OEM_6 represents "`'" key and is relocated to the left of backspace (switching places with QWERTY's VK_OEM_PLUS)
+	//MapVirtualKey(MAPVK_VK_TO_CHAR) actually takes in account keyboard layout, so passing it VK_OEM_6 while German QWERTZ layout selected will result in proper [ ' ] key
+	
+	//Code below checks if default char for OEM key is actually present on this key for any of the installed layouts
+	//0xFF is invalid vk - it will force algorithm to think that default char wasn't found in case of GetKeyboardLayoutList() fails
+	DWORD layout_vk=0xFF;
+	if (int hkl_len=GetKeyboardLayoutList(0, NULL)) {
+		HKL hkl_lst[hkl_len];
+		GetKeyboardLayoutList(hkl_len, hkl_lst);
+		while ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[--hkl_len])))!=oem_vk&&hkl_len);
+	}
+	
+	if (layout_vk==oem_vk)
+		//If default char is found on OEM vk for one of the layouts - return it
+		return {L'[', L' ', def_char, L' ', L']'};
+	else {
+		//If not found - try with alt char or return actual OEM char
+		if (alt_char!=L'\0')
+			return GetOemChar(alt_char, L'\0', oem_vk);
+		else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
+			return {L'[', L' ', mapped_char, L' ', L']'};
+		else
+			return GetHexVk(oem_vk);
+	}
 }
 
 std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type)
@@ -299,7 +327,7 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Pause";
 				break;
 			case VK_CAPITAL:
-				hk_str+=L"CapsLk";
+				hk_str+=L"CapsLock";
 				break;
 			case VK_KANA:
 				hk_str+=L"Kana/Hangul";
@@ -383,118 +411,141 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Sleep";
 				break;
 			case VK_MULTIPLY:
-				hk_str+=L"Num*";
+				hk_str+=L"Num[ * ]";
 				break;
 			case VK_ADD:
-				hk_str+=L"Num+";
+				hk_str+=L"Num[ + ]";
 				break;
 			case VK_SEPARATOR:
-				hk_str+=L"Num,";
+				//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
+				hk_str+=L"Num";
+				hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(VK_SEPARATOR, MAPVK_VK_TO_CHAR), L' ', L']'};
 				break;
 			case VK_SUBTRACT:
-				hk_str+=L"Num-";
+				hk_str+=L"Num[ - ]";
 				break;
 			case VK_DECIMAL:
-				hk_str+=L"Num.";
+				//Decimal separator, localized (can be comma or period)
+				hk_str+=L"Num";
+				hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(VK_DECIMAL, MAPVK_VK_TO_CHAR), L' ', L']'};
 				break;
 			case VK_DIVIDE:
-				hk_str+=L"Num/";
+				hk_str+=L"Num[ / ]";
 				break;
 			case VK_NUMLOCK:
-				hk_str+=L"NumLk";
+				hk_str+=L"NumLock";
 				break;
 			case VK_SCROLL:
-				hk_str+=L"ScrLk";
+				hk_str+=L"ScrLock";
 				break;
 			case VK_BROWSER_BACK:
-				hk_str+=L"BrowserRew";
+				hk_str+=L"BrowserBack";
 				break;
 			case VK_BROWSER_FORWARD:
-				hk_str+=L"BrowserFwd";
+				hk_str+=L"BrowserForward";
 				break;
 			case VK_BROWSER_REFRESH:
-				hk_str+=L"BrowserRld";
+				hk_str+=L"BrowserRefresh";
 				break;
 			case VK_BROWSER_STOP:
 				hk_str+=L"BrowserStop";
 				break;
 			case VK_BROWSER_SEARCH:
-				hk_str+=L"BrowserFnd";
+				hk_str+=L"BrowserSearch";
 				break;
 			case VK_BROWSER_FAVORITES:
-				hk_str+=L"BrowserFav";
+				hk_str+=L"BrowserFavorites";
 				break;
 			case VK_BROWSER_HOME:
 				hk_str+=L"BrowserHome";
 				break;
+			case VK_VOLUME_MUTE:
+				hk_str+=L"VolumeMute";
+				break;				
 			case VK_VOLUME_DOWN:
-				hk_str+=L"MediaVolDn";
+				hk_str+=L"VolumeDown";
 				break;
 			case VK_VOLUME_UP:
-				hk_str+=L"MediaVolUp";
+				hk_str+=L"VolumeUp";
 				break;
 			case VK_MEDIA_NEXT_TRACK:
-				hk_str+=L"MediaNext";
+				hk_str+=L"MediaTrackNext";
 				break;
 			case VK_MEDIA_PREV_TRACK:
-				hk_str+=L"MediaPrev";
+				hk_str+=L"MediaTrackPrevious";
 				break;
 			case VK_MEDIA_STOP:
 				hk_str+=L"MediaStop";
 				break;
 			case VK_MEDIA_PLAY_PAUSE:
-				hk_str+=L"MediaPlay";
+				hk_str+=L"MediaPlayPause";
 				break;
 			case VK_LAUNCH_MAIL:
-				hk_str+=L"MediaMail";
+				hk_str+=L"LaunchMail";
 				break;
 			case VK_LAUNCH_MEDIA_SELECT:
 				hk_str+=L"MediaSelect";
 				break;
 			case VK_LAUNCH_APP1:
-				hk_str+=L"MediaApp1";
+				hk_str+=L"LaunchApp1";
 				break;
 			case VK_LAUNCH_APP2:
-				hk_str+=L"MediaApp2";
+				hk_str+=L"LaunchApp2";
 				break;
 			case VK_OEM_1:
-				hk_str+=GetOemChar(L':', VK_OEM_1);
+				hk_str+=GetOemChar(L':', L';', VK_OEM_1);
+				hk_str+=L"VK_OEM_1";
 				break;
 			case VK_OEM_PLUS:
-				hk_str+=L"+";
+				hk_str+=L"[ + ]";
+				hk_str+=L"VK_OEM_PLUS";
 				break;
 			case VK_OEM_COMMA:
-				hk_str+=GetOemChar(L'<', VK_OEM_COMMA);
+				hk_str+=L"[ , ]";
+				hk_str+=L"VK_OEM_COMMA";
 				break;
 			case VK_OEM_MINUS:
-				hk_str+=L"-";
+				hk_str+=L"[ - ]";
+				hk_str+=L"VK_OEM_MINUS";
 				break;
 			case VK_OEM_PERIOD:
-				hk_str+=GetOemChar(L'>', VK_OEM_PERIOD);
+				hk_str+=L"[ . ]";
+				hk_str+=L"VK_OEM_PERIOD";
 				break;
 			case VK_OEM_2:
-				hk_str+=GetOemChar(L'?', VK_OEM_2);
+				hk_str+=GetOemChar(L'?', L'/', VK_OEM_2);
+				hk_str+=L"VK_OEM_2";
 				break;
 			case VK_OEM_3:
-				hk_str+=GetOemChar(L'~', VK_OEM_3);
+				hk_str+=GetOemChar(L'~', L'`', VK_OEM_3);
+				hk_str+=L"VK_OEM_3";
 				break;
 			case VK_OEM_4:
-				hk_str+=GetOemChar(L'{', VK_OEM_4);
+				hk_str+=GetOemChar(L'{', L'[', VK_OEM_4);
+				hk_str+=L"VK_OEM_4";
 				break;
 			case VK_OEM_5:
-				hk_str+=GetOemChar(L'|', VK_OEM_5);
+				hk_str+=GetOemChar(L'|', L'\\', VK_OEM_5);
+				hk_str+=L"VK_OEM_5";
 				break;
 			case VK_OEM_6:
-				hk_str+=GetOemChar(L'}', VK_OEM_6);
+				hk_str+=GetOemChar(L'}', L']', VK_OEM_6);
+				hk_str+=L"VK_OEM_6";
 				break;
 			case VK_OEM_7:
-				hk_str+=GetOemChar(L'"', VK_OEM_7);
+				hk_str+=GetOemChar(L'"', L'\'', VK_OEM_7);
+				hk_str+=L"VK_OEM_7";
 				break;
 			case VK_OEM_8:
-				hk_str+=(wchar_t)MapVirtualKey(VK_OEM_8, MAPVK_VK_TO_CHAR);
+				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb
+				hk_str+=GetOemChar(L'§', L'!', VK_OEM_8);
+				hk_str+=L"VK_OEM_8";
 				break;
 			case VK_OEM_102:
-				hk_str+=GetOemChar(L'|', VK_OEM_7);
+				//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
+				//Also present on non-102 AZERTY kb as [ > < ]
+				hk_str+=GetOemChar(L'|', L'>', VK_OEM_102);
+				hk_str+=L"VK_OEM_102";
 				break;
 			case VK_PROCESSKEY:
 				hk_str+=L"Process";
@@ -525,17 +576,16 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				break;
 			default:
 				if ((vk>=0x30&&vk<=0x39)||(vk>=0x41&&vk<=0x5A)||(vk>=0xE9&&vk<=0xF5)) {
-					hk_str+=(wchar_t)MapVirtualKey(vk, MAPVK_VK_TO_CHAR);
+					hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(vk, MAPVK_VK_TO_CHAR), L' ', L']'};
 				} else if (vk>=0x60&&vk<=0x69) {
-					hk_str+=L"Num";
+					hk_str+=L"Num[ ";
 					hk_str+=std::to_wstring(vk-0x60);
+					hk_str+=L" ]";
 				} else if (vk>=0x70&&vk<=0x87) {
 					hk_str+=L"F";
 					hk_str+=std::to_wstring(vk-0x6F);
 				} else {
-					std::wstringstream hex_vk;
-					hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(2)<<vk;
-					hk_str+=hex_vk.str();
+					hk_str+=GetHexVk(vk);
 				}
 		}
 	}

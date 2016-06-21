@@ -1,5 +1,7 @@
 #include "SuiteHotkeyFunctions.h"
 
+#define LONG_PRESS_DURATION 3000	//3 sec (keep in mind that this define is compared with GetTickCount() that can have resolution up to 55ms)
+
 KeyTriplet::KeyTriplet():
 	OnModKey(std::bind(&KeyTriplet::OnCtrlAlt, this, std::placeholders::_1, std::placeholders::_2)), 
 	hk_binded_vk(VK_BACK), hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
@@ -90,8 +92,8 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 			if (!hk_up&&hk_long_press) {
 				DWORD cur_tick=GetTickCount();
 				if (cur_tick>=hk_down_tick) {	//Excludes moment of system timer wrap around after 49.7 days of uptime
-					if (cur_tick-hk_down_tick>3000)
-						MessageBeep(MB_ICONERROR);	//Long hotkey press (>3 secs)
+					if (cur_tick-hk_down_tick>LONG_PRESS_DURATION)
+						MessageBeep(MB_ICONERROR);	//Long hotkey press (>LONG_PRESS_DURATION msec)
 					else
 						MessageBeep(MB_ICONINFORMATION);	//Ordinary hotkey press
 				}

@@ -547,6 +547,9 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=GetOemChar(L'|', L'>', VK_OEM_102);
 				hk_str+=L"VK_OEM_102";
 				break;
+			case VK_OEM_AX:
+				hk_str+=L"AX";
+				break;	
 			case VK_PROCESSKEY:
 				hk_str+=L"Process";
 				break;
@@ -575,16 +578,21 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Clear";
 				break;
 			default:
-				if ((vk>=0x30&&vk<=0x39)||(vk>=0x41&&vk<=0x5A)||(vk>=0xE9&&vk<=0xF5)) {
+				if (vk>=0x30&&vk<=0x39) {
+					//0-9 keys
+					//Not using MapVirtualKey(MAPVK_VK_TO_CHAR) because some layouts assume that default map for numeric keys is their shifted-state
+					hk_str+=L"[ "+std::to_wstring(vk-0x30)+L" ]";
+				} else if (vk>=0x41&&vk<=0x5A) {
+					//A-Z keys
 					hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(vk, MAPVK_VK_TO_CHAR), L' ', L']'};
 				} else if (vk>=0x60&&vk<=0x69) {
-					hk_str+=L"Num[ ";
-					hk_str+=std::to_wstring(vk-0x60);
-					hk_str+=L" ]";
+					//Numpad 0-9 keys
+					hk_str+=L"Num[ "+std::to_wstring(vk-0x60)+L" ]";
 				} else if (vk>=0x70&&vk<=0x87) {
-					hk_str+=L"F";
-					hk_str+=std::to_wstring(vk-0x6F);
+					//Function keys
+					hk_str+=L"F"+std::to_wstring(vk-0x6F);
 				} else {
+					//Unknown, reserved and rest of OEM specific keys goes here
 					hk_str+=GetHexVk(vk);
 				}
 		}

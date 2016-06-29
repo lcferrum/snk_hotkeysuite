@@ -5,7 +5,7 @@
 
 class SuiteSettings {
 public:
-	enum ModKeyType:char {CTRL_ALT, SHIFT_ALT, CTRL_SHIFT};
+	enum ModKeyType:unsigned char {CTRL_ALT=0, SHIFT_ALT, CTRL_SHIFT, DONT_CARE=CTRL_ALT};
 private:
 	bool long_press;
 	ModKeyType mod_key;

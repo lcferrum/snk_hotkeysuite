@@ -13,7 +13,7 @@
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
 
 enum class GetHotkeyStringType:char {FULL, MOD_KEY, VK};
-std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type);
+std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL);
 
 #ifdef OBSOLETE_WWINMAIN
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmdShow)
@@ -44,6 +44,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	if (Settings.GetLongPress()) {
 		SnkIcon->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED); 
 		OnKeyTriplet.SetLongPress(true);
+	} else {
+		SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 	}
 	switch (Settings.GetModKey()) {
 		case SuiteSettings::CTRL_ALT:
@@ -64,9 +66,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
 		return 2;
 	}
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(SuiteSettings::DONT_CARE, Settings.GetBindedVK(), GetHotkeyStringType::VK, L"Rebind ", L"...").c_str());
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(Settings.GetModKey(), Settings.GetBindedVK(), GetHotkeyStringType::FULL).c_str()); 
-	//SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
+
 	
 	//Main thread's message loop
 	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT 
@@ -80,39 +83,52 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		}
 	}
 	
-	//Manually uninitializng some components to make sure right unintializtion order
+	//Manually uninitializing some components to make sure right unintialization order
 	SnkHotkey->Stop();
 	
 	return msg.wParam;
 }
 
+#define BindingDialogProc_HK_ENGINE(lParam)	std::get<0>(*(std::tuple<HotkeyEngine*, DWORD, DWORD>*)lParam)
+#define BindingDialogProc_OLD_VK(lParam)	std::get<1>(*(std::tuple<HotkeyEngine*, DWORD, DWORD>*)lParam)
+#define BindingDialogProc_NEW_VK(lParam)	std::get<2>(*(std::tuple<HotkeyEngine*, DWORD, DWORD>*)lParam)
 INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
 		case WM_INITDIALOG:
-			SetWindowLongPtr(hwndDlg, DWLP_USER, 0);
-			SetDlgItemText(hwndDlg, IDC_VK_PREFIX, GetHotkeyString(std::get<1>(*(std::tuple<HotkeyEngine*, SuiteSettings::ModKeyType, DWORD>*)lParam), 0, GetHotkeyStringType::MOD_KEY).c_str());
-			SetDlgItemText(hwndDlg, IDC_VK_VIEWER, GetHotkeyString(SuiteSettings::CTRL_ALT, std::get<2>(*(std::tuple<HotkeyEngine*, SuiteSettings::ModKeyType, DWORD>*)lParam), GetHotkeyStringType::VK).c_str());
-			//If we fail with starting binding keyboard hook - exit immediately with 0 result
-			//Callee will determine that it was error because HotkeyEngine::Stop() will return false
-			//It's callee responsibility to stop this hook
-			if (!std::get<0>(*(std::tuple<HotkeyEngine*, SuiteSettings::ModKeyType, DWORD>*)lParam)->StartNew(std::bind(BindKey, hwndDlg, WM_BINDVK, std::placeholders::_1, std::placeholders::_2)))
-				EndDialog(hwndDlg, 0);
-			return TRUE;
+			{
+				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
+				SetWindowText(hwndDlg, GetHotkeyString(SuiteSettings::DONT_CARE, BindingDialogProc_OLD_VK(lParam), GetHotkeyStringType::VK, L"Rebind ").c_str());
+				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
+				if (hIcon) SendMessage(hwndDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+				//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
+				if (!BindingDialogProc_HK_ENGINE(lParam)->StartNew(std::bind(BindKey, hwndDlg, WM_BINDVK, std::placeholders::_1, std::placeholders::_2)))
+					EndDialog(hwndDlg, -1);
+				return TRUE;
+			}
 		case WM_BINDVK:
-			SetDlgItemText(hwndDlg, IDC_VK_VIEWER, GetHotkeyString(SuiteSettings::CTRL_ALT, wParam, GetHotkeyStringType::VK).c_str());
-			SetWindowLongPtr(hwndDlg, DWLP_USER, wParam);
+			if (!BindingDialogProc_NEW_VK(GetWindowLongPtr(hwndDlg, DWLP_USER))) {
+				BindingDialogProc_NEW_VK(GetWindowLongPtr(hwndDlg, DWLP_USER))=wParam;
+				BindingDialogProc_HK_ENGINE(GetWindowLongPtr(hwndDlg, DWLP_USER))->Stop();
+				EnableWindow(GetDlgItem(hwndDlg, IDC_CONFIRM_VK), TRUE);
+				EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_VK), TRUE);
+				//We should set focus to default button (it's not set by default because button was disabled) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
+				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CONFIRM_VK), TRUE);
+				SetDlgItemText(hwndDlg, IDC_VK_VIEWER, GetHotkeyString(SuiteSettings::DONT_CARE, wParam, GetHotkeyStringType::VK, L"Rebind to ", L"?").c_str());
+			}
 			return TRUE;
 		case WM_CLOSE:
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
+			BindingDialogProc_HK_ENGINE(GetWindowLongPtr(hwndDlg, DWLP_USER))->Stop();
 			EndDialog(hwndDlg, 0);
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls
+			//They are enabled only when binding hook has already stopped
 			if (HIWORD(wParam)==BN_CLICKED) {
 				switch (LOWORD(wParam)) {
 					case IDC_CONFIRM_VK:
-						EndDialog(hwndDlg, GetWindowLongPtr(hwndDlg, DWLP_USER));
+						EndDialog(hwndDlg, 1);
 						return TRUE;
 					case IDC_CANCEL_VK:
 						EndDialog(hwndDlg, 0);
@@ -124,13 +140,14 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 			return FALSE;
 	}
 }
+#undef BindingDialogProc_HK_ENGINE
+#undef BindingDialogProc_OLD_VK
+#undef BindingDialogProc_NEW_VK
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
 {
 	//Not checking if hk_engine is NULL in menu handlers - handlers won't be called until message loop is fired which happens after creation of hk_engine
 	bool hk_was_running=false;
-	std::tuple<HotkeyEngine*, SuiteSettings::ModKeyType, DWORD> bindingdlg_tuple;
-	DWORD bind_vk=0;
 	switch (LOWORD(wParam)) {
 		case IDM_EXIT:
 			//We can just use PostQuitMessage() and wait for TskbrNtfAreaIcon destructor to destroy icon at the end of the program
@@ -160,10 +177,12 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			hk_was_running=hk_engine->Stop();
 			if (settings->GetLongPress()) {
 				sender->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_UNCHECKED);
+				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 				settings->SetLongPress(false);
 				hk_triplet->SetLongPress(false);
 			} else {
 				sender->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED);
+				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_ENABLED);
 				settings->SetLongPress(true);
 				hk_triplet->SetLongPress(true);
 			}
@@ -197,32 +216,36 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CUSTOM:
-			//First disable this menu item so binding dialog won't be called second time
-			//Other menu item can be clicked - they'll restart binding keyboard hook like it was hotkey hook
-			sender->EnableIconMenuItem(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_GRAYED);
-			hk_was_running=hk_engine->Stop();
-			//Several words on InitCommonControls() and InitCommonControlsEx()
-			//"Common" name is somewhat misleading
-			//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls
-			//So there is no need to initialize them with InitCommonControls() or InitCommonControlsEx() functions
-			//Though ICC_STANDARD_CLASSES can be passed to InitCommonControlsEx, it actually does nothing - "standard" controls are really initialized by the system
-			//Also these functions has nothing to do with "Win XP"/"ComCtl32 v6+" style - just supply proper manifest to make "standard" controls use it
-			//IDD_BINDINGDLG uses only "standard" controls
-			//Return result for IDD_BINDINGDLG is VK to bind or 0 if binding was canceled
-			bindingdlg_tuple=std::make_tuple(hk_engine, settings->GetModKey(), settings->GetBindedVK());
-			bind_vk=DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialogProc, (LPARAM)&bindingdlg_tuple);
-			//Inside dialog's DLGPROC we are starting new binding keyboard hook
-			//If this fail - HotkeyEngine::Stop() will return false because hook wasn't started
-			if (!hk_engine->Stop()) break;
-			if (bind_vk) { 
-				hk_triplet->SetBindedVK(bind_vk);
-				settings->SetBindedVK(bind_vk);
-				//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-				sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bind_vk, GetHotkeyStringType::FULL).c_str()); 
+			{
+				std::tuple<HotkeyEngine*, DWORD, DWORD> bindingdlg_tuple;
+				bindingdlg_tuple=std::make_tuple(hk_engine, settings->GetBindedVK(), 0);
+				//First disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
+				sender->Enable(false);
+				hk_was_running=hk_engine->Stop();
+				//Several words on InitCommonControls() and InitCommonControlsEx()
+				//"Common" name is somewhat misleading
+				//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls
+				//So there is no need to initialize them with InitCommonControls() or InitCommonControlsEx() functions
+				//Though ICC_STANDARD_CLASSES can be passed to InitCommonControlsEx, it actually does nothing - "standard" controls are really initialized by the system
+				//Also these functions has nothing to do with "Win XP"/"ComCtl32 v6+" style - just supply proper manifest to make "standard" controls use it
+				//IDD_BINDINGDLG uses only "standard" controls
+				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialogProc, (LPARAM)&bindingdlg_tuple)) {
+					//DialogBoxParam will return 0 on Cancel, -1 on fail and 1 on Confirm
+					case -1:
+						break;
+					case 1:
+						hk_triplet->SetBindedVK(std::get<2>(bindingdlg_tuple));
+						settings->SetBindedVK(std::get<2>(bindingdlg_tuple));
+						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(SuiteSettings::DONT_CARE, std::get<2>(bindingdlg_tuple), GetHotkeyStringType::VK, L"Rebind ", L"...").c_str());
+						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
+						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), std::get<2>(bindingdlg_tuple), GetHotkeyStringType::FULL).c_str()); 
+					case 0:
+						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+						sender->Enable();
+						return true;
+				}
+				break;
 			}
-			if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
-			sender->EnableIconMenuItem(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_ENABLED);
-			return true;
 		default:
 			return false;
 	}
@@ -282,9 +305,12 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk)
 	}
 }
 
-std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type)
+std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type, const wchar_t* prefix, const wchar_t* postfix)
 {
 	std::wstring hk_str=L"";
+	
+	if (prefix)
+		hk_str+=prefix;
 	
 	if (type==GetHotkeyStringType::FULL||type==GetHotkeyStringType::MOD_KEY) {
 		switch (mod_key) {
@@ -597,6 +623,9 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				}
 		}
 	}
+	
+	if (postfix)
+		hk_str+=postfix;
 	
 	return hk_str;
 }

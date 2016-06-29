@@ -21,6 +21,7 @@ private:
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	
 	bool valid;
+	bool enabled;
 	HINSTANCE app_instance;
 	HMENU icon_menu;
 	UINT default_menuid;
@@ -36,6 +37,7 @@ public:
 	void Close();
 	void CloseAndQuit(int exit_code);
 	void CloseAndQuit() { return CloseAndQuit(0); }
+	void Enable(bool state=true) { enabled=state; }
 	HMENU GetIconMenu();
 	HWND GetIconWindow();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);

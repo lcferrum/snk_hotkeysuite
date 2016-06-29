@@ -21,7 +21,7 @@ TskbrNtfAreaIcon::~TskbrNtfAreaIcon()
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
 TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid):
-	valid(false), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_atom(0), icon_ntfdata{
+	valid(false), enabled(true), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_atom(0), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
 		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID
@@ -180,12 +180,12 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
 			case WM_COMMAND:
-				if (OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))
+				if (instance->enabled&&OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))
 					return 0;
 				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations if OnWmCommand returned FALSE
 			default:
 				//Non-const cases goes here
-				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon
+				if (instance->enabled&&message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon
 					//For the first version of NOTIFYICONDATA lParam (as a whole, not just LOWORD) holds the mouse or keyboard messages and wParam holds icon ID
 					if (wParam==ICON_UID) {
 						switch (lParam) {

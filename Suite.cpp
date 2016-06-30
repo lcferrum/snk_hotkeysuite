@@ -219,14 +219,14 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			{
 				std::tuple<HotkeyEngine*, DWORD, DWORD> bindingdlg_tuple;
 				bindingdlg_tuple=std::make_tuple(hk_engine, settings->GetBindedVK(), 0);
-				//The fun thing with DialogBoxParam is that it won't return until DLGPROC exits with EndDialog() but in the same time it won't block thread execution
+				//The fun thing with DialogBoxParam is that it won't return until DLGPROC exits with EndDialog but in the same time it won't block thread execution
 				//It creates new message loop within current message loop, while latter remains blocked because current message dispatch hasn't ended (it waits for DialogBoxParam to return)
 				//But other windows still respond because this new message loop besides it's own DLGPROC happily handles all other thread's window processes
-				//When EndDialog is called within DLGPROC, it exits DialogBoxParam's message loop, finishes message dispatch that called DialogBoxParam at first place and returns to thread's original message loop
+				//When EndDialog is called within DLGPROC, it exits DialogBoxParam's message loop, finishes message dispatch that called DialogBoxParam in the first place and returns to thread's original message loop
 				//Q: What happens when DialogBoxParam called several times without exiting previous dialogs?
 				//A: We get several nested message loops and all dialog/window processes will be handled by last created loop
 				//Q: What happens if I use PostQuitMessage with one or several dialogs running?
-				//A: All present message loops will exit (including thread's own, starting from the last created) and DialogBoxParam will return 0 
+				//A: All present message loops will exit (including thread's own, starting from the last created) and DialogBoxParam will return 0 every time it's message loop exits
 				//Q: What happens when I open several dialogs and exit the one that wasn't the last created?
 				//A: DialogBoxParam won't return and last created message loop will still run until it's own dialog exits
 				//A: In the end, randomly closing dialogs, we get proper nested message loop unwinding (i.e. DialogBoxParam will return sequentially starting from the last called)

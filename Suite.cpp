@@ -219,7 +219,11 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			{
 				std::tuple<HotkeyEngine*, DWORD, DWORD> bindingdlg_tuple;
 				bindingdlg_tuple=std::make_tuple(hk_engine, settings->GetBindedVK(), 0);
-				//First disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
+				//The fun thing with DialogBoxParam is that it won't return until DLGPROC exits with EndDialog() but in the same time it won't block thread execution
+				//It creates new message loop within current message loop, which remains blocked because current message dispatch hasn't ended
+				//But other windows still respond because this new message loop besides it's own DLGPROC happily handles all other thread's window processes
+				//When EndDialog is called within DLGPROC, it exits DialogBoxParam's message loop, finishes message dispatch that called DialogBoxParam at first place and returns to thread's original message loop
+				//That's why it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
 				sender->Enable(false);
 				hk_was_running=hk_engine->Stop();
 				//Several words on InitCommonControls() and InitCommonControlsEx()

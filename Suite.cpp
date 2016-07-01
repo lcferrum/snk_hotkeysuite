@@ -5,8 +5,6 @@
 #include "HotkeyEngine.h"
 #include "SuiteCommon.h"
 #include "Res.h"
-#include <memory>
-#include <tuple>
 #include <string>
 #include <windows.h>
 

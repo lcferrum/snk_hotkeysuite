@@ -18,6 +18,7 @@
 #define IDC_CONFIRM_VK		30001
 #define IDC_CANCEL_VK		30002
 #define IDC_VK_VIEWER		30003
+#define IDC_RETRY_VK		30004
 
 #define WM_HSTNAICO			(WM_USER+1)
 #define WM_BINDVK			(WM_USER+2)

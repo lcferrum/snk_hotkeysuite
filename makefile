@@ -29,7 +29,7 @@ UPX=upx
 CFLAGS=-std=c++11 -Wno-write-strings -D_WIN32_WINNT=0x0502 -DNOMINMAX -DUNICODE -D_UNICODE $(DEBUG)
 LDFLAGS=-static-libgcc -static-libstdc++ -s $(WNDSUBSYS)
 UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
-SRC=Suite.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp SuiteSettings.cpp Res.rc
+SRC=Suite.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp SuiteSettings.cpp SuiteBindingDialog.cpp SuiteCommon.cpp Res.rc
 OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
 

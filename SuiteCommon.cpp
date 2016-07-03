@@ -10,7 +10,7 @@ std::wstring GetHexVk(DWORD vk)
 	return hex_vk.str();
 }
 
-std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk)
+std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD oem_sc)
 {
 	//Actual purpose of GetOemChar is to force default OEM vk meaning to maintain some consistency between various installed layouts
 	//Also we have to ensure that this OEM vk stays on the same physical place on hw kb
@@ -29,45 +29,42 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk)
 	//But on German QWERTZ layout VK_OEM_6 represents "`'" key and is relocated to the left of backspace (switching places with QWERTY's VK_OEM_PLUS)
 	//MapVirtualKey(MAPVK_VK_TO_CHAR) actually takes in account keyboard layout, so passing it VK_OEM_6 while German QWERTZ layout selected will result in proper [ ' ] key
 	
-	//Code below checks if default char for OEM key is actually present on this key for any of the installed layouts
-	//0xFF is invalid vk - it will force algorithm to think that default char wasn't found in case of GetKeyboardLayoutList() fails
-	DWORD layout_vk=0xFF;
+	//Code below checks if default char for OEM key is actually present on this hardware key for any of the installed layouts
 	if (int hkl_len=GetKeyboardLayoutList(0, NULL)) {
 		HKL hkl_lst[hkl_len];
 		GetKeyboardLayoutList(hkl_len, hkl_lst);
-		while ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[--hkl_len])))!=oem_vk&&hkl_len);
+		DWORD layout_vk;
+		while (--hkl_len>=0)
+			if ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[hkl_len])))==MapVirtualKeyEx(oem_sc, MAPVK_VSC_TO_VK, hkl_lst[hkl_len]))
+				//Default char is found on OEM vk for one of the layouts - return it
+				return {L'[', L' ', def_char, L' ', L']'};	
 	}
 	
-	if (layout_vk==oem_vk)
-		//If default char is found on OEM vk for one of the layouts - return it
-		return {L'[', L' ', def_char, L' ', L']'};
-	else {
-		//If not found - try with alt char or return actual OEM char
-		if (alt_char!=L'\0')
-			return GetOemChar(alt_char, L'\0', oem_vk);
-		else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
-			return {L'[', L' ', mapped_char, L' ', L']'};
-		else
-			return GetHexVk(oem_vk);
-	}
+	//If not found - try with alt char or return actual OEM char
+	if (alt_char!=L'\0')
+		return GetOemChar(alt_char, L'\0', oem_vk, oem_sc);
+	else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
+		return {L'[', L' ', mapped_char, L' ', L']'};
+	else
+		return GetHexVk(oem_vk);
 }
 
-std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHotkeyStringType type, const wchar_t* prefix, const wchar_t* postfix)
+std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
 {
 	std::wstring hk_str=L"";
 	
 	if (prefix)
 		hk_str+=prefix;
 	
-	if (type==GetHotkeyStringType::FULL||type==GetHotkeyStringType::MOD_KEY) {
+	if (type==HkStrType::FULL||type==HkStrType::MOD_KEY) {
 		switch (mod_key) {
-			case SuiteSettings::CTRL_ALT:
+			case ModKeyType::CTRL_ALT:
 				hk_str=L"Ctrl+Alt+";
 				break;
-			case SuiteSettings::SHIFT_ALT:
+			case ModKeyType::SHIFT_ALT:
 				hk_str=L"Shift+Alt+";
 				break;
-			case SuiteSettings::CTRL_SHIFT:
+			case ModKeyType::CTRL_SHIFT:
 				hk_str=L"Ctrl+Shift+";
 				break;
 		}
@@ -76,7 +73,7 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 	//Mouse buttons, space, enter and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
 	//Space and enter are still here because they can be set through register
 	//Other excluded keys also can be set through register but in this case they will be displayed as hex characters signaling user that something is not right
-	if (type==GetHotkeyStringType::FULL||type==GetHotkeyStringType::VK) {
+	if (type==HkStrType::FULL||type==HkStrType::VK) {
 		switch (vk) {
 			case VK_SPACE:
 				hk_str+=L"Space";
@@ -85,6 +82,9 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Enter";
 				break;
 			case VK_CANCEL:
+				//Break is a special case
+				//It always a two-key combination: Control followed by Break
+				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on AT/XT keyboard)
 				hk_str+=L"Break";
 				break;
 			case VK_BACK:
@@ -97,6 +97,7 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Clear";
 				break;
 			case VK_PAUSE:
+				//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on AT/XT keyboard)
 				hk_str+=L"Pause";
 				break;
 			case VK_CAPITAL:
@@ -160,7 +161,12 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"Execute";
 				break;
 			case VK_SNAPSHOT:
-				hk_str+=L"PrtScn";
+				//For some reason on Windows VK_SNAPSHOT is shared between SysRq and PrtScn scancodes
+				//Also PrtScn's scan code is shared between PrtScn and Num[*] virtual keys (because historically it first came as Num[*]'s alternative on AT/XT keyboard)
+				if (sc==0x54)
+					hk_str+=L"SysRq";
+				else
+					hk_str+=L"PrtScn";
 				break;
 			case VK_INSERT:
 				hk_str+=L"Ins";
@@ -191,18 +197,17 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				break;
 			case VK_SEPARATOR:
 				//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
-				hk_str+=L"Num";
-				hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(VK_SEPARATOR, MAPVK_VK_TO_CHAR), L' ', L']'};
+				hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)MapVirtualKey(VK_SEPARATOR, MAPVK_VK_TO_CHAR), L' ', L']'};
 				break;
 			case VK_SUBTRACT:
 				hk_str+=L"Num[ - ]";
 				break;
 			case VK_DECIMAL:
 				//Decimal separator, localized (can be comma or period)
-				hk_str+=L"Num";
-				hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(VK_DECIMAL, MAPVK_VK_TO_CHAR), L' ', L']'};
+				hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)MapVirtualKey(VK_DECIMAL, MAPVK_VK_TO_CHAR), L' ', L']'};
 				break;
 			case VK_DIVIDE:
+				//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there were no Num[/] on AT/XT keyboard)
 				hk_str+=L"Num[ / ]";
 				break;
 			case VK_NUMLOCK:
@@ -266,59 +271,46 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 				hk_str+=L"LaunchApp2";
 				break;
 			case VK_OEM_1:
-				hk_str+=GetOemChar(L':', L';', VK_OEM_1);
-				hk_str+=L"VK_OEM_1";
+				hk_str+=GetOemChar(L':', L';', vk, sc);
 				break;
 			case VK_OEM_PLUS:
 				hk_str+=L"[ + ]";
-				hk_str+=L"VK_OEM_PLUS";
 				break;
 			case VK_OEM_COMMA:
 				hk_str+=L"[ , ]";
-				hk_str+=L"VK_OEM_COMMA";
 				break;
 			case VK_OEM_MINUS:
 				hk_str+=L"[ - ]";
-				hk_str+=L"VK_OEM_MINUS";
 				break;
 			case VK_OEM_PERIOD:
 				hk_str+=L"[ . ]";
-				hk_str+=L"VK_OEM_PERIOD";
 				break;
 			case VK_OEM_2:
-				hk_str+=GetOemChar(L'?', L'/', VK_OEM_2);
-				hk_str+=L"VK_OEM_2";
+				hk_str+=GetOemChar(L'?', L'/', vk, sc);
 				break;
 			case VK_OEM_3:
-				hk_str+=GetOemChar(L'~', L'`', VK_OEM_3);
-				hk_str+=L"VK_OEM_3";
+				hk_str+=GetOemChar(L'~', L'`', vk, sc);
 				break;
 			case VK_OEM_4:
-				hk_str+=GetOemChar(L'{', L'[', VK_OEM_4);
-				hk_str+=L"VK_OEM_4";
+				hk_str+=GetOemChar(L'{', L'[', vk, sc);
 				break;
 			case VK_OEM_5:
-				hk_str+=GetOemChar(L'|', L'\\', VK_OEM_5);
-				hk_str+=L"VK_OEM_5";
+				hk_str+=GetOemChar(L'|', L'\\', vk, sc);
 				break;
 			case VK_OEM_6:
-				hk_str+=GetOemChar(L'}', L']', VK_OEM_6);
-				hk_str+=L"VK_OEM_6";
+				hk_str+=GetOemChar(L'}', L']', vk, sc);
 				break;
 			case VK_OEM_7:
-				hk_str+=GetOemChar(L'"', L'\'', VK_OEM_7);
-				hk_str+=L"VK_OEM_7";
+				hk_str+=GetOemChar(L'"', L'\'', vk, sc);
 				break;
 			case VK_OEM_8:
 				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb
-				hk_str+=GetOemChar(L'§', L'!', VK_OEM_8);
-				hk_str+=L"VK_OEM_8";
+				hk_str+=GetOemChar(L'§', L'!', vk, sc);
 				break;
 			case VK_OEM_102:
 				//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
 				//Also present on non-102 AZERTY kb as [ > < ]
-				hk_str+=GetOemChar(L'|', L'>', VK_OEM_102);
-				hk_str+=L"VK_OEM_102";
+				hk_str+=GetOemChar(L'|', L'>', vk, sc);
 				break;
 			case VK_OEM_AX:
 				hk_str+=L"AX";
@@ -353,16 +345,18 @@ std::wstring GetHotkeyString(SuiteSettings::ModKeyType mod_key, DWORD vk, GetHot
 			default:
 				if (vk>=0x30&&vk<=0x39) {
 					//0-9 keys
-					//Not using MapVirtualKey(MAPVK_VK_TO_CHAR) because some layouts assume that default map for numeric keys is their shifted-state
-					hk_str+=L"[ "+std::to_wstring(vk-0x30)+L" ]";
+					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
+					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x30+0x30*/, L' ', L']'};
 				} else if (vk>=0x41&&vk<=0x5A) {
 					//A-Z keys
-					hk_str+={L'[', L' ', (wchar_t)MapVirtualKey(vk, MAPVK_VK_TO_CHAR), L' ', L']'};
+					//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
+					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x41+0x41*/, L' ', L']'};
 				} else if (vk>=0x60&&vk<=0x69) {
 					//Numpad 0-9 keys
-					hk_str+=L"Num[ "+std::to_wstring(vk-0x60)+L" ]";
+					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
+					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(vk-0x30) /* vk-0x60+0x30*/, L' ', L']'};
 				} else if (vk>=0x70&&vk<=0x87) {
-					//Function keys
+					//Function F1-F24 keys
 					hk_str+=L"F"+std::to_wstring(vk-0x6F);
 				} else {
 					//Unknown, reserved and rest of OEM specific keys goes here

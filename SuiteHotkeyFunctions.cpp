@@ -182,5 +182,6 @@ bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_eve
 				return true;
 		}
 	}
+	
 	return false;
 }

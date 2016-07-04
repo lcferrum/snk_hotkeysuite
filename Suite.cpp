@@ -6,6 +6,7 @@
 #include "SuiteCommon.h"
 #include "Res.h"
 #include <string>
+#include <memory>
 #include <windows.h>
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
@@ -20,14 +21,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
-	SuiteSettings Settings;
+	std::unique_ptr<SuiteSettings> Settings(new SuiteSettings());
 	KeyTriplet OnKeyTriplet;
 	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
 	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
-		std::bind(IconMenuProc, std::ref(SnkHotkey), &Settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		std::bind(IconMenuProc, std::ref(SnkHotkey), Settings.get(), &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (!SnkIcon->IsValid()) {
 		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_ICONERROR|MB_OK);
 		return 1;
@@ -37,7 +38,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//So it's ok to customize menu here and initialize everything else
 	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
 	//By default IDM_EDIT_LHK menu item is enabled and IDM_SET_EN_LHK is unchecked (see Res.rc)
-	if (Settings.GetLongPress()) {
+	if (Settings->GetLongPress()) {
 		SnkIcon->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED); 
 		OnKeyTriplet.SetLongPress(true);
 	} else {
@@ -45,7 +46,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		OnKeyTriplet.SetLongPress(false);
 	}
 	//By default none of IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT and IDM_SET_SHIFT_ALT is checked (see Res.rc)
-	switch (Settings.GetModKey()) {
+	switch (Settings->GetModKey()) {
 		case ModKeyType::CTRL_ALT:
 			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
 			OnKeyTriplet.SetCtrlAlt();
@@ -64,9 +65,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
 		return 2;
 	}
-	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, Settings.GetBindedVK(), Settings.GetBindedSC(), HkStrType::VK, L"Rebind ", L"...").c_str());
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, Settings->GetBindedVK(), Settings->GetBindedSC(), HkStrType::VK, L"Rebind ", L"...").c_str());
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(Settings.GetModKey(), Settings.GetBindedVK(), Settings.GetBindedSC(), HkStrType::FULL).c_str()); 
+	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(Settings->GetModKey(), Settings->GetBindedVK(), Settings->GetBindedSC(), HkStrType::FULL).c_str()); 
 	
 	//Main thread's message loop
 	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT 
@@ -81,7 +82,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	}
 	
 	//Manually uninitializing some components to make sure right unintialization order
-	SnkHotkey->Stop();
+	SnkHotkey->Stop();			//This way HotkeyEngine is deinitialized right after TskbrNtfAreaIcon
+	Settings->SaveSettings();	//Main parts of HotkeySuite are deinitialized and now it's time to save settings
 	
 	return msg.wParam;
 }

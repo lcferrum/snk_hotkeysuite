@@ -4,6 +4,10 @@
 #include <iostream>
 #endif
 
+#define FLAG_HK_1ST	(1<<0)
+#define FLAG_HK_2ND	(1<<1)
+#define FLAG_HK_3RD	(1<<2)
+#define FLAG_HK_ALL	(FLAG_HK_1ST|FLAG_HK_2ND|FLAG_HK_3RD)
 #define LONG_PRESS_DURATION 3000	//3 sec (keep in mind that this define is compared with GetTickCount() that can have resolution up to 55ms)
 
 KeyTriplet::KeyTriplet():
@@ -18,15 +22,15 @@ bool KeyTriplet::OnCtrlAlt(DWORD vk, bool key_up)
 		case VK_RCONTROL:
 		case VK_CONTROL:
 			//Ctrl
-			if (key_up)	hk_state&=~0x1;
-				else hk_state|=0x1;
+			if (key_up)	hk_state&=~FLAG_HK_1ST;
+				else hk_state|=FLAG_HK_1ST;
 			return true;
 		case VK_LMENU:
 		case VK_RMENU:
 		case VK_MENU:
 			//Alt
-			if (key_up)	hk_state&=~0x2;
-				else hk_state|=0x2;
+			if (key_up)	hk_state&=~FLAG_HK_2ND;
+				else hk_state|=FLAG_HK_2ND;
 			return true;			
 		default:
 			return false;
@@ -40,15 +44,15 @@ bool KeyTriplet::OnCtrlShift(DWORD vk, bool key_up)
 		case VK_RCONTROL:
 		case VK_CONTROL:
 			//Ctrl
-			if (key_up)	hk_state&=~0x1;
-				else hk_state|=0x1;
+			if (key_up)	hk_state&=~FLAG_HK_1ST;
+				else hk_state|=FLAG_HK_1ST;
 			return true;
 		case VK_LSHIFT:
 		case VK_RSHIFT:
 		case VK_SHIFT:
 			//Shift
-			if (key_up)	hk_state&=~0x2;
-				else hk_state|=0x2;
+			if (key_up)	hk_state&=~FLAG_HK_2ND;
+				else hk_state|=FLAG_HK_2ND;
 			return true;			
 		default:
 			return false;
@@ -62,15 +66,15 @@ bool KeyTriplet::OnShiftAlt(DWORD vk, bool key_up)
 		case VK_RMENU:
 		case VK_MENU:
 			//Alt
-			if (key_up)	hk_state&=~0x1;
-				else hk_state|=0x1;
+			if (key_up)	hk_state&=~FLAG_HK_1ST;
+				else hk_state|=FLAG_HK_1ST;
 			return true;		
 		case VK_LSHIFT:
 		case VK_RSHIFT:
 		case VK_SHIFT:
 			//Shift
-			if (key_up)	hk_state&=~0x2;
-				else hk_state|=0x2;
+			if (key_up)	hk_state&=~FLAG_HK_2ND;
+				else hk_state|=FLAG_HK_2ND;
 			return true;			
 		default:
 			return false;
@@ -80,7 +84,7 @@ bool KeyTriplet::OnShiftAlt(DWORD vk, bool key_up)
 bool KeyTriplet::OnTargetKey(DWORD vk, DWORD sc, bool key_up)
 {
 	//For legacy reasons Break, Pause, PrtScn and Num[/] have scancodes shared respectively with ScrLock, NumLock, Num[*] and [?/]
-	//So for these keys we should also compare virtual keys
+	//So for these keys we should also compare virtual keys to distinguish them from one another
 	
 	if (sc==hk_binded_sc) {
 		switch (sc) {
@@ -101,8 +105,8 @@ bool KeyTriplet::OnTargetKey(DWORD vk, DWORD sc, bool key_up)
 		//Don't forget that Ctrl+Pause=Break, Ctrl+ScrLock=Break, Ctrl+NumLock=Pause and Alt+PrtScn=SysRq
 		//So hotkeys like Ctrl+Alt+Pause won't work because Ctrl+Alt+Break will be generated instead
 		
-		if (key_up)	hk_state&=~0x4;
-			else hk_state|=0x4;
+		if (key_up)	hk_state&=~FLAG_HK_3RD;
+			else hk_state|=FLAG_HK_3RD;
 
 		return true;
 	} else
@@ -136,7 +140,7 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 				}
 			}
 			hk_up=true;
-		} else if (hk_state==0x7) {
+		} else if (hk_state==FLAG_HK_ALL) {
 			if (hk_up) {
 				hk_up=false;
 				if (hk_long_press)

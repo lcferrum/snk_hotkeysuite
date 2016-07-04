@@ -161,7 +161,7 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 
 bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 {
-	if (wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN)
+	if (wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN) {
 #ifdef DEBUG
 		std::wcerr<<std::hex<<"KEYDOWN VK: "<<kb_event->vkCode<<L" SC: "<<kb_event->scanCode<<std::endl;
 #endif
@@ -181,5 +181,6 @@ bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_eve
 				PostMessage(dlg_hwnd, bind_wm, kb_event->vkCode, kb_event->scanCode);
 				return true;
 		}
+	}
 	return false;
 }

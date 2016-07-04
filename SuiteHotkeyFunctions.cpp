@@ -1,4 +1,5 @@
 #include "SuiteHotkeyFunctions.h"
+#include "SuiteCommon.h"
 
 #ifdef DEBUG
 #include <iostream>
@@ -12,7 +13,7 @@
 
 KeyTriplet::KeyTriplet():
 	OnModKey(std::bind(&KeyTriplet::OnCtrlAlt, this, std::placeholders::_1, std::placeholders::_2)), 
-	hk_binded_vk(VK_BACK), hk_binded_sc(0x0E), hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
+	hk_binded_vk(DEFAULT_VK), hk_binded_sc(DEFAULT_SC), hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
 {}
 
 bool KeyTriplet::OnCtrlAlt(DWORD vk, bool key_up)

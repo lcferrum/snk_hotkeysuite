@@ -6,7 +6,7 @@
 #include <windows.h>
 
 class SuiteSettings {
-private:
+protected:
 	bool long_press;
 	ModKeyType mod_key;
 	DWORD binded_vk;
@@ -23,12 +23,6 @@ public:
 	void SetModKey(ModKeyType new_key) { mod_key=new_key; }
 	DWORD GetBindedSC() { return binded_sc; }
 	DWORD GetBindedVK() { return binded_vk; }
-/*		
-		if (binded_vk==0xFF)
-			return MapVirtualKeyEx(binded_sc, MAPVK_VSC_TO_VK, initial_hkl);
-		else
-			return binded_vk;
-*/
 	void SetBindedKey(DWORD new_vk_binding, DWORD new_sc_binding) { binded_vk=new_vk_binding; binded_sc=new_sc_binding; }
 	std::wstring GetShkCfgPath() { return shk_cfg_path; }
 	std::wstring GetLhkCfgPath() { return lhk_cfg_path; }
@@ -42,7 +36,8 @@ public:
 
 class SuiteSettingsReg: public SuiteSettings {
 private:
-
+	bool RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var);
+	bool RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name, DWORD &var);
 	void LoadSettingsFromReg();
 public:
 	virtual void SaveSettings();

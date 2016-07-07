@@ -6,12 +6,15 @@
 #include <windows.h>
 
 class SuiteSettings {
+private:
+	std::wstring ExpandEnvironmentStringsWrapper(const std::wstring &path);
 protected:
 	bool long_press;
 	ModKeyType mod_key;
 	DWORD binded_vk;
 	DWORD binded_sc;
 	HKL initial_hkl;
+	bool valid;
 	
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
@@ -24,9 +27,10 @@ public:
 	DWORD GetBindedSC() { return binded_sc; }
 	DWORD GetBindedVK() { return binded_vk; }
 	void SetBindedKey(DWORD new_vk_binding, DWORD new_sc_binding) { binded_vk=new_vk_binding; binded_sc=new_sc_binding; }
-	std::wstring GetShkCfgPath() { return shk_cfg_path; }
-	std::wstring GetLhkCfgPath() { return lhk_cfg_path; }
-	std::wstring GetSnkPath() { return snk_path; }
+	std::wstring GetShkCfgPath() { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
+	std::wstring GetLhkCfgPath() { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
+	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }
+	bool IsValid() { return valid; }
 	
 	virtual void SaveSettings() {}	//Load should be in constructor and suppresses all erors like save
 	

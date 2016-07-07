@@ -1,4 +1,9 @@
 #include "SuiteSettings.h"
+#include <cwchar>
+
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #define DEFAULT_SHK_CFG_PATH	L"on_hotkey.cfg"
 #define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.cfg"
@@ -8,12 +13,46 @@
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 
 SuiteSettings::SuiteSettings():
-	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)),
+	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), valid(true),
 	shk_cfg_path(DEFAULT_SHK_CFG_PATH), lhk_cfg_path(DEFAULT_LHK_CFG_PATH), snk_path(DEFAULT_SNK_PATH)
-{}
+{
+	wchar_t exe_path[MAX_PATH];
+	DWORD ret_len=GetModuleFileName(NULL, exe_path, MAX_PATH);	//Passing NULL as hModule to get current exe path
+	
+	//GetModuleFileName returns 0 on error and nSize (MAX_PATH) if buffer is unsufficient
+	if (ret_len&&ret_len<MAX_PATH) {
+		//GetModuleFileName always returns module's full path (not some relative-to-something-path even if it was passed to CreateProcess in first place)
+		//So instead of using _wsplitpath/_makepath or PathRemoveFileSpec, which have additional code to deal with relative paths, just use wcsrchr to find last backslash occurrence
+		//Also PathRemoveFileSpec doesn't strip trailing slash if file is at drive's root which isn't the thing we want in environment variable
+		if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\'))
+			*last_backslash=L'\0';
+		
+		SetEnvironmentVariable(L"HS_PATH", exe_path);
+#ifdef DEBUG
+		std::wcerr<<L"SET HS_PATH="<<exe_path<<std::endl;
+#endif
+	}
+}
 	
 SuiteSettings::~SuiteSettings()
 {}
+
+std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &path) 
+{ 
+	wchar_t dummy_buf;
+
+	//Documentation says that lpDst parameter is optional but Win 95 version of this function actually fails if lpDst is NULL
+	//So using dummy buffer to get needed buffer length (function returns length in characters including terminating NULL)
+	//If returned length is 0 - it is error
+	if (DWORD buf_len=ExpandEnvironmentStrings(path.c_str(), &dummy_buf, 0)) {
+		wchar_t string_buf[buf_len];
+		//Ensuring that returned length is expected length
+		if (ExpandEnvironmentStrings(path.c_str(), string_buf, buf_len)==buf_len) 
+			return string_buf;
+	}
+	
+	return L"";
+}
 
 SuiteSettingsReg::SuiteSettingsReg():
 	SuiteSettings()

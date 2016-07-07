@@ -54,6 +54,7 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	std::wstring ini_path;
 	
+	std::wstring MakePortablePrefix(const std::wstring &ini_path, const wchar_t* target_path);
 	void LoadSettingsFromIni();
 public:
 	virtual void SaveSettings();

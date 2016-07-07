@@ -1,13 +1,28 @@
 #include "SuiteSettings.h"
+#include <cstdlib>
 #include <cwchar>
 
 #ifdef DEBUG
 #include <iostream>
 #endif
 
+#define KEY_ONHOTKEYCFGPATH				L"OnHotkeyCfgPath"
+#define KEY_ONHOTKEYLONGPRESSCFGPATH	L"OnHotkeyLongPressCfgPath"
+#define	KEY_SNKPATH						L"SnkPath"
+#define KEY_HOTKEYSCANCODE				L"HotkeyScancode"
+#define KEY_HOTKEYVIRTUALKEY			L"HotkeyVirtualKey"
+#define KEY_HOTKEYMODIFIERKEY			L"HotkeyModifierKey"
+#define KEY_LONGPRESSENABLED			L"LongPressEnabled"
+#define VAL_CTRLALT						L"CtrlAlt"
+#define VAL_SHIFTALT					L"ShiftAlt"
+#define VAL_CTRLSHIFT					L"CtrlShift"
+
 #define DEFAULT_SHK_CFG_PATH	L"on_hotkey.cfg"
 #define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.cfg"
+#define PORTABLE_SHK_CFG_PATH	L"portable_on_hotkey.cfg"
+#define PORTABLE_LHK_CFG_PATH	L"portable_on_hotkey_long_press.cfg"
 #define DEFAULT_INI_PATH		L"HotkeySuite.ini"
+#define PORTABLE_INI_PATH		L"PortableHotkeySuite.ini"
 #define DEFAULT_SNK_PATH		L"SnKh.exe"
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
@@ -54,6 +69,45 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 	return L"";
 }
 
+SuiteSettingsIni::SuiteSettingsIni():
+	SuiteSettings(), ini_path(PORTABLE_INI_PATH)
+{
+	shk_cfg_path=PORTABLE_SHK_CFG_PATH;
+	lhk_cfg_path=PORTABLE_LHK_CFG_PATH;
+	
+	LoadSettingsFromIni();
+}
+
+SuiteSettingsIni::SuiteSettingsIni(const std::wstring &ini_path):
+	SuiteSettings(), ini_path(ini_path)
+{
+	shk_cfg_path=MakePortablePrefix(ini_path, DEFAULT_SHK_CFG_PATH);
+	lhk_cfg_path=MakePortablePrefix(ini_path, DEFAULT_LHK_CFG_PATH);
+	
+	LoadSettingsFromIni();
+}
+
+SuiteSettingsIni::~SuiteSettingsIni()
+{}
+
+std::wstring SuiteSettingsIni::MakePortablePrefix(const std::wstring &ini_path, const wchar_t* target_path)
+{
+	wchar_t fname[_MAX_FNAME];
+	
+	_wsplitpath(ini_path.c_str(), NULL, NULL, fname, NULL);
+	
+	if (wcslen(fname))
+		return std::wstring(fname)+L"_"+target_path;
+	else
+		return target_path;
+}
+
+void SuiteSettingsIni::LoadSettingsFromIni()
+{}
+
+void SuiteSettingsIni::SaveSettings()
+{}
+
 SuiteSettingsReg::SuiteSettingsReg():
 	SuiteSettings()
 {
@@ -61,21 +115,6 @@ SuiteSettingsReg::SuiteSettingsReg():
 }
 
 SuiteSettingsReg::~SuiteSettingsReg()
-{}
-
-SuiteSettingsIni::SuiteSettingsIni():
-	SuiteSettings(), ini_path(DEFAULT_INI_PATH)
-{
-	LoadSettingsFromIni();
-}
-
-SuiteSettingsIni::SuiteSettingsIni(const std::wstring &ini_path):
-	SuiteSettings(), ini_path(ini_path)
-{
-	LoadSettingsFromIni();
-}
-
-SuiteSettingsIni::~SuiteSettingsIni()
 {}
 
 bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var)
@@ -133,12 +172,12 @@ void SuiteSettingsReg::LoadSettingsFromReg()
 		RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)!=ERROR_SUCCESS)
 		return;
 		
-	RegSzQueryValue(reg_key, L"OnHotkeyCfgPath", shk_cfg_path);
-	RegSzQueryValue(reg_key, L"OnHotkeyLongPressCfgPath", lhk_cfg_path);
-	RegSzQueryValue(reg_key, L"SnkPath", snk_path);
+	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
+	RegSzQueryValue(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path);
+	RegSzQueryValue(reg_key, KEY_SNKPATH, snk_path);
 	
-	bool sc_found=RegDwordQueryValue(reg_key, L"HotkeyScancode", binded_sc);
-	bool vk_found=RegDwordQueryValue(reg_key, L"HotkeyVirtualKey", binded_vk);
+	bool sc_found=RegDwordQueryValue(reg_key, KEY_HOTKEYSCANCODE, binded_sc);
+	bool vk_found=RegDwordQueryValue(reg_key, KEY_HOTKEYVIRTUALKEY, binded_vk);
 	if (sc_found&&!vk_found) {
 		//If SC was in registry but VK wasn't - make VK from SC
 		binded_vk=MapVirtualKeyEx(binded_sc, MAPVK_VSC_TO_VK, initial_hkl);
@@ -150,17 +189,17 @@ void SuiteSettingsReg::LoadSettingsFromReg()
 	//In case if both VK and SC wern't found - default values will be kept
 	
 	std::wstring mod_key_str;
-	RegSzQueryValue(reg_key, L"HotkeyModifierKey", mod_key_str);
-	if (!mod_key_str.compare(L"Ctrl+Alt")) {
+	RegSzQueryValue(reg_key, KEY_HOTKEYMODIFIERKEY, mod_key_str);
+	if (!mod_key_str.compare(VAL_CTRLALT)) {
 		mod_key=ModKeyType::CTRL_ALT;
-	} else if (!mod_key_str.compare(L"Shift+Alt")) {
+	} else if (!mod_key_str.compare(VAL_SHIFTALT)) {
 		mod_key=ModKeyType::SHIFT_ALT;
-	} else if (!mod_key_str.compare(L"Ctrl+Shift")) {
+	} else if (!mod_key_str.compare(VAL_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
 	}
 	
 	DWORD long_press_dw;
-	if (RegDwordQueryValue(reg_key, L"LongPressEnabled", long_press_dw)) {
+	if (RegDwordQueryValue(reg_key, KEY_LONGPRESSENABLED, long_press_dw)) {
 		long_press=long_press_dw;
 	}
 		
@@ -168,10 +207,4 @@ void SuiteSettingsReg::LoadSettingsFromReg()
 }
 
 void SuiteSettingsReg::SaveSettings()
-{}
-
-void SuiteSettingsIni::LoadSettingsFromIni()
-{}
-
-void SuiteSettingsIni::SaveSettings()
 {}

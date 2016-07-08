@@ -56,16 +56,31 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	std::wstring ini_path;
 	
-	std::wstring MakePortablePrefix(const std::wstring &ini_path, const wchar_t* target_path);
+	std::wstring MakeIniPrefix(const std::wstring &ini_path, const wchar_t* target_path);
 	void LoadSettingsFromIni();
 protected:
+	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
+	
 	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path);
 public:
 	virtual void SaveSettings();
 
-	SuiteSettingsIni();
-	SuiteSettingsIni(const std::wstring &ini_path);
+	SuiteSettingsIni(const std::wstring &rel_ini_path);
 	~SuiteSettingsIni();
+};
+
+class SuiteSettingsPortable: public SuiteSettingsIni {
+public:
+	SuiteSettingsPortable();
+	~SuiteSettingsPortable();
+};
+
+class SuiteSettingsAppData: public SuiteSettingsIni {
+private:
+	std::wstring GetIniAppDataPath();
+public:
+	SuiteSettingsAppData();
+	~SuiteSettingsAppData();
 };
 
 #endif //SUITESETTINGS_H

@@ -19,10 +19,7 @@
 
 #define DEFAULT_SHK_CFG_PATH	L"on_hotkey.cfg"
 #define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.cfg"
-#define PORTABLE_SHK_CFG_PATH	L"portable_on_hotkey.cfg"
-#define PORTABLE_LHK_CFG_PATH	L"portable_on_hotkey_long_press.cfg"
 #define DEFAULT_INI_PATH		L"HotkeySuite.ini"
-#define PORTABLE_INI_PATH		L"PortableHotkeySuite.ini"
 #define DEFAULT_SNK_PATH		L"SnKh.exe"
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
@@ -39,13 +36,13 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 		//GetModuleFileName always returns module's full path (not some relative-to-something-path even if it was passed to CreateProcess in first place)
 		//So instead of using _wsplitpath/_makepath or PathRemoveFileSpec, which have additional code to deal with relative paths, just use wcsrchr to find last backslash occurrence
 		//Also PathRemoveFileSpec doesn't strip trailing slash if file is at drive's root which isn't the thing we want in environment variable
-		if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\'))
-			*last_backslash=L'\0';
-		
-		SetEnvironmentVariable(L"HS_PATH", exe_path);
+		if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\')) {
+			*last_backslash=L'\0';		
+			SetEnvironmentVariable(L"HS_EXE_PATH", exe_path);
 #ifdef DEBUG
-		std::wcerr<<L"SET HS_PATH="<<exe_path<<std::endl;
+			std::wcerr<<L"SET HS_EXE_PATH="<<exe_path<<std::endl;
 #endif
+		}
 	}
 }
 
@@ -73,28 +70,25 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 	return L"";
 }
 
-SuiteSettingsIni::SuiteSettingsIni():
-	SuiteSettings(PORTABLE_SHK_CFG_PATH, PORTABLE_LHK_CFG_PATH), ini_path(PORTABLE_INI_PATH)
-{
-	LoadSettingsFromIni();
-}
-
-SuiteSettingsIni::SuiteSettingsIni(const std::wstring &ini_path):
-	SuiteSettings(MakePortablePrefix(ini_path, DEFAULT_SHK_CFG_PATH), MakePortablePrefix(ini_path, DEFAULT_LHK_CFG_PATH)), ini_path(ini_path)
-{
-	LoadSettingsFromIni();
-}
-
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path):
 	SuiteSettings(shk_cfg_path, lhk_cfg_path), ini_path(ini_path)
 {
-	LoadSettingsFromIni();
+	if (ini_path.empty())
+		valid=false;
+	else
+		LoadSettingsFromIni();
 }
+
+SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
+	SuiteSettingsIni(std::wstring(L"%HS_INI_PATH%\\")+MakeIniPrefix(rel_ini_path, DEFAULT_SHK_CFG_PATH), 
+		std::wstring(L"%HS_INI_PATH%\\")+MakeIniPrefix(rel_ini_path, DEFAULT_LHK_CFG_PATH),
+		GetFullPathNameWrapper(rel_ini_path))
+{}
 
 SuiteSettingsIni::~SuiteSettingsIni()
 {}
 
-std::wstring SuiteSettingsIni::MakePortablePrefix(const std::wstring &ini_path, const wchar_t* target_path)
+std::wstring SuiteSettingsIni::MakeIniPrefix(const std::wstring &ini_path, const wchar_t* target_path)
 {
 	wchar_t fname[_MAX_FNAME];
 	
@@ -106,14 +100,57 @@ std::wstring SuiteSettingsIni::MakePortablePrefix(const std::wstring &ini_path, 
 		return target_path;
 }
 
+std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_path)
+{
+	wchar_t dummy_buf;
+	wchar_t* fname_pos;
+
+	//If returned length is 0 - it is error
+	if (DWORD buf_len=GetFullPathName(rel_path.c_str(), 0, &dummy_buf, &fname_pos)) {
+		wchar_t string_buf[buf_len];
+		//Ensuring that returned length is expected length and resulting string contains file name (i.e. it's not directory)
+		if (GetFullPathName(rel_path.c_str(), buf_len, string_buf, &fname_pos)+1==buf_len&&fname_pos!=NULL) 
+			return string_buf;
+	}
+	
+	return L"";
+}
+
 void SuiteSettingsIni::LoadSettingsFromIni()
-{}
+{
+	size_t last_backslash;
+	if ((last_backslash=ini_path.find_last_of(L'\\'))!=std::wstring::npos) {
+		SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
+#ifdef DEBUG
+		std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
+#endif
+	}
+}
 
 void SuiteSettingsIni::SaveSettings()
 {}
 
+SuiteSettingsPortable::SuiteSettingsPortable():
+	SuiteSettingsIni(L"%HS_INI_PATH%\\portable_" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\portable_" DEFAULT_LHK_CFG_PATH, GetFullPathNameWrapper(L"Portable" DEFAULT_INI_PATH))
+{}
+
+SuiteSettingsPortable::~SuiteSettingsPortable()
+{}
+
+SuiteSettingsAppData::SuiteSettingsAppData():
+	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath())
+{}
+
+SuiteSettingsAppData::~SuiteSettingsAppData()
+{}
+
+std::wstring SuiteSettingsAppData::GetIniAppDataPath()
+{
+	return L"";
+}
+
 SuiteSettingsReg::SuiteSettingsReg():
-	SuiteSettings()
+	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH)
 {
 	LoadSettingsFromReg();
 }

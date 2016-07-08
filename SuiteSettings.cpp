@@ -24,9 +24,9 @@
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 
-SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path):
+SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), valid(true),
-	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(DEFAULT_SNK_PATH)
+	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
 {
 	wchar_t exe_path[MAX_PATH];
 	DWORD ret_len=GetModuleFileName(NULL, exe_path, MAX_PATH);	//Passing NULL as hModule to get current exe path
@@ -47,12 +47,9 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 }
 
 SuiteSettings::SuiteSettings():
-	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH)
+	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH, DEFAULT_SNK_PATH)
 {}
 	
-SuiteSettings::~SuiteSettings()
-{}
-
 std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &path) 
 { 
 	wchar_t dummy_buf;
@@ -71,7 +68,7 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 }
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path):
-	SuiteSettings(shk_cfg_path, lhk_cfg_path), ini_path(ini_path)
+	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH\\" DEFAULT_SNK_PATH), ini_path(ini_path)
 {
 	if (ini_path.empty())
 		valid=false;
@@ -83,9 +80,6 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
 	SuiteSettingsIni(std::wstring(L"%HS_INI_PATH%\\")+MakeIniPrefix(rel_ini_path, DEFAULT_SHK_CFG_PATH), 
 		std::wstring(L"%HS_INI_PATH%\\")+MakeIniPrefix(rel_ini_path, DEFAULT_LHK_CFG_PATH),
 		GetFullPathNameWrapper(rel_ini_path))
-{}
-
-SuiteSettingsIni::~SuiteSettingsIni()
 {}
 
 std::wstring SuiteSettingsIni::MakeIniPrefix(const std::wstring &ini_path, const wchar_t* target_path)
@@ -134,14 +128,8 @@ SuiteSettingsPortable::SuiteSettingsPortable():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\portable_" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\portable_" DEFAULT_LHK_CFG_PATH, GetFullPathNameWrapper(L"Portable" DEFAULT_INI_PATH))
 {}
 
-SuiteSettingsPortable::~SuiteSettingsPortable()
-{}
-
 SuiteSettingsAppData::SuiteSettingsAppData():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath())
-{}
-
-SuiteSettingsAppData::~SuiteSettingsAppData()
 {}
 
 std::wstring SuiteSettingsAppData::GetIniAppDataPath()
@@ -150,13 +138,10 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath()
 }
 
 SuiteSettingsReg::SuiteSettingsReg():
-	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH)
+	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, L"%HS_EXE_PATH\\" DEFAULT_SNK_PATH)
 {
 	LoadSettingsFromReg();
 }
-
-SuiteSettingsReg::~SuiteSettingsReg()
-{}
 
 bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var)
 {

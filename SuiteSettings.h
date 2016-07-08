@@ -20,7 +20,7 @@ protected:
 	std::wstring lhk_cfg_path;
 	std::wstring snk_path;
 	
-	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path);
+	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path);
 public:
 	bool GetLongPress() { return long_press; }
 	void SetLongPress(bool enabled) { long_press=enabled; }
@@ -37,7 +37,6 @@ public:
 	virtual void SaveSettings() {}	//Load should be in constructor and suppresses all erors like save
 	
 	SuiteSettings();
-	~SuiteSettings();
 };
 
 class SuiteSettingsReg: public SuiteSettings {
@@ -49,7 +48,6 @@ public:
 	virtual void SaveSettings();
 	
 	SuiteSettingsReg();
-	~SuiteSettingsReg();
 };
 
 class SuiteSettingsIni: public SuiteSettings {
@@ -66,13 +64,11 @@ public:
 	virtual void SaveSettings();
 
 	SuiteSettingsIni(const std::wstring &rel_ini_path);
-	~SuiteSettingsIni();
 };
 
 class SuiteSettingsPortable: public SuiteSettingsIni {
 public:
 	SuiteSettingsPortable();
-	~SuiteSettingsPortable();
 };
 
 class SuiteSettingsAppData: public SuiteSettingsIni {
@@ -80,7 +76,6 @@ private:
 	std::wstring GetIniAppDataPath();
 public:
 	SuiteSettingsAppData();
-	~SuiteSettingsAppData();
 };
 
 #endif //SUITESETTINGS_H

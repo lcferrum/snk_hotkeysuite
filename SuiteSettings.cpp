@@ -27,9 +27,9 @@
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 
-SuiteSettings::SuiteSettings():
+SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), valid(true),
-	shk_cfg_path(DEFAULT_SHK_CFG_PATH), lhk_cfg_path(DEFAULT_LHK_CFG_PATH), snk_path(DEFAULT_SNK_PATH)
+	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(DEFAULT_SNK_PATH)
 {
 	wchar_t exe_path[MAX_PATH];
 	DWORD ret_len=GetModuleFileName(NULL, exe_path, MAX_PATH);	//Passing NULL as hModule to get current exe path
@@ -48,6 +48,10 @@ SuiteSettings::SuiteSettings():
 #endif
 	}
 }
+
+SuiteSettings::SuiteSettings():
+	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH)
+{}
 	
 SuiteSettings::~SuiteSettings()
 {}
@@ -70,20 +74,20 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 }
 
 SuiteSettingsIni::SuiteSettingsIni():
-	SuiteSettings(), ini_path(PORTABLE_INI_PATH)
+	SuiteSettings(PORTABLE_SHK_CFG_PATH, PORTABLE_LHK_CFG_PATH), ini_path(PORTABLE_INI_PATH)
 {
-	shk_cfg_path=PORTABLE_SHK_CFG_PATH;
-	lhk_cfg_path=PORTABLE_LHK_CFG_PATH;
-	
 	LoadSettingsFromIni();
 }
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &ini_path):
-	SuiteSettings(), ini_path(ini_path)
+	SuiteSettings(MakePortablePrefix(ini_path, DEFAULT_SHK_CFG_PATH), MakePortablePrefix(ini_path, DEFAULT_LHK_CFG_PATH)), ini_path(ini_path)
 {
-	shk_cfg_path=MakePortablePrefix(ini_path, DEFAULT_SHK_CFG_PATH);
-	lhk_cfg_path=MakePortablePrefix(ini_path, DEFAULT_LHK_CFG_PATH);
-	
+	LoadSettingsFromIni();
+}
+
+SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path):
+	SuiteSettings(shk_cfg_path, lhk_cfg_path), ini_path(ini_path)
+{
 	LoadSettingsFromIni();
 }
 

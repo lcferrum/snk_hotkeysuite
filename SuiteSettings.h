@@ -19,6 +19,8 @@ protected:
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
 	std::wstring snk_path;
+	
+	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path);
 public:
 	bool GetLongPress() { return long_press; }
 	void SetLongPress(bool enabled) { long_press=enabled; }
@@ -56,6 +58,8 @@ private:
 	
 	std::wstring MakePortablePrefix(const std::wstring &ini_path, const wchar_t* target_path);
 	void LoadSettingsFromIni();
+protected:
+	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path);
 public:
 	virtual void SaveSettings();
 

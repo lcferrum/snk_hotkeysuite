@@ -9,12 +9,15 @@ class SuiteSettings {
 private:
 	std::wstring ExpandEnvironmentStringsWrapper(const std::wstring &path);
 protected:
+	enum StorageType:char {USER, SYSTEM, CUSTOM, NONE};
+
 	bool long_press;
 	ModKeyType mod_key;
 	DWORD binded_vk;
 	DWORD binded_sc;
 	HKL initial_hkl;
 	bool valid;
+	StorageType storage;
 	
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
@@ -54,12 +57,12 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	std::wstring ini_path;
 	
-	std::wstring MakeIniPrefix(const std::wstring &ini_path, const wchar_t* target_path);
+	std::wstring MakeIniPrefixFromPath(const std::wstring &path);
 	void LoadSettingsFromIni();
 protected:
 	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
 	
-	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &ini_path);
+	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path);
 public:
 	virtual void SaveSettings();
 

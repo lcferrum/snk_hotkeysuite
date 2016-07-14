@@ -19,14 +19,14 @@
 #define VAL_SHIFTALT					L"ShiftAlt"
 #define VAL_CTRLSHIFT					L"CtrlShift"
 
-#define DEFAULT_SHK_CFG_PATH	L"on_hotkey.cfg"
-#define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.cfg"
+#define DEFAULT_SHK_CFG_PATH	L"on_hotkey.txt"
+#define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.txt"
 #define DEFAULT_INI_PATH		L"HotkeySuite.ini"
 #define DEFAULT_SNK_PATH		L"SnKh.exe"
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 #define SUITE_INI_SECTION		L"HotkeySuite"
-#define SUITE_APPDATA_DIR		L"SnK HotkeySuite"	//One level dir only
+#define SUITE_APPDATA_DIR		L"SnK HotkeySuite"	//Single level dir only
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), valid(true), stored(false),
@@ -100,11 +100,12 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	
 	//Check if section exists
 	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer
-	//If buffer is too small - returned list is truncated to buffer size and terminated with two NULLs
-	//So if buffer is completely empty - no keys were found in section or section doesn't exist
-	wchar_t section_test_buf[3];
-	GetPrivateProfileString(ini_section.c_str(), NULL, NULL, section_test_buf, 3, ini_path.c_str());
-	if (section_test_buf[0]==L'\0')
+	//If buffer is too small - returned list is truncated to buffer size, terminated with two NULLs and GetLastError is ERROR_MORE_DATA
+	//If there are no keys in section and section exists - function succeeds (GetLastError=ERROR_SUCCESS) but return buffer should be at least 2 character in size so not to get ERROR_MORE_DATA
+	//In all other cases (file or section doesn't exist) GetLastError=ERROR_FILE_NOT_FOUND
+	wchar_t section_test_buf[2];
+	GetPrivateProfileString(ini_section.c_str(), NULL, NULL, section_test_buf, 2, ini_path.c_str());
+	if (GetLastError()==ERROR_FILE_NOT_FOUND)
 		return;
 	stored=true;
 		

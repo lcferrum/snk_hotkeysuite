@@ -3,10 +3,32 @@
 #include <iomanip>
 #include <sstream>
 
-std::wstring GetHexVk(DWORD vk)
+std::wstring GetExecutableFileName(bool path_only)
+{
+	wchar_t exe_path[MAX_PATH];
+	DWORD ret_len=GetModuleFileName(NULL, exe_path, MAX_PATH);	//Passing NULL as hModule to get current exe path
+	
+	//GetModuleFileName returns 0 on error and nSize (MAX_PATH) if buffer is unsufficient
+	if (ret_len&&ret_len<MAX_PATH) {
+		//GetModuleFileName always returns module's full path (not some relative-to-something-path even if it was passed to CreateProcess in first place)
+		//So instead of using _wsplitpath/_makepath or PathRemoveFileSpec, which have additional code to deal with relative paths, just use wcsrchr to find last backslash occurrence
+		//Also PathRemoveFileSpec doesn't strip trailing slash if file is at drive's root which isn't the thing we want in environment variable
+		if (path_only) {
+			if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\')) {
+				*last_backslash=L'\0';
+				return exe_path;
+			}
+		} else
+			return exe_path;
+	}
+	
+	return L"";
+}
+
+std::wstring DwordToHexString(DWORD vk, int hex_width)
 {
 	std::wstringstream hex_vk;
-	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(2)<<vk;
+	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(hex_width)<<vk;
 	return hex_vk.str();
 }
 
@@ -46,7 +68,7 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 	else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
 		return {L'[', L' ', mapped_char, L' ', L']'};
 	else
-		return GetHexVk(oem_vk);
+		return DwordToHexString(oem_vk);
 }
 
 std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
@@ -360,7 +382,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 					hk_str+=L"F"+std::to_wstring(vk-0x6F);
 				} else {
 					//Unknown, reserved and rest of OEM specific keys goes here
-					hk_str+=GetHexVk(vk);
+					hk_str+=DwordToHexString(vk);
 				}
 		}
 	}

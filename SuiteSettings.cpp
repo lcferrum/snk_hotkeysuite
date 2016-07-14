@@ -227,7 +227,7 @@ std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_pa
 void SuiteSettingsIni::SaveSettings()
 {
 	//WritePrivateProfileString can create file if it doesn't exists but only if all the directories in file path exist
-	//SuiteSettingsIni constructor has already attempted to create ini file without creating full directory tree and if it failed validness was set to false
+	//SuiteSettingsIni constructor has already tested directory existence and if it failed validness was set to false
 	stored=true;
 	if (!valid)
 		return;

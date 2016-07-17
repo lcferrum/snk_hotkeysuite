@@ -71,20 +71,22 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	}
 	
 	//If we don't have any backslashes in path - this means that path is not valid (it should have been absolute path)
+	//Getting last backslash of absolute file path is equivalent to PathRemoveFileSpec which also handles non-absolute paths
 	size_t last_backslash;
-	DWORD dwAttrib;
-	if ((last_backslash=ini_path.find_last_of(L'\\'))!=std::wstring::npos) {
-		//Ini directory should exist
-		dwAttrib=GetFileAttributes(ini_path.substr(0, last_backslash).c_str());
-		if (dwAttrib==INVALID_FILE_ATTRIBUTES||!(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-			valid=false;
-			return;
-		}
-		SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
+	if ((last_backslash=ini_path.find_last_of(L'\\'))==std::wstring::npos) {
+		valid=false;
+		return;
+	}
+	
+	//If initialization hasn't failed yet - this means that ini_path is at least valid to be used for environment variable
+	SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
 #ifdef DEBUG
-		std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
+	std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
 #endif
-	} else {
+
+	//Ini directory should exist
+	DWORD dwAttrib=GetFileAttributes(ini_path.substr(0, last_backslash).c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||!(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
 		valid=false;
 		return;
 	}
@@ -274,12 +276,26 @@ SuiteSettingsPortable::SuiteSettingsPortable():
 //------------------------------ APPDATA -------------------------------
 
 SuiteSettingsAppData::SuiteSettingsAppData():
-	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetAndCreateIniAppDataPath(), SUITE_INI_SECTION)
-{}
+	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
+{
+	if (!valid&&!ini_path.empty()) {
+		//If after calling SuiteSettingsIni constructor valid is false and ini_path (returned by GetIniAppDataPath) is not empty this means that actually everything is ok
+		//This is because SuiteSettingsAppData in contrast with SuiteSettingsIni doesn't require directory tree to ini_path to exist or ini_path not to be directory itself
+		//It will construct valid directory tree (and delete ini_path if it's directory) in SaveSettings
+		//Taking in account that GetIniAppDataPath returns only absolute paths and in case of error returns empty directory this means that valid was set to false because of aforementioned issues
+		//And we can deal with it without problems
+		valid=true;
+	}
+}
 
-std::wstring SuiteSettingsAppData::GetAndCreateIniAppDataPath() const
+std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 {
 	return L"";
+}
+
+void SuiteSettingsAppData::SaveSettings()
+{
+	SuiteSettingsIni::SaveSettings();
 }
 
 //------------------------------ REGISTRY -------------------------------

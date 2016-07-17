@@ -37,6 +37,7 @@ public:
 	std::wstring GetLhkCfgPath() { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
 	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }
 	bool IsValid() { return valid; }
+	bool IsStored() { return stored; }
 	
 	virtual void SaveSettings() {}	//Load should be in constructor and suppresses all erors like save
 	
@@ -57,12 +58,12 @@ public:
 
 class SuiteSettingsIni: public SuiteSettings {
 private:
-	std::wstring ini_path;
-	std::wstring ini_section;
-	
 	bool IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const;
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
 protected:
+	std::wstring ini_path;
+	std::wstring ini_section;
+
 	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
 	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path, ini_section and ini_path without any modifications and checks
@@ -88,8 +89,10 @@ public:
 
 class SuiteSettingsAppData: public SuiteSettingsIni {
 private:
-	std::wstring GetAndCreateIniAppDataPath() const;
+	std::wstring GetIniAppDataPath() const;
 public:
+	virtual void SaveSettings();
+
 	SuiteSettingsAppData();
 };
 

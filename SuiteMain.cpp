@@ -18,11 +18,11 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, L"SNK_HS: RUNNING", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
 		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (!SnkIcon->IsValid()) {
-		MessageBox(NULL, L"Failed to create icon!", L"SNK_HS", MB_ICONERROR|MB_OK);
-		return 1;
+		ErrorMessage(L"Failed to create icon!");
+		return ERR_SUITEMAIN+1;
 	}
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
@@ -53,8 +53,8 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	}
 	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
 	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::OnKeyPress, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
-		MessageBox(NULL, L"Failed to set keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
-		return 2;
+		ErrorMessage(L"Failed to set keyboard hook!");
+		return ERR_SUITEMAIN+2;
 	}
 	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::VK, L"Rebind ", L"...").c_str());
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
@@ -89,16 +89,16 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			//But in this case icon will be briefly present after the end of message loop till the end of WinMain, though being unresponsive
 			//It will be better to destroy the icon right away and then exit message loop
 			//And after that do all other uninitialization without icon being visible for unknown purpose
-			sender->CloseAndQuit();
+			sender->CloseAndQuit();	//Sets WM_QUIT's wParam to 0
 			return true;
 		case IDM_STOP_START:
 			if (hk_engine->IsRunning()) {
 				hk_engine->Stop();
-				sender->ChangeIconTooltip(L"SNK_HS: STOPPED");
+				sender->ChangeIconTooltip(SNK_HS_TITLE L": Stopped");
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 			} else {
 				if (!hk_engine->Start()) break;
-				sender->ChangeIconTooltip(L"SNK_HS: RUNNING");
+				sender->ChangeIconTooltip(SNK_HS_TITLE L": Running");
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Stop"); 
 			}
 			return true;
@@ -175,16 +175,17 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//Also these functions has nothing to do with "Win XP"/"ComCtl32 v6+" style - just supply proper manifest to make "standard" controls use it
 				//IDD_BINDINGDLG uses only "standard" controls
 				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialogProc, (LPARAM)&bd_dlgprc_param)) {
-					//DialogBoxParam will return 0 on Cancel, -1 on fail and 1 on Confirm
-					case -1:
+					case BD_DLGPRC_ERROR:
+					case DLGBX_FN_INV_PARAM:
+					case DLGBX_FN_FAILED:
 						break;
-					case 1:
+					case BD_DLGPRC_OK:
 						hk_triplet->SetBindedKey(bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc);
 						settings->SetBindedKey(bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc);
 						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc, HkStrType::VK, L"Rebind ", L"...").c_str());
 						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc, HkStrType::FULL).c_str()); 
-					case 0:
+					case BD_DLGPRC_CANCEL:
 						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
 						sender->Enable();
 						return true;
@@ -196,8 +197,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	}
 	
 	//We get there after break which happens instead of return in all cases where hk_engine should have restarted but failed
-	MessageBox(NULL, L"Failed to restart keyboard hook!", L"SNK_HS", MB_ICONERROR|MB_OK);
-	sender->CloseAndQuit(3);
+	ErrorMessage(L"Failed to restart keyboard hook!");
+	sender->CloseAndQuit(ERR_SUITEMAIN+3);	//Sets WM_QUIT's wParam to ERR_SUITEMAIN+0
 	return true;
 }
 

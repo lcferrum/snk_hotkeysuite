@@ -4,6 +4,12 @@
 #include "HotkeyEngine.h"
 #include <windows.h>
 
+#define DLGBX_FN_INV_PARAM					0
+#define DLGBX_FN_FAILED						-1
+#define BD_DLGPRC_OK						1
+#define BD_DLGPRC_CANCEL					2
+#define BD_DLGPRC_ERROR						3
+
 typedef struct {
 	HotkeyEngine* hk_engine;
 	DWORD original_vk;

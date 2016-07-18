@@ -46,7 +46,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				
 				//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
 				if (!bd_dlgprc_param->hk_engine->StartNew(std::bind(BindKey, hwndDlg, WM_BINDSC, std::placeholders::_1, std::placeholders::_2)))
-					EndDialogWithDeinit(hwndDlg, -1, hFont);
+					EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR, hFont);
 				
 				return TRUE;
 			}
@@ -66,7 +66,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 		case WM_CLOSE:
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
 			bd_dlgprc_param->hk_engine->Stop();
-			EndDialogWithDeinit(hwndDlg, 0);
+			EndDialogWithDeinit(hwndDlg, BD_DLGPRC_CANCEL);
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls
@@ -81,13 +81,13 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...");
 						//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
 						if (!bd_dlgprc_param->hk_engine->Start())
-							EndDialogWithDeinit(hwndDlg, -1);
+							EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR);
 						return TRUE;
 					case IDC_CONFIRM_SC:
-						EndDialogWithDeinit(hwndDlg, 1);
+						EndDialogWithDeinit(hwndDlg, BD_DLGPRC_OK);
 						return TRUE;
 					case IDC_CANCEL_SC:
-						EndDialogWithDeinit(hwndDlg, 0);
+						EndDialogWithDeinit(hwndDlg, BD_DLGPRC_CANCEL);
 						return TRUE;
 				}
 			}

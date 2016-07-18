@@ -3,6 +3,11 @@
 #include <iomanip>
 #include <sstream>
 
+void ErrorMessage(const wchar_t* err_msg)
+{
+	MessageBox(NULL, err_msg, SNK_HS_TITLE, MB_ICONERROR|MB_OK);
+}
+
 std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 {
 	wchar_t exe_path[MAX_PATH];
@@ -68,7 +73,7 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 	else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
 		return {L'[', L' ', mapped_char, L' ', L']'};
 	else
-		return DwordToHexString(oem_vk);
+		return DwordToHexString(oem_vk, 2);
 }
 
 std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
@@ -368,21 +373,21 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				if (vk>=0x30&&vk<=0x39) {
 					//0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x30+0x30*/, L' ', L']'};
+					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x30+0x30 */, L' ', L']'};
 				} else if (vk>=0x41&&vk<=0x5A) {
 					//A-Z keys
 					//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
-					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x41+0x41*/, L' ', L']'};
+					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x41+0x41 */, L' ', L']'};
 				} else if (vk>=0x60&&vk<=0x69) {
 					//Numpad 0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(vk-0x30) /* vk-0x60+0x30*/, L' ', L']'};
+					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(vk-0x30) /* vk-0x60+0x30 */, L' ', L']'};
 				} else if (vk>=0x70&&vk<=0x87) {
 					//Function F1-F24 keys
 					hk_str+=L"F"+std::to_wstring(vk-0x6F);
 				} else {
 					//Unknown, reserved and rest of OEM specific keys goes here
-					hk_str+=DwordToHexString(vk);
+					hk_str+=DwordToHexString(vk, 2);
 				}
 		}
 	}

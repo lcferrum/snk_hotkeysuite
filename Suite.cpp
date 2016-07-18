@@ -25,8 +25,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	}
 	
 	if (!Settings->SaveSettings()) {
-		MessageBox(NULL, L"Failed to read settings!", L"SNK_HS", MB_ICONERROR|MB_OK);
-		return 0;
+		ErrorMessage(L"Failed to load settings!");
+		return ERR_SUITE+1;
 	} else
-		return SuiteMain(hInstance, Settings.get());
+		return SuiteMain(hInstance, Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
 }

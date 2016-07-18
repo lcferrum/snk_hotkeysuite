@@ -34,6 +34,7 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
 #ifdef DEBUG
+	std::wcerr<<L"SETTINGS: DEFAULT (BASE)"<<std::endl;
 	std::wcerr<<L"SET HS_EXE_PATH="<<GetExecutableFileName(L"")<<std::endl;
 #endif
 }
@@ -65,6 +66,9 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), ini_path(abs_ini_path), ini_section(ini_section)
 {
 	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path
+#ifdef DEBUG
+	std::wcerr<<L"SETTINGS: INI"<<std::endl;
+#endif
 	
 	//Empty path is only exception - derived constructor should pass it in case of error
 	if (ini_path.empty())
@@ -270,7 +274,11 @@ bool SuiteSettingsIni::SaveSettings()
 
 SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
 	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), ini_section)
-{}
+{
+#ifdef DEBUG
+	std::wcerr<<L"SETTINGS: SECTION"<<std::endl;
+#endif
+}
 
 std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
 {
@@ -282,7 +290,11 @@ std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
 
 SuiteSettingsAppData::SuiteSettingsAppData():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
-{}
+{
+#ifdef DEBUG
+	std::wcerr<<L"SETTINGS: APPDATA"<<std::endl;
+#endif
+}
 
 std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 {
@@ -302,6 +314,10 @@ SuiteSettingsReg::SuiteSettingsReg():
 	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), user(false)
 {
 	HKEY reg_key;
+	
+#ifdef DEBUG
+	std::wcerr<<L"SETTINGS: REG"<<std::endl;
+#endif
 	
 	//Leave default values if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
 	if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {

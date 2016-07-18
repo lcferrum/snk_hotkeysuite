@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <sstream>
 
-std::wstring GetExecutableFileName(bool path_only)
+std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 {
 	wchar_t exe_path[MAX_PATH];
 	DWORD ret_len=GetModuleFileName(NULL, exe_path, MAX_PATH);	//Passing NULL as hModule to get current exe path
@@ -13,10 +13,10 @@ std::wstring GetExecutableFileName(bool path_only)
 		//GetModuleFileName always returns module's full path (not some relative-to-something-path even if it was passed to CreateProcess in first place)
 		//So instead of using _wsplitpath/_makepath or PathRemoveFileSpec, which have additional code to deal with relative paths, just use wcsrchr to find last backslash occurrence
 		//Also PathRemoveFileSpec doesn't strip trailing slash if file is at drive's root which isn't the thing we want in environment variable
-		if (path_only) {
+		if (replace_fname) {
 			if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\')) {
 				*last_backslash=L'\0';
-				return exe_path;
+				return std::wstring(exe_path)+replace_fname;
 			}
 		} else
 			return exe_path;

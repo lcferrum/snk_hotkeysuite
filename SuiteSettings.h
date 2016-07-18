@@ -38,7 +38,7 @@ public:
 	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }
 	bool IsStored() { return stored; }
 	
-	virtual bool SaveSettings() {}	//Load should be in constructor and suppresses all erors like save
+	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors like save
 	
 	SuiteSettings();
 };

@@ -32,9 +32,9 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), stored(false),
 	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
 {
-	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(true).c_str());
+	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
 #ifdef DEBUG
-	std::wcerr<<L"SET HS_EXE_PATH="<<GetExecutableFileName(true)<<std::endl;
+	std::wcerr<<L"SET HS_EXE_PATH="<<GetExecutableFileName(L"")<<std::endl;
 #endif
 }
 
@@ -154,7 +154,7 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
 {}
 
 SuiteSettingsIni::SuiteSettingsIni():
-	SuiteSettingsIni(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(true)+L"\\" DEFAULT_INI_PATH, SUITE_INI_SECTION)
+	SuiteSettingsIni(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), SUITE_INI_SECTION)
 {}
 
 bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const
@@ -269,7 +269,7 @@ bool SuiteSettingsIni::SaveSettings()
 //------------------------------ SECTION -------------------------------
 
 SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
-	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(true)+L"\\" DEFAULT_INI_PATH, ini_section)
+	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), ini_section)
 {}
 
 std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const

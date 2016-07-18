@@ -29,7 +29,7 @@
 #define SUITE_APPDATA_DIR		L"SnK HotkeySuite"	//Single level dir only
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
-	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), valid(true), stored(false),
+	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), stored(false),
 	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(true).c_str());
@@ -64,41 +64,25 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section):
 	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), ini_path(abs_ini_path), ini_section(ini_section)
 {
-	//Empty paths and sections are not allowed
-	if (ini_path.empty()||ini_section.empty()) {
-		valid=false;
-		return;
-	}
+	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path
 	
-	//If we don't have any backslashes in path - this means that path is not valid (it should have been absolute path)
-	//Getting last backslash of absolute file path is equivalent to PathRemoveFileSpec which also handles non-absolute paths
+	//Empty path is only exception - derived constructor should pass it in case of error
+	if (ini_path.empty())
+		return;
+	
+	//Actually this branch should always work because, once again, passed path should be absolute file path or empty string
 	size_t last_backslash;
-	if ((last_backslash=ini_path.find_last_of(L'\\'))==std::wstring::npos) {
-		valid=false;
-		return;
+	if ((last_backslash=ini_path.find_last_of(L'\\'))!=std::wstring::npos) {
+		SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
+	#ifdef DEBUG
+		std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
+	#endif
 	}
 	
-	//If initialization hasn't failed yet - this means that ini_path is at least valid to be used for environment variable
-	SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
-#ifdef DEBUG
-	std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
-#endif
-
-	//Ini directory should exist
-	DWORD dwAttrib=GetFileAttributes(ini_path.substr(0, last_backslash).c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||!(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		valid=false;
+	//Leave default values if ini file doesn't exist
+	DWORD dwAttrib=GetFileAttributes(ini_path.c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY))
 		return;
-	}
-	
-	//Leave default values if ini file doesn't exist (and this ini file shouldn't be directory itself)
-	dwAttrib=GetFileAttributes(ini_path.c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES) {
-		return;
-	} else if (dwAttrib&FILE_ATTRIBUTE_DIRECTORY) {
-		valid=false;
-		return;
-	}
 	
 	//Check if section exists
 	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer
@@ -109,6 +93,7 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	GetPrivateProfileString(ini_section.c_str(), NULL, NULL, section_test_buf, 2, ini_path.c_str());
 	if (GetLastError()==ERROR_FILE_NOT_FOUND)
 		return;
+	
 	stored=true;
 		
 	IniSzQueryValue(KEY_ONHOTKEYCFGPATH, this->shk_cfg_path);
@@ -166,6 +151,10 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetFullPathNameWrapper(rel_ini_path), SUITE_INI_SECTION)
+{}
+
+SuiteSettingsIni::SuiteSettingsIni():
+	SuiteSettingsIni(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(true)+L"\\" DEFAULT_INI_PATH, SUITE_INI_SECTION)
 {}
 
 bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const
@@ -227,32 +216,54 @@ std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_pa
 	return L"";
 }
 
-void SuiteSettingsIni::SaveSettings()
+bool SuiteSettingsIni::SaveSettings()
 {
+	//Empty paths are not allowed
+	if (ini_path.empty())
+		return false;
+
 	//WritePrivateProfileString can create file if it doesn't exists but only if all the directories in file path exist
-	//SuiteSettingsIni constructor has already tested directory existence and if it failed validness was set to false
-	stored=true;
-	if (!valid)
-		return;
 	
-	WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYCFGPATH, shk_cfg_path.c_str(), ini_path.c_str());
-	WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path.c_str(), ini_path.c_str());
-	WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str());
-	WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString(binded_sc, 8).c_str(), ini_path.c_str());
-	WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_vk, 8).c_str(), ini_path.c_str());
+	bool save_succeeded=true;
+	
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYCFGPATH, shk_cfg_path.c_str(), ini_path.c_str()))
+		save_succeeded=false;
+
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path.c_str(), ini_path.c_str()))
+		save_succeeded=false;
+
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str()))
+		save_succeeded=false;
+
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString(binded_sc, 8).c_str(), ini_path.c_str()))
+		save_succeeded=false;
+
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_vk, 8).c_str(), ini_path.c_str()))
+		save_succeeded=false;
+
 	switch (mod_key) {
 		case ModKeyType::CTRL_ALT:
-			WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLALT, ini_path.c_str());
+			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLALT, ini_path.c_str()))
+				save_succeeded=false;
 			break;
 		case ModKeyType::SHIFT_ALT:
-			WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_SHIFTALT, ini_path.c_str());
+			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_SHIFTALT, ini_path.c_str()))
+				save_succeeded=false;
 			break;
 		case ModKeyType::CTRL_SHIFT:
-			WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLSHIFT, ini_path.c_str());
+			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLSHIFT, ini_path.c_str()))
+				save_succeeded=false;
 			break;
 	}
+	
 	DWORD long_press_dw=long_press?1:0;
-	WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, DwordToHexString(long_press_dw, 8).c_str(), ini_path.c_str());
+	if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, DwordToHexString(long_press_dw, 8).c_str(), ini_path.c_str()))
+		save_succeeded=false;
+	
+	if (!stored&&save_succeeded)
+		stored=true;
+	
+	return save_succeeded;
 }
 
 //------------------------------ SECTION -------------------------------
@@ -267,35 +278,22 @@ std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
 	return str;
 }
 
-//------------------------------ PORTABLE -------------------------------
-
-SuiteSettingsPortable::SuiteSettingsPortable():
-	SuiteSettingsSection(L"Portable")
-{}
-
 //------------------------------ APPDATA -------------------------------
 
 SuiteSettingsAppData::SuiteSettingsAppData():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
-{
-	if (!valid&&!ini_path.empty()) {
-		//If after calling SuiteSettingsIni constructor valid is false and ini_path (returned by GetIniAppDataPath) is not empty this means that actually everything is ok
-		//This is because SuiteSettingsAppData in contrast with SuiteSettingsIni doesn't require directory tree to ini_path to exist or ini_path not to be directory itself
-		//It will construct valid directory tree (and delete ini_path if it's directory) in SaveSettings
-		//Taking in account that GetIniAppDataPath returns only absolute paths and in case of error returns empty directory this means that valid was set to false because of aforementioned issues
-		//And we can deal with it without problems
-		valid=true;
-	}
-}
+{}
 
 std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 {
+	//TODO: choose AppData path (system or user) and return L"" in case of error
 	return L"";
 }
 
-void SuiteSettingsAppData::SaveSettings()
+bool SuiteSettingsAppData::SaveSettings()
 {
-	SuiteSettingsIni::SaveSettings();
+	//TODO: create directory tree: return SaveSettings in case of success or return false in case of error
+	return SuiteSettingsIni::SaveSettings();
 }
 
 //------------------------------ REGISTRY -------------------------------
@@ -417,37 +415,63 @@ bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name,
 	return true;
 }
 
-void SuiteSettingsReg::SaveSettings()
+std::wstring SuiteSettingsReg::GetRegKey()
+{
+	return std::wstring(user?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
+}
+
+bool SuiteSettingsReg::SaveSettings()
 {
 	HKEY reg_key;
 	
 	if (stored) {
 		if (RegOpenKeyEx(user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_SET_VALUE, &reg_key)!=ERROR_SUCCESS)
-			return;
+			return false;
 	} else {
-		stored=true;
 		if (RegCreateKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
-			return;
+			return false;
 	}
 	
-	RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*2);
-	RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*2);
-	RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*2);
-	RegSetValueEx(reg_key, KEY_HOTKEYSCANCODE, 0, REG_DWORD, (BYTE*)&binded_sc, sizeof(DWORD));
-	RegSetValueEx(reg_key, KEY_HOTKEYVIRTUALKEY, 0, REG_DWORD, (BYTE*)&binded_vk, sizeof(DWORD));
+	bool save_succeeded=true;
+	
+	if (RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*2)!=ERROR_SUCCESS)
+		save_succeeded=false;
+	
+	if (RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*2)!=ERROR_SUCCESS)
+		save_succeeded=false;
+	
+	if (RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*2)!=ERROR_SUCCESS)
+		save_succeeded=false;
+	
+	if (RegSetValueEx(reg_key, KEY_HOTKEYSCANCODE, 0, REG_DWORD, (BYTE*)&binded_sc, sizeof(DWORD))!=ERROR_SUCCESS)
+		save_succeeded=false;
+	
+	if (RegSetValueEx(reg_key, KEY_HOTKEYVIRTUALKEY, 0, REG_DWORD, (BYTE*)&binded_vk, sizeof(DWORD))!=ERROR_SUCCESS)
+		save_succeeded=false;
+	
 	switch (mod_key) {
 		case ModKeyType::CTRL_ALT:
-			RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLALT, (wcslen(VAL_CTRLALT)+1)*2);
+			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLALT, (wcslen(VAL_CTRLALT)+1)*2)!=ERROR_SUCCESS)
+				save_succeeded=false;
 			break;
 		case ModKeyType::SHIFT_ALT:
-			RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_SHIFTALT, (wcslen(VAL_SHIFTALT)+1)*2);
+			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_SHIFTALT, (wcslen(VAL_SHIFTALT)+1)*2)!=ERROR_SUCCESS)
+				save_succeeded=false;
 			break;
 		case ModKeyType::CTRL_SHIFT:
-			RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLSHIFT, (wcslen(VAL_CTRLSHIFT)+1)*2);
+			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLSHIFT, (wcslen(VAL_CTRLSHIFT)+1)*2)!=ERROR_SUCCESS)
+				save_succeeded=false;
 			break;
 	}
+	
 	DWORD long_press_dw=long_press?1:0;
-	RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD));
+	if (RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD))!=ERROR_SUCCESS)
+		save_succeeded=false;
 	
 	RegCloseKey(reg_key);
+	
+	if (!stored&&save_succeeded)
+		stored=true;
+	
+	return save_succeeded;
 }

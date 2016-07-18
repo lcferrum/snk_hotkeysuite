@@ -21,7 +21,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
-	std::unique_ptr<SuiteSettings> Settings(new SuiteSettingsSection(L"TEST3"));
+	std::unique_ptr<SuiteSettings> Settings(new SuiteSettingsIni());
 	KeyTriplet OnKeyTriplet;
 	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments

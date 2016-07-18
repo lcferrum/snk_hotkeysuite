@@ -1,9 +1,9 @@
-#ifndef SUITESNKINTERFACE_U
-#define SUITESNKINTERFACE_U
+#ifndef SUITESNKINTERFACE_H
+#define SUITESNKINTERFACE_H
 
 #include <windows.h>
 
 class SuiteSnkInterface {
 };
 
-#endif //SUITESNKINTERFACE_U
+#endif //SUITESNKINTERFACE_H

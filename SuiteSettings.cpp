@@ -1,4 +1,5 @@
 #include "SuiteSettings.h"
+#include "SuiteExtras.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cctype>
@@ -27,6 +28,8 @@
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 #define SUITE_INI_SECTION		L"HotkeySuite"
 #define SUITE_APPDATA_DIR		L"SnK HotkeySuite"	//Single level dir only
+
+extern pSHGetFolderPath fnSHGetFolderPath;
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), stored(false),

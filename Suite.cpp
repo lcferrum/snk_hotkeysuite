@@ -1,4 +1,5 @@
 #include "SuiteMain.h"
+#include "SuiteExtras.h"
 #include "SuiteCommon.h"
 #include "SuiteSettings.h"
 #include <memory>
@@ -12,15 +13,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmd
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 #endif
+	SuiteExtras::MakeInstance();
+	
 	//TODO: process lpCmdLine
 	
 	std::unique_ptr<SuiteSettings> Settings;
 	
-	Settings.reset(new SuiteSettingsAppData());
+	Settings.reset(new SuiteSettingsIni());
 	if (!Settings->IsStored()) {
-		Settings.reset(new SuiteSettingsReg());
+		Settings.reset(new SuiteSettingsAppData());
 		if (!Settings->IsStored()) {
-			Settings.reset(new SuiteSettingsIni());
+			Settings.reset(new SuiteSettingsReg());
+			if (!Settings->IsStored()) {
+				Settings.reset(new SuiteSettingsIni());
+			}
 		}
 	}
 	

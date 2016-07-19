@@ -1,9 +1,11 @@
 #include "SuiteSettings.h"
 #include "SuiteExtras.h"
+#include <functional>
 #include <algorithm>
 #include <cstdlib>
 #include <cctype>
 #include <cwchar>
+#include <shlobj.h>
 
 #ifdef DEBUG
 #include <iostream>
@@ -27,9 +29,9 @@
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 #define SUITE_INI_SECTION		L"HotkeySuite"
-#define SUITE_APPDATA_DIR		L"SnK HotkeySuite"	//Single level dir only
+#define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"	//Should end with backslash
 
-extern pSHGetFolderPath fnSHGetFolderPath;
+extern pSHGetSpecialFolderPath fnSHGetSpecialFolderPath;
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), stored(false),
@@ -45,7 +47,7 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 SuiteSettings::SuiteSettings():
 	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH, DEFAULT_SNK_PATH)
 {}
-	
+
 std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &path) const
 { 
 	wchar_t dummy_buf;
@@ -81,24 +83,13 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	size_t last_backslash;
 	if ((last_backslash=ini_path.find_last_of(L'\\'))!=std::wstring::npos) {
 		SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
-	#ifdef DEBUG
+#ifdef DEBUG
 		std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
-	#endif
+#endif
 	}
 	
-	//Leave default values if ini file doesn't exist
-	DWORD dwAttrib=GetFileAttributes(ini_path.c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY))
-		return;
-	
-	//Check if section exists
-	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer
-	//If buffer is too small - returned list is truncated to buffer size, terminated with two NULLs and GetLastError is ERROR_MORE_DATA
-	//If there are no keys in section and section exists - function succeeds (GetLastError=ERROR_SUCCESS) but return buffer should be at least 2 character in size so not to get ERROR_MORE_DATA
-	//In all other cases (file or section doesn't exist) GetLastError=ERROR_FILE_NOT_FOUND
-	wchar_t section_test_buf[2];
-	GetPrivateProfileString(ini_section.c_str(), NULL, NULL, section_test_buf, 2, ini_path.c_str());
-	if (GetLastError()==ERROR_FILE_NOT_FOUND)
+	//Leave default values if settings are not stored in ini file
+	if (!CheckIfIniStored(ini_path, ini_section))
 		return;
 	
 	stored=true;
@@ -158,11 +149,19 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetFullPathNameWrapper(rel_ini_path), SUITE_INI_SECTION)
-{}
+{
+#ifdef DEBUG
+	std::wcerr<<L"RELATIVE INI_PATH="<<ini_path<<std::endl;
+#endif
+}
 
 SuiteSettingsIni::SuiteSettingsIni():
 	SuiteSettingsIni(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), SUITE_INI_SECTION)
-{}
+{
+#ifdef DEBUG
+	std::wcerr<<L"DEFAULT INI_PATH="<<ini_path<<std::endl;
+#endif
+}
 
 bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const
 {
@@ -185,7 +184,7 @@ bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &va
 
 bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const
 {
-	wchar_t data_buf[15]; //This buffer size can hold dec, hex or oct representation of any (unsigned) long, including minus sign and NULL terminator, while not triggering ERROR_MORE_DATA
+	wchar_t data_buf[15]; //This buffer size can hold dec, hex or oct representation of any signed or unsigned long, including minus sign and NULL terminator, while not triggering ERROR_MORE_DATA
 	
 	//GetPrivateProfileInt understands only decimals so using custom version for reading DWORDs
 	//For more on GetPrivateProfileString behaviour see IniSzQueryValue function
@@ -205,6 +204,26 @@ bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) c
 	}		
 	
 	return false;
+}
+
+bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wstring &section) const
+{
+	//Check if file exists
+	DWORD dwAttrib=GetFileAttributes(path.c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY))
+		return false;
+	
+	//Check if section exists
+	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer
+	//If buffer is too small - returned list is truncated to buffer size, terminated with two NULLs and GetLastError is ERROR_MORE_DATA
+	//If there are no keys in section and section exists - function succeeds (GetLastError=ERROR_SUCCESS) but return buffer should be at least 2 character in size so not to get ERROR_MORE_DATA
+	//In all other cases (file or section doesn't exist) GetLastError=ERROR_FILE_NOT_FOUND
+	wchar_t section_test_buf[2];
+	GetPrivateProfileString(section.c_str(), NULL, NULL, section_test_buf, 2, path.c_str());
+	if (GetLastError()==ERROR_FILE_NOT_FOUND)
+		return false;
+	
+	return true;
 }
 
 std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_path) const
@@ -280,6 +299,7 @@ SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
 {
 #ifdef DEBUG
 	std::wcerr<<L"SETTINGS: SECTION"<<std::endl;
+	std::wcerr<<L"SECTION INI_PATH="<<GetIniPath()<<std::endl;
 #endif
 }
 
@@ -296,13 +316,50 @@ SuiteSettingsAppData::SuiteSettingsAppData():
 {
 #ifdef DEBUG
 	std::wcerr<<L"SETTINGS: APPDATA"<<std::endl;
+	std::wcerr<<L"APPDATA INI_PATH="<<GetIniPath()<<std::endl;
 #endif
 }
 
 std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 {
-	//TODO: choose AppData path (system or user) and return L"" in case of error
-	return L"";
+	//We have three functions that can retrieve APPDATA path: SHGetSpecialFolderPath (shell32 v4.71+), SHGetFolderPath (v5.0+) and SHGetKnownFolderPath (v6.0+)
+	//By using SHGetSpecialFolderPath we can ensure that APPDATA path could be retreived on Win 98+ and Win 2000+ out of the box, and on Win 95 and Win NT4 with IE 4.0 installed
+	if (fnSHGetSpecialFolderPath) {
+		//SHGetSpecialFolderPath(NULL, buffer, CSIDL, TRUE) is equivalent to SHGetFolderPath(NULL, CSIDL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, buffer)
+		//Though SHGetSpecialFolderPath is considered deprecated it is still available even in most recent versions of Windows for backward compatibility
+		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[this](int csidl, std::wstring& path_str){
+			//SHGetSpecialFolderPath's lpszPath should be MAX_PATH in length
+			wchar_t path_buf[MAX_PATH];
+			
+			//If SHGetSpecialFolderPath fails - path_str not modified
+			//If SHGetSpecialFolderPath succeeds - path_str will contain valid path even if CheckIfIniStored fails
+			if (fnSHGetSpecialFolderPath(NULL, path_buf, csidl, TRUE)==TRUE) {
+				path_str=path_buf;
+				
+				//Only in case of drive's root returned string ends with backslash
+				if (path_str.back()!=L'\\')
+					path_str+=L'\\';
+				
+				path_str+=SUITE_APPDATA_DIR DEFAULT_INI_PATH;
+				return CheckIfIniStored(path_str, SUITE_INI_SECTION);
+			} else			
+				return false;
+		};
+		
+		//Using CSIDL_APPDATA for user APPDATA instead of CSIDL_LOCAL_APPDATA because former is available from shell32 v4.71+ while latter from v5.0+
+		//System APPDATA is CSIDL_COMMON_APPDATA (shell32 v5.0+)
+		
+		std::wstring user_path;		
+		if (fnCheckIfAppDataStored(CSIDL_APPDATA, user_path))
+			return user_path;
+		
+		std::wstring system_path;		
+		if (fnCheckIfAppDataStored(CSIDL_COMMON_APPDATA, system_path))
+			return system_path;
+		else
+			return user_path;
+	} else	
+		return L"";
 }
 
 bool SuiteSettingsAppData::SaveSettings()

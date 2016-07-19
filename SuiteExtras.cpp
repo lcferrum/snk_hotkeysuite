@@ -1,6 +1,7 @@
 #include "SuiteExtras.h"
 
 pSHGetFolderPath fnSHGetFolderPath=NULL;
+pSHGetSpecialFolderPath fnSHGetSpecialFolderPath=NULL;
 
 std::unique_ptr<SuiteExtras> SuiteExtras::instance;
 
@@ -30,7 +31,8 @@ void SuiteExtras::LoadFunctions()
 	hShell32=LoadLibrary(L"shell32.dll");
 
 	if (hShell32) {
-		fnSHGetFolderPath=(pSHGetFolderPath)GetProcAddress(hShell32, "SHGetFolderPath");
+		fnSHGetFolderPath=(pSHGetFolderPath)GetProcAddress(hShell32, "SHGetFolderPathW");
+		fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, "SHGetSpecialFolderPathW");
 	}
 }
 

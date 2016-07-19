@@ -65,9 +65,10 @@ private:
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
 protected:
 	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
+	bool CheckIfIniStored(const std::wstring &path, const std::wstring &section) const;
 	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path, ini_section and ini_path without any modifications and checks
-	//Warning: ini_path passed as third parameter to this constructor is expected to be absolute file path or empty string
+	//Warning: ini_path passed as third parameter to this constructor should be absolute file path or empty string
 	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section);
 public:
 	std::wstring GetIniPath() { return ini_path; }

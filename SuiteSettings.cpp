@@ -327,21 +327,21 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 	if (fnSHGetSpecialFolderPath) {
 		//SHGetSpecialFolderPath(NULL, buffer, CSIDL, TRUE) is equivalent to SHGetFolderPath(NULL, CSIDL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, buffer)
 		//Though SHGetSpecialFolderPath is considered deprecated it is still available even in most recent versions of Windows for backward compatibility
-		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[this](int csidl, std::wstring& path_str){
+		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[this](int csidl, std::wstring& ret_path_str){
 			//SHGetSpecialFolderPath's lpszPath should be MAX_PATH in length
 			wchar_t path_buf[MAX_PATH];
 			
-			//If SHGetSpecialFolderPath fails - path_str not modified
-			//If SHGetSpecialFolderPath succeeds - path_str will contain valid path even if CheckIfIniStored fails
+			//If SHGetSpecialFolderPath fails - ret_path_str not modified
+			//If SHGetSpecialFolderPath succeeds - ret_path_str will contain valid path even if CheckIfIniStored fails
 			if (fnSHGetSpecialFolderPath(NULL, path_buf, csidl, TRUE)==TRUE) {
-				path_str=path_buf;
+				ret_path_str=path_buf;
 				
 				//Only in case of drive's root returned string ends with backslash
-				if (path_str.back()!=L'\\')
-					path_str+=L'\\';
+				if (ret_path_str.back()!=L'\\')
+					ret_path_str+=L'\\';
 				
-				path_str+=SUITE_APPDATA_DIR DEFAULT_INI_PATH;
-				return CheckIfIniStored(path_str, SUITE_INI_SECTION);
+				ret_path_str+=SUITE_APPDATA_DIR DEFAULT_INI_PATH;
+				return CheckIfIniStored(ret_path_str, SUITE_INI_SECTION);
 			} else			
 				return false;
 		};

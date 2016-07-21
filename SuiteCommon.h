@@ -18,6 +18,7 @@ enum class ModKeyType:unsigned char {CTRL_ALT=0, SHIFT_ALT, CTRL_SHIFT, DONT_CAR
 std::wstring DwordToHexString(DWORD vk, int hex_width);	//hex_width is minimum width of hex string in characters not includin '0x' prefix
 std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType type, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL);
 std::wstring GetExecutableFileName(const wchar_t* replace_fname=NULL);	//If replace_fname is not NULL - replaces file name (including preceding backslash) in returned path with replace_fname
+std::wstring StringToLower(std::wstring str);
 void ErrorMessage(const wchar_t* err_msg);
 
 #endif //SUITECOMMON_H

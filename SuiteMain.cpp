@@ -166,7 +166,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//All in all, it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
 				sender->Enable(false);
 				hk_was_running=hk_engine->Stop();
-				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings->GetBindedVK(), settings->GetBindedSC(), 0, 0};
+				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, 0, 0};
 				//Several words on InitCommonControls() and InitCommonControlsEx()
 				//"Common" name is somewhat misleading
 				//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls

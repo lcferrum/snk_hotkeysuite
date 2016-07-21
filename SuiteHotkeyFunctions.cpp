@@ -87,6 +87,9 @@ bool KeyTriplet::OnTargetKey(DWORD vk, DWORD sc, bool key_up)
 	//For legacy reasons Break, Pause, PrtScn and Num[/] have scancodes shared respectively with ScrLock, NumLock, Num[*] and [?/]
 	//So for these keys we should also compare virtual keys to distinguish them from one another
 	
+	//Don't forget that Ctrl+Pause=Break, Ctrl+ScrLock=Break, Ctrl+NumLock=Pause and Alt+PrtScn=SysRq
+	//So hotkeys like Ctrl+Alt+Pause won't work because Ctrl+Alt+Break will be generated instead
+	
 	if (sc==hk_binded_sc) {
 		switch (sc) {
 			case 0x46:	//Break/ScrLock
@@ -103,8 +106,6 @@ bool KeyTriplet::OnTargetKey(DWORD vk, DWORD sc, bool key_up)
 					return false;
 				break;
 		}
-		//Don't forget that Ctrl+Pause=Break, Ctrl+ScrLock=Break, Ctrl+NumLock=Pause and Alt+PrtScn=SysRq
-		//So hotkeys like Ctrl+Alt+Pause won't work because Ctrl+Alt+Break will be generated instead
 		
 		if (key_up)	hk_state&=~FLAG_HK_3RD;
 			else hk_state|=FLAG_HK_3RD;
@@ -122,7 +123,7 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 	std::wcerr<<std::hex<<(wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN?L"KEYDOWN":L"KEYUP")<<L" VK: "<<kb_event->vkCode<<L" SC: "<<kb_event->scanCode<<std::endl;
 #endif
 	
-	if (OnModKey(kb_event->vkCode, key_up)||OnTargetKey(kb_event->vkCode, kb_event->scanCode, key_up)) {
+	if (kb_event->scanCode&&(OnModKey(kb_event->vkCode, key_up)||OnTargetKey(kb_event->vkCode, kb_event->scanCode, key_up))) {
 		if (key_up) {
 			if (!hk_up&&hk_long_press) {
 				DWORD cur_tick=GetTickCount();
@@ -162,9 +163,10 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 
 bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 {
-	if (wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN) {
+	//It is possible to receive zero scancode if some other program artificially creates keyboard events
+	if (kb_event->scanCode&&(wParam==WM_KEYDOWN||wParam==WM_SYSKEYDOWN)) {
 #ifdef DEBUG
-		std::wcerr<<std::hex<<"KEYDOWN VK: "<<kb_event->vkCode<<L" SC: "<<kb_event->scanCode<<std::endl;
+		std::wcerr<<std::hex<<"BIND VK: "<<kb_event->vkCode<<L" SC: "<<kb_event->scanCode<<std::endl;
 #endif
 		//Ignoring Ctrl, Alt and Shift
 		switch (kb_event->vkCode) {

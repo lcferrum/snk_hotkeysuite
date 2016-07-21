@@ -38,6 +38,7 @@ public:
 	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }
 	bool IsStored() { return stored; }
 	
+	virtual std::wstring GetStoredLocation() { return L""; }
 	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors like save
 	
 	SuiteSettings();
@@ -50,7 +51,7 @@ private:
 protected:
 	bool user;
 public:
-	std::wstring GetRegKey();
+	virtual std::wstring GetStoredLocation();
 	virtual bool SaveSettings();
 	
 	SuiteSettingsReg();
@@ -60,18 +61,18 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	bool IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const;
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
+	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
 protected:
 	std::wstring ini_path;
 	std::wstring ini_section;
 	
-	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
 	bool CheckIfIniStored(const std::wstring &path, const std::wstring &section) const;
 	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path, ini_section and ini_path without any modifications and checks
 	//Warning: ini_path passed as third parameter to this constructor should be absolute file path or empty string
 	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section);
 public:
-	std::wstring GetIniPath() { return ini_path; }
+	virtual std::wstring GetStoredLocation() { return ini_path; }
 	virtual bool SaveSettings();
 
 	SuiteSettingsIni(const std::wstring &rel_ini_path);
@@ -79,8 +80,6 @@ public:
 };
 
 class SuiteSettingsSection: public SuiteSettingsIni {
-private:
-	std::wstring StringToLower(std::wstring str) const;
 public:
 	SuiteSettingsSection(const std::wstring &ini_section);
 };

@@ -1,10 +1,15 @@
 #include "SuiteCommon.h"
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cctype>
 
 void ErrorMessage(const wchar_t* err_msg)
 {
+#ifdef DEBUG
+	std::wcerr<<L"ERROR MESSAGE: "<<err_msg<<std::endl;
+#endif
 	MessageBox(NULL, err_msg, SNK_HS_TITLE, MB_ICONERROR|MB_OK);
 }
 
@@ -35,6 +40,12 @@ std::wstring DwordToHexString(DWORD vk, int hex_width)
 	std::wstringstream hex_vk;
 	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(hex_width)<<vk;
 	return hex_vk.str();
+}
+
+std::wstring StringToLower(std::wstring str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), tolower);
+	return str;
 }
 
 std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD oem_sc)

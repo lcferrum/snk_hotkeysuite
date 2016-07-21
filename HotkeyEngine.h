@@ -12,7 +12,7 @@ public:
 	typedef std::function<bool(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)> KeyPressFn;
 private:
 	static std::unique_ptr<HotkeyEngine> instance;
-	static KeyPressFn OnKeyPress;
+	static KeyPressFn OnKeyPress;	//Keyboard event is passed to OnKeyPress - it should return true if event shouldn't be passed further (to other keyboard handlers) and false otherwise
 	static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 	static DWORD WINAPI ThreadProc(LPVOID lpParameter);
 	

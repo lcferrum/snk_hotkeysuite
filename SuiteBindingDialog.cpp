@@ -1,6 +1,5 @@
 #include "SuiteHotkeyFunctions.h"
 #include "SuiteBindingDialog.h"
-#include "SuiteSettings.h"
 #include "SuiteCommon.h"
 #include "Res.h"
 #include <functional>
@@ -28,7 +27,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
 				bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)lParam;
 				
-				SetWindowText(hwndDlg, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->original_vk, bd_dlgprc_param->original_sc, HkStrType::VK, L"Rebind ").c_str());
+				SetWindowText(hwndDlg, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->settings->GetBindedVK(), bd_dlgprc_param->settings->GetBindedSC(), HkStrType::VK, L"Rebind ").c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
@@ -79,7 +78,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 						EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_SC), FALSE);
 						bd_dlgprc_param->binded_sc=0;
 						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...");
-						//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
+						//If we fail with starting binding keyboard hook - exit immediately with BD_DLGPRC_ERROR result
 						if (!bd_dlgprc_param->hk_engine->Start())
 							EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR);
 						return TRUE;

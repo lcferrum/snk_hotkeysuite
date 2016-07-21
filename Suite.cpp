@@ -31,21 +31,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 			if (!Settings->IsStored()) {
 				Settings.reset(new SuiteSettingsIni());
 #ifdef DEBUG
-				std::wcerr<<L"DEFAULT SETTINGS_INI: INI_PATH="<<((SuiteSettingsIni*)Settings.get())->GetIniPath()<<std::endl;
+				std::wcerr<<L"DEFAULT SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 			} else {
 #ifdef DEBUG
-				std::wcerr<<L"STORED SETTINGS_REG: REG_KEY="<<((SuiteSettingsReg*)Settings.get())->GetRegKey()<<std::endl;
+				std::wcerr<<L"STORED SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 			}
 		} else {
 #ifdef DEBUG
-			std::wcerr<<L"STORED SETTINGS_APPDATA: INI_PATH="<<((SuiteSettingsAppData*)Settings.get())->GetIniPath()<<std::endl;
+			std::wcerr<<L"STORED SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 		}
 	} else {
 #ifdef DEBUG
-		std::wcerr<<L"STORED SETTINGS_INI: INI_PATH="<<((SuiteSettingsIni*)Settings.get())->GetIniPath()<<std::endl;
+		std::wcerr<<L"STORED SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 	}
 	

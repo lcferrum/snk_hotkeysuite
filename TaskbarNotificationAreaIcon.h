@@ -17,7 +17,7 @@ public:
 private:
 	static std::unique_ptr<TskbrNtfAreaIcon> instance;
 	static UINT WmTaskbarCreated;
-	static WmCommandFn OnWmCommand;
+	static WmCommandFn OnWmCommand;	//WM_COMMAND msg is passed to OnWmCommand - it should return true if msg is fully processed or false if msg should be processed by DefWindowProc
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	
 	bool valid;

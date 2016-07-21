@@ -1,9 +1,7 @@
 #include "SuiteSettings.h"
 #include "SuiteExtras.h"
 #include <functional>
-#include <algorithm>
 #include <cstdlib>
-#include <cctype>
 #include <cwchar>
 #include <shlobj.h>
 
@@ -69,10 +67,10 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section):
 	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), ini_path(abs_ini_path), ini_section(ini_section)
 {
-	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path
+	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path or empty string
 	
-	//Empty path is only exception - derived constructor should pass it in case of error
-	if (ini_path.empty())
+	//Empty paths and sections are not allowed
+	if (ini_path.empty()||ini_section.empty())
 		return;
 	
 	//Actually this branch should always work because, once again, passed path should be absolute file path or empty string
@@ -232,8 +230,8 @@ std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_pa
 
 bool SuiteSettingsIni::SaveSettings()
 {
-	//Empty paths are not allowed
-	if (ini_path.empty())
+	//Empty paths and sections are not allowed
+	if (ini_path.empty()||ini_section.empty())
 		return false;
 
 	//WritePrivateProfileString can create file if it doesn't exists but only if all the directories in file path exist
@@ -285,12 +283,6 @@ bool SuiteSettingsIni::SaveSettings()
 SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
 	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), ini_section)
 {}
-
-std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
-{
-	std::transform(str.begin(), str.end(), str.begin(), tolower);
-	return str;
-}
 
 //------------------------------ APPDATA -------------------------------
 
@@ -486,7 +478,7 @@ bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name,
 	return true;
 }
 
-std::wstring SuiteSettingsReg::GetRegKey()
+std::wstring SuiteSettingsReg::GetStoredLocation()
 {
 	return std::wstring(user?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
 }

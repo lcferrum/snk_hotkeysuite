@@ -5,6 +5,13 @@
 std::unique_ptr<HotkeyEngine> HotkeyEngine::instance;
 HotkeyEngine::KeyPressFn HotkeyEngine::OnKeyPress;
 
+//When exiting or terminating thread we should set exit code
+//Here it is just formality because hook's thread exit code is never queried and not passed outside of class
+//For the sake of completeness, possible exit codes:
+//	0 - indicates that thread exited normally
+//	1 - indicates that thread exited due to error
+//	2 - indicates that thread was forcefully terminated because it failed to respond in specified time
+
 HotkeyEngine* HotkeyEngine::MakeInstance(HINSTANCE hInstance)
 {
 	instance.reset(new HotkeyEngine(hInstance));
@@ -112,7 +119,7 @@ LRESULT CALLBACK HotkeyEngine::LowLevelKeyboardProc(int nCode, WPARAM wParam, LP
 
 	//And let CallNextHookEx handle the keyboard event if OnKeyPress returned FALSE
 	if (OnKeyPress&&OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))	
-		return 1;	//We should return non-zero value if event is processed
+		return 1;	//We should return non-zero value if event shouldn't be passed further down the keyboard handlers chain
 	else
 		return CallNextHookEx(NULL, nCode, wParam, lParam);
 }

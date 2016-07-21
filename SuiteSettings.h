@@ -6,6 +6,8 @@
 #include <windows.h>
 
 class SuiteSettings {
+private:
+	std::wstring ExpandEnvironmentStringsWrapper(const std::wstring &path) const;
 protected:
 	bool long_press;
 	ModKeyType mod_key;
@@ -20,8 +22,6 @@ protected:
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
 	std::wstring snk_path;
-	
-	std::wstring ExpandEnvironmentStringsWrapper(const std::wstring &path) const;
 	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path and snk_path without any modifications and checks
 	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path);
@@ -45,10 +45,10 @@ public:
 
 class SuiteSettingsReg: public SuiteSettings {
 private:
-	bool user;
-
 	bool RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var) const;
 	bool RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name, DWORD &var) const;
+protected:
+	bool user;
 public:
 	std::wstring GetRegKey();
 	virtual bool SaveSettings();
@@ -58,12 +58,12 @@ public:
 
 class SuiteSettingsIni: public SuiteSettings {
 private:
-	std::wstring ini_path;
-	std::wstring ini_section;
-	
 	bool IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const;
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
 protected:
+	std::wstring ini_path;
+	std::wstring ini_section;
+	
 	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
 	bool CheckIfIniStored(const std::wstring &path, const std::wstring &section) const;
 	

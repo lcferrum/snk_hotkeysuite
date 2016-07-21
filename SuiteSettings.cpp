@@ -29,7 +29,7 @@
 
 #define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
 #define SUITE_INI_SECTION		L"HotkeySuite"
-#define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"	//Should end with backslash
+#define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"	//Should end with backslash, can have any number of subdirectories
 
 extern pSHGetSpecialFolderPath fnSHGetSpecialFolderPath;
 
@@ -39,7 +39,6 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
 #ifdef DEBUG
-	std::wcerr<<L"SETTINGS: DEFAULT (BASE)"<<std::endl;
 	std::wcerr<<L"SET HS_EXE_PATH="<<GetExecutableFileName(L"")<<std::endl;
 #endif
 }
@@ -71,9 +70,6 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), ini_path(abs_ini_path), ini_section(ini_section)
 {
 	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path
-#ifdef DEBUG
-	std::wcerr<<L"SETTINGS: INI"<<std::endl;
-#endif
 	
 	//Empty path is only exception - derived constructor should pass it in case of error
 	if (ini_path.empty())
@@ -149,19 +145,11 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetFullPathNameWrapper(rel_ini_path), SUITE_INI_SECTION)
-{
-#ifdef DEBUG
-	std::wcerr<<L"RELATIVE INI_PATH="<<ini_path<<std::endl;
-#endif
-}
+{}
 
 SuiteSettingsIni::SuiteSettingsIni():
 	SuiteSettingsIni(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), SUITE_INI_SECTION)
-{
-#ifdef DEBUG
-	std::wcerr<<L"DEFAULT INI_PATH="<<ini_path<<std::endl;
-#endif
-}
+{}
 
 bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const
 {
@@ -296,12 +284,7 @@ bool SuiteSettingsIni::SaveSettings()
 
 SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
 	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), ini_section)
-{
-#ifdef DEBUG
-	std::wcerr<<L"SETTINGS: SECTION"<<std::endl;
-	std::wcerr<<L"SECTION INI_PATH="<<GetIniPath()<<std::endl;
-#endif
-}
+{}
 
 std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
 {
@@ -313,12 +296,7 @@ std::wstring SuiteSettingsSection::StringToLower(std::wstring str) const
 
 SuiteSettingsAppData::SuiteSettingsAppData():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
-{
-#ifdef DEBUG
-	std::wcerr<<L"SETTINGS: APPDATA"<<std::endl;
-	std::wcerr<<L"APPDATA INI_PATH="<<GetIniPath()<<std::endl;
-#endif
-}
+{}
 
 std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 {
@@ -364,7 +342,28 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
 
 bool SuiteSettingsAppData::SaveSettings()
 {
-	//TODO: create directory tree: return SaveSettings in case of success or return false in case of error
+	//Don't bother creating directory tree if settings are alredy stored
+	if (!stored) {
+		//Recursively creating directory tree for ini_path by searching for backslashes in path
+		//By design ini_path can hold only absolute path to file or empty string
+		//In theory APPDATA path can be UNC one
+		//So we skipping first two characters from backslash search that are either leading double-backslash of UNC path or drive name of normal path
+		//If we get npos with wstring.find_first_of - string was empty or we have reached file name
+		//Empty string will be caught by SuiteSettingsIni::SaveSettings
+		size_t prev_backslash=2;
+		DWORD dw_err;
+		while ((prev_backslash=ini_path.find_first_of(L'\\', prev_backslash))!=std::wstring::npos) {
+			//Only ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signals that everything ok and we can continue creating directories
+			//ERROR_BAD_PATHNAME occurs instead of ERROR_ALREADY_EXISTS when we try to create directory in place of server name in UNC path
+			//When path is totally wrong (e.g. drive doesn't exist or we have file in place of one of the directories) ERROR_PATH_NOT_FOUND returned instead
+			//When path has invalid symbols ERROR_INVALID_NAME returned
+			//We can also have ERROR_ACCESS_DENIED in case we dosen't have sufficient rights to create directory
+			//All errors besides ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signal that continuing the loop is fruitless - we already failed to create directory tree and SaveSettings failed in general
+			if (!CreateDirectory(ini_path.substr(0, prev_backslash++).c_str(), NULL)&&(dw_err=GetLastError(), dw_err!=ERROR_ALREADY_EXISTS&&dw_err!=ERROR_BAD_PATHNAME))
+				return false;
+		}
+	}
+	
 	return SuiteSettingsIni::SaveSettings();
 }
 
@@ -375,10 +374,6 @@ SuiteSettingsReg::SuiteSettingsReg():
 {
 	HKEY reg_key;
 	
-#ifdef DEBUG
-	std::wcerr<<L"SETTINGS: REG"<<std::endl;
-#endif
-	
 	//Leave default values if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
 	if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
 		user=true;
@@ -386,10 +381,10 @@ SuiteSettingsReg::SuiteSettingsReg():
 	} else {
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
 			stored=true;
-		else
+		else 
 			return;
 	}
-		
+	
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_SNKPATH, snk_path);

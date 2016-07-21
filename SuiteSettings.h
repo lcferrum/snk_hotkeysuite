@@ -5,6 +5,9 @@
 #include <string>
 #include <windows.h>
 
+//Some methods are defined as static here to indicate that their output is used in member initilization 
+//They shouldn't set or query any of class members themselves because they are not initialized when method is called
+
 class SuiteSettings {
 private:
 	std::wstring ExpandEnvironmentStringsWrapper(const std::wstring &path) const;
@@ -61,12 +64,12 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	bool IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const;
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
-	std::wstring GetFullPathNameWrapper(const std::wstring &rel_path) const;
+	static std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
 protected:
 	std::wstring ini_path;
 	std::wstring ini_section;
 	
-	bool CheckIfIniStored(const std::wstring &path, const std::wstring &section) const;
+	static bool CheckIfIniStored(const std::wstring &path, const std::wstring &section);
 	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path, ini_section and ini_path without any modifications and checks
 	//Warning: ini_path passed as third parameter to this constructor should be absolute file path or empty string
@@ -86,7 +89,7 @@ public:
 
 class SuiteSettingsAppData: public SuiteSettingsIni {
 private:
-	std::wstring GetIniAppDataPath() const;
+	static std::wstring GetIniAppDataPath();
 public:
 	virtual bool SaveSettings();
 

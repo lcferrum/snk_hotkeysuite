@@ -192,7 +192,7 @@ bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) c
 	return false;
 }
 
-bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wstring &section) const
+bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wstring &section)
 {
 	//Check if file exists
 	DWORD dwAttrib=GetFileAttributes(path.c_str());
@@ -212,7 +212,7 @@ bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wst
 	return true;
 }
 
-std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_path) const
+std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_path)
 {
 	wchar_t dummy_buf;
 	wchar_t* fname_pos;
@@ -290,14 +290,14 @@ SuiteSettingsAppData::SuiteSettingsAppData():
 	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
 {}
 
-std::wstring SuiteSettingsAppData::GetIniAppDataPath() const
+std::wstring SuiteSettingsAppData::GetIniAppDataPath()
 {
 	//We have three functions that can retrieve APPDATA path: SHGetSpecialFolderPath (shell32 v4.71+), SHGetFolderPath (v5.0+) and SHGetKnownFolderPath (v6.0+)
 	//By using SHGetSpecialFolderPath we can ensure that APPDATA path could be retreived on Win 98+ and Win 2000+ out of the box, and on Win 95 and Win NT4 with IE 4.0 installed
 	if (fnSHGetSpecialFolderPath) {
 		//SHGetSpecialFolderPath(NULL, buffer, CSIDL, TRUE) is equivalent to SHGetFolderPath(NULL, CSIDL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, buffer)
 		//Though SHGetSpecialFolderPath is considered deprecated it is still available even in most recent versions of Windows for backward compatibility
-		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[this](int csidl, std::wstring& ret_path_str){
+		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[](int csidl, std::wstring& ret_path_str){
 			//SHGetSpecialFolderPath's lpszPath should be MAX_PATH in length
 			wchar_t path_buf[MAX_PATH];
 			

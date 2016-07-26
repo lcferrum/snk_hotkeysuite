@@ -42,7 +42,7 @@ public:
 	bool IsStored() { return stored; }
 	
 	virtual std::wstring GetStoredLocation() { return L""; }
-	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors like save
+	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors
 	
 	SuiteSettings();
 };

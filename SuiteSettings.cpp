@@ -25,9 +25,9 @@
 #define DEFAULT_INI_PATH		L"HotkeySuite.ini"
 #define DEFAULT_SNK_PATH		L"SnKh.exe"
 
-#define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"
-#define SUITE_INI_SECTION		L"HotkeySuite"
-#define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"	//Should end with backslash, can have any number of subdirectories
+#define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"	//Registry key path passed as lpSubKey param to functions like RegOpenKeyEx, hive-independent
+#define SUITE_INI_SECTION		L"HotkeySuite"					//Section name in ini file, no restrictions
+#define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"			//Shouldn't start with backslash, but should end with backslash, can have any number of subdirectories, will be prepedned with APPDATA path
 
 extern pSHGetSpecialFolderPath fnSHGetSpecialFolderPath;
 
@@ -91,11 +91,6 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	IniSzQueryValue(KEY_ONHOTKEYCFGPATH, this->shk_cfg_path);
 	IniSzQueryValue(KEY_ONHOTKEYLONGPRESSCFGPATH, this->lhk_cfg_path);
 	IniSzQueryValue(KEY_SNKPATH, snk_path);
-#ifdef DEBUG
-	std::wcerr<<L"KEY_ONHOTKEYCFGPATH="<<this->shk_cfg_path<<std::endl;
-	std::wcerr<<L"KEY_ONHOTKEYLONGPRESSCFGPATH="<<this->lhk_cfg_path<<std::endl;
-	std::wcerr<<L"KEY_SNKPATH="<<snk_path<<std::endl;
-#endif
 	
 	bool sc_found=IniDwordQueryValue(KEY_HOTKEYSCANCODE, binded_sc);
 	bool vk_found=IniDwordQueryValue(KEY_HOTKEYVIRTUALKEY, binded_vk);
@@ -108,37 +103,21 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 		binded_sc=MapVirtualKeyEx(binded_vk, MAPVK_VK_TO_VSC, initial_hkl);
 	}
 	//In case if both VK and SC wern't found - default values will be kept
-#ifdef DEBUG
-	std::wcerr<<L"KEY_HOTKEYSCANCODE="<<std::hex<<binded_sc<<std::endl;
-	std::wcerr<<L"KEY_HOTKEYVIRTUALKEY="<<std::hex<<binded_vk<<std::endl;
-#endif
 	
 	std::wstring mod_key_str;
 	IniSzQueryValue(KEY_HOTKEYMODIFIERKEY, mod_key_str);
 	if (!mod_key_str.compare(VAL_CTRLALT)) {
 		mod_key=ModKeyType::CTRL_ALT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_CTRLALT"<<std::endl;
-#endif
 	} else if (!mod_key_str.compare(VAL_SHIFTALT)) {
 		mod_key=ModKeyType::SHIFT_ALT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_SHIFTALT"<<std::endl;
-#endif
 	} else if (!mod_key_str.compare(VAL_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_CTRLSHIFT"<<std::endl;
-#endif
 	}
 	
 	DWORD long_press_dw;
 	if (IniDwordQueryValue(KEY_LONGPRESSENABLED, long_press_dw)) {
 		long_press=long_press_dw;
 	}
-#ifdef DEBUG
-	std::wcerr<<L"KEY_LONGPRESSENABLED="<<(long_press?L"TRUE":L"FALSE")<<std::endl;
-#endif
 }
 
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &rel_ini_path):
@@ -163,6 +142,9 @@ bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &va
 	
 	if (GetLastError()==ERROR_SUCCESS) {
 		var=data_buf;
+#ifdef DEBUG
+		std::wcerr<<key_name<<L"="<<std::hex<<data_buf<<std::endl;
+#endif
 		return true;
 	} else
 		return false;
@@ -181,10 +163,13 @@ bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) c
 		wchar_t* non_ul_char;
 		DWORD dw_buf=wcstoul(data_buf, &non_ul_char, 0);
 		//endptr will be set to the first non-integer character of str
-		//So if it's points to NULL - str is empty or doesn't have any illegal characters
+		//So if it's points to '\0' - str is empty or doesn't have any illegal characters
 		//If str doesn't have any illegal characters but doesn't fit into DWORD - errno is set to ERANGE
 		if (errno!=ERANGE&&*non_ul_char==L'\0') {
 			var=dw_buf;
+#ifdef DEBUG
+			std::wcerr<<key_name<<L"="<<std::hex<<DwordToHexString(dw_buf, 8)<<std::endl;
+#endif
 			return true;
 		}
 	}		
@@ -380,11 +365,6 @@ SuiteSettingsReg::SuiteSettingsReg():
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_SNKPATH, snk_path);
-#ifdef DEBUG
-	std::wcerr<<L"KEY_ONHOTKEYCFGPATH="<<shk_cfg_path<<std::endl;
-	std::wcerr<<L"KEY_ONHOTKEYLONGPRESSCFGPATH="<<lhk_cfg_path<<std::endl;
-	std::wcerr<<L"KEY_SNKPATH="<<snk_path<<std::endl;
-#endif
 	
 	bool sc_found=RegDwordQueryValue(reg_key, KEY_HOTKEYSCANCODE, binded_sc);
 	bool vk_found=RegDwordQueryValue(reg_key, KEY_HOTKEYVIRTUALKEY, binded_vk);
@@ -397,37 +377,21 @@ SuiteSettingsReg::SuiteSettingsReg():
 		binded_sc=MapVirtualKeyEx(binded_vk, MAPVK_VK_TO_VSC, initial_hkl);
 	}
 	//In case if both VK and SC wern't found - default values will be kept
-#ifdef DEBUG
-	std::wcerr<<L"KEY_HOTKEYSCANCODE="<<std::hex<<binded_sc<<std::endl;
-	std::wcerr<<L"KEY_HOTKEYVIRTUALKEY="<<std::hex<<binded_vk<<std::endl;
-#endif
 	
 	std::wstring mod_key_str;
 	RegSzQueryValue(reg_key, KEY_HOTKEYMODIFIERKEY, mod_key_str);
 	if (!mod_key_str.compare(VAL_CTRLALT)) {
 		mod_key=ModKeyType::CTRL_ALT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_CTRLALT"<<std::endl;
-#endif
 	} else if (!mod_key_str.compare(VAL_SHIFTALT)) {
 		mod_key=ModKeyType::SHIFT_ALT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_SHIFTALT"<<std::endl;
-#endif
 	} else if (!mod_key_str.compare(VAL_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
-#ifdef DEBUG
-		std::wcerr<<L"KEY_HOTKEYMODIFIERKEY=VAL_CTRLSHIFT"<<std::endl;
-#endif
 	}
 	
 	DWORD long_press_dw;
 	if (RegDwordQueryValue(reg_key, KEY_LONGPRESSENABLED, long_press_dw)) {
 		long_press=long_press_dw;
 	}
-#ifdef DEBUG
-	std::wcerr<<L"KEY_LONGPRESSENABLED="<<(long_press?L"TRUE":L"FALSE")<<std::endl;
-#endif
 		
 	RegCloseKey(reg_key);
 }
@@ -457,6 +421,9 @@ bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, st
 		return false;
 	
 	var=data_buf;
+#ifdef DEBUG
+	std::wcerr<<key_name<<L"="<<data_buf<<std::endl;
+#endif
 	return true;
 }
 
@@ -475,6 +442,9 @@ bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name,
 		return false;
 	
 	var=data_buf;
+#ifdef DEBUG
+	std::wcerr<<key_name<<L"="<<std::hex<<DwordToHexString(data_buf, 8)<<std::endl;
+#endif
 	return true;
 }
 

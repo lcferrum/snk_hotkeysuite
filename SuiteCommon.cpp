@@ -35,10 +35,10 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 	return L"";
 }
 
-std::wstring DwordToHexString(DWORD vk, int hex_width)
+std::wstring DwordToHexString(DWORD dw, int hex_width)
 {
 	std::wstringstream hex_vk;
-	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(hex_width)<<vk;
+	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(hex_width)<<dw;
 	return hex_vk.str();
 }
 
@@ -70,12 +70,13 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 	//Code below checks if default char for OEM key is actually present on this hardware key for any of the installed layouts
 	if (int hkl_len=GetKeyboardLayoutList(0, NULL)) {
 		HKL hkl_lst[hkl_len];
-		GetKeyboardLayoutList(hkl_len, hkl_lst);
-		DWORD layout_vk;
-		while (--hkl_len>=0)
-			if ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[hkl_len])))==MapVirtualKeyEx(oem_sc, MAPVK_VSC_TO_VK, hkl_lst[hkl_len]))
-				//Default char is found on OEM vk for one of the layouts - return it
-				return {L'[', L' ', def_char, L' ', L']'};	
+		if (GetKeyboardLayoutList(hkl_len, hkl_lst)) {
+			DWORD layout_vk;
+			while (--hkl_len>=0)
+				if ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[hkl_len])))==MapVirtualKeyEx(oem_sc, MAPVK_VSC_TO_VK, hkl_lst[hkl_len]))
+					//Default char is found on OEM vk for one of the layouts - return it
+					return {L'[', L' ', def_char, L' ', L']'};	
+		}
 	}
 	
 	//If not found - try with alt char or return actual OEM char
@@ -108,8 +109,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 		}
 	}
 	
-	//Mouse buttons, space, enter and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
-	//Space and enter are still here because they can be set through register
+	//Mouse buttons and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
 	//Other excluded keys also can be set through register but in this case they will be displayed as hex characters signaling user that something is not right
 	if (type==HkStrType::FULL||type==HkStrType::VK) {
 		switch (vk) {
@@ -121,7 +121,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				break;
 			case VK_CANCEL:
 				//Break is a special case
-				//It always a two-key combination: Control followed by Break
+				//It is always a two-key combination: Control followed by Break
 				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on AT/XT keyboard)
 				hk_str+=L"Break";
 				break;

@@ -79,10 +79,10 @@ $(TARGET): $(OBJ)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INC)
 	
 %.o: %.rc
-	$(WINDRES) $< $@
+	$(WINDRES) $< $@ $(filter -D% -U% -I%,$(CFLAGS)) $(INC)
 	
 upx:
 	$(UPX) $(TARGET)
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) $(OBJ)

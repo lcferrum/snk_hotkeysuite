@@ -2,10 +2,17 @@
 #include <winuser.h>
 #include "Res.h"
 
+//Note on VERSIONINFO
+//According to MSDN https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058.aspx required StringFileInfo fields are:
+//CompanyName, FileDescription, FileVersion, InternalName, ProductName, ProductVersion and OriginalFilename
+//But actually Windows does nothing if some of these fields (or VERSIONINFO altogether) are absent
+//Moreover, since Vista Details tab (ex Version tab) of file properties dialog shows only limited number of StringFileInfo entries, even omitting some "required" ones
+//FILEFLAGS is complete bogus - Details/Version dialog never displays anything regarding those flags, they are totally ignored by Windows
+
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION    1,0,0,0
+  FILEVERSION 1,0,0,0
   PRODUCTVERSION 1,0,0,0
-  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+  FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
   FILEFLAGS 0x0
   FILEOS VOS__WINDOWS32
   FILETYPE VFT_APP

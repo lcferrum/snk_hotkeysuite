@@ -82,7 +82,7 @@ $(TARGET): $(OBJ)
 	$(WINDRES) $< $@ $(filter -D% -U% -I%,$(CFLAGS)) $(INC)
 	
 upx:
-	$(UPX) $(TARGET)
+	$(UPX) $(TARGET) ||:
 
 clean:
-	$(RM) $(TARGET) $(OBJ)
+	$(RM) $(TARGET) $(OBJ) ||:

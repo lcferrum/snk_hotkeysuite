@@ -1,16 +1,28 @@
 #include "SuiteCommon.h"
+#include "SuiteExtras.h"
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <cctype>
+#include <commctrl.h>
+
+extern pTaskDialog fnTaskDialog;
 
 void ErrorMessage(const wchar_t* err_msg)
 {
 #ifdef DEBUG
 	std::wcerr<<L"ERROR MESSAGE: "<<err_msg<<std::endl;
 #endif
-	MessageBox(NULL, err_msg, SNK_HS_TITLE, MB_ICONERROR|MB_OK);
+	std::wstring full_msg(L"Error: ");
+	full_msg+=err_msg;
+	if (fnTaskDialog) {
+		int btn_clicked;
+		fnTaskDialog(NULL, NULL, SNK_HS_TITLE, SNK_HS_TITLE L" encountered an error and will be closed", full_msg.c_str(), TDCBF_CLOSE_BUTTON, TD_ERROR_ICON, &btn_clicked);
+	} else {
+		full_msg+=L"\n\nPress 'OK' to close " SNK_HS_TITLE;
+		MessageBox(NULL, full_msg.c_str(), SNK_HS_TITLE, MB_ICONERROR|MB_OK);
+	}
 }
 
 std::wstring GetExecutableFileName(const wchar_t* replace_fname)

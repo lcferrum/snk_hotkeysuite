@@ -14,28 +14,31 @@ private:
 protected:
 	bool long_press;
 	ModKeyType mod_key;
-	DWORD binded_vk;
-	DWORD binded_sc;
+	BINDED_KEY binded_key;
 	HKL initial_hkl;
 	//Stored indicates if external setting source exists - if it doesn't exist SaveSettings should create it before attempting to write settings
 	//If SaveSettings was succesfull and setting wern't stored initially - stored is set to true (otherwise stored value remains the same)
 	//Setting source doesn't necessary includes settings themselves - it could be empty
 	bool stored;
+	//Each set bit in changed variable indicate which setting was changed since last succesfull SaveSettings call
+	unsigned char changed;
 	
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
 	std::wstring snk_path;
 	
+	bool MapVkToSc(DWORD src_vk, BINDED_KEY &dst_key) const;
+	bool MapScToVk(DWORD src_sc, BINDED_KEY &dst_key) const;
+	
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path and snk_path without any modifications and checks
 	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path);
 public:
 	bool GetLongPress() { return long_press; }
-	void SetLongPress(bool enabled) { long_press=enabled; }
+	void SetLongPress(bool enabled);
 	ModKeyType GetModKey() { return mod_key; }
-	void SetModKey(ModKeyType new_key) { mod_key=new_key; }
-	DWORD GetBindedSC() { return binded_sc; }
-	DWORD GetBindedVK() { return binded_vk; }
-	void SetBindedKey(DWORD new_vk_binding, DWORD new_sc_binding) { binded_vk=new_vk_binding; binded_sc=new_sc_binding; }
+	void SetModKey(ModKeyType new_key);
+	BINDED_KEY GetBindedKey() { return binded_key; }
+	void SetBindedKey(BINDED_KEY new_key_binding);
 	std::wstring GetShkCfgPath() { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
 	std::wstring GetLhkCfgPath() { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
 	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }

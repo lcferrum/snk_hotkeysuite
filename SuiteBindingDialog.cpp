@@ -27,7 +27,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
 				bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)lParam;
 				
-				SetWindowText(hwndDlg, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->settings->GetBindedVK(), bd_dlgprc_param->settings->GetBindedSC(), HkStrType::VK, L"Rebind ").c_str());
+				SetWindowText(hwndDlg, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->settings->GetBindedKey(), HkStrType::VK, L"Rebind ").c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
@@ -50,16 +50,15 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				return TRUE;
 			}
 		case WM_BINDSC:
-			if (!bd_dlgprc_param->binded_sc) {
-				bd_dlgprc_param->binded_vk=wParam;
-				bd_dlgprc_param->binded_sc=lParam;
+			if (!bd_dlgprc_param->binded_key.sc) {
+				bd_dlgprc_param->binded_key=(BINDED_KEY)wParam;
 				bd_dlgprc_param->hk_engine->Stop();
 				EnableWindow(GetDlgItem(hwndDlg, IDC_CONFIRM_SC), TRUE);
 				EnableWindow(GetDlgItem(hwndDlg, IDC_RETRY_SC), TRUE);
 				EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_SC), TRUE);
 				//We should set focus to default button (it's not set by default because button was disabled) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
 				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CONFIRM_SC), TRUE);
-				SetDlgItemText(hwndDlg, IDC_BD_VIEWER, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->binded_vk, bd_dlgprc_param->binded_sc, HkStrType::VK, L"Rebind to ", L"?").c_str());
+				SetDlgItemText(hwndDlg, IDC_BD_VIEWER, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->binded_key, HkStrType::VK, L"Rebind to ", L"?").c_str());
 			}
 			return TRUE;
 		case WM_CLOSE:
@@ -76,7 +75,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 						EnableWindow(GetDlgItem(hwndDlg, IDC_CONFIRM_SC), FALSE);
 						EnableWindow(GetDlgItem(hwndDlg, IDC_RETRY_SC), FALSE);
 						EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_SC), FALSE);
-						bd_dlgprc_param->binded_sc=0;
+						bd_dlgprc_param->binded_key.sc=0;
 						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...");
 						//If we fail with starting binding keyboard hook - exit immediately with BD_DLGPRC_ERROR result
 						if (!bd_dlgprc_param->hk_engine->Start())

@@ -56,9 +56,9 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+2;
 	}
-	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::VK, L"Rebind ", L"...").c_str());
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::FULL).c_str()); 
+	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 	
 	//Main thread's message loop
 	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT 
@@ -129,7 +129,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::CTRL_ALT);
 			hk_triplet->SetCtrlAlt();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_SHIFT_ALT:
@@ -138,7 +138,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::SHIFT_ALT);
 			hk_triplet->SetShiftAlt();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_SHIFT:
@@ -147,7 +147,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::CTRL_SHIFT);
 			hk_triplet->SetCtrlShift();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedVK(), settings->GetBindedSC(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CUSTOM:
@@ -166,7 +166,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//All in all, it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
 				sender->Enable(false);
 				hk_was_running=hk_engine->Stop();
-				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, 0, 0};
+				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, {0, 0, false}};
 				//Several words on InitCommonControls() and InitCommonControlsEx()
 				//"Common" name is somewhat misleading
 				//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls
@@ -180,11 +180,11 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 					case DLGBX_FN_FAILED:
 						break;
 					case BD_DLGPRC_OK:
-						hk_triplet->SetBindedKey(bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc);
-						settings->SetBindedKey(bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc);
-						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc, HkStrType::VK, L"Rebind ", L"...").c_str());
+						hk_triplet->SetBindedKey(bd_dlgprc_param.binded_key);
+						settings->SetBindedKey(bd_dlgprc_param.binded_key);
+						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param.binded_key, HkStrType::VK, L"Rebind ", L"...").c_str());
 						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_vk, bd_dlgprc_param.binded_sc, HkStrType::FULL).c_str()); 
+						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
 					case BD_DLGPRC_CANCEL:
 						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
 						sender->Enable();
@@ -198,7 +198,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	
 	//We get there after break which happens instead of return in all cases where hk_engine should have restarted but failed
 	ErrorMessage(L"Failed to restart keyboard hook!");
-	sender->CloseAndQuit(ERR_SUITEMAIN+3);	//Sets WM_QUIT's wParam to ERR_SUITEMAIN+0
+	sender->CloseAndQuit(ERR_SUITEMAIN+3);	//Sets WM_QUIT's wParam to ERR_SUITEMAIN+3
 	return true;
 }
 

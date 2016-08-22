@@ -9,6 +9,15 @@
 #include <iostream>
 #endif
 
+#define CHG_ONHOTKEYCFGPATH				(1<<0)
+#define CHG_ONHOTKEYLONGPRESSCFGPATH	(1<<1)
+#define	CHG_SNKPATH						(1<<2)
+#define CHG_HOTKEYSCANCODE				(1<<3)
+#define CHG_HOTKEYVIRTUALKEY			(1<<4)
+#define CHG_HOTKEYMODIFIERKEY			(1<<5)
+#define CHG_LONGPRESSENABLED			(1<<6)
+#define CHG_ALLKEYS	(CHG_ONHOTKEYCFGPATH|CHG_ONHOTKEYLONGPRESSCFGPATH|CHG_SNKPATH|CHG_HOTKEYSCANCODE|CHG_HOTKEYVIRTUALKEY|CHG_HOTKEYMODIFIERKEY|CHG_LONGPRESSENABLED)
+
 #define KEY_ONHOTKEYCFGPATH				L"OnHotkeyCfgPath"
 #define KEY_ONHOTKEYLONGPRESSCFGPATH	L"OnHotkeyLongPressCfgPath"
 #define	KEY_SNKPATH						L"SnkPath"
@@ -32,7 +41,7 @@
 extern pSHGetSpecialFolderPath fnSHGetSpecialFolderPath;
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
-	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_vk(DEFAULT_VK), binded_sc(DEFAULT_SC), initial_hkl(GetKeyboardLayout(0)), stored(false),
+	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, initial_hkl(GetKeyboardLayout(0)), stored(false), changed(0)
 	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
@@ -44,6 +53,24 @@ SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstrin
 SuiteSettings::SuiteSettings():
 	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH, DEFAULT_SNK_PATH)
 {}
+
+inline void SuiteSettings::SetLongPress(bool enabled) 
+{ 
+	changed|=CHG_LONGPRESSENABLED;
+	long_press=enabled; 
+}
+
+inline void SuiteSettings::SetModKey(ModKeyType new_key) 
+{ 
+	changed|=CHG_HOTKEYMODIFIERKEY;
+	mod_key=new_key; 
+}
+
+inline void SuiteSettings::SetBindedKey(BINDED_KEY new_key_binding) 
+{ 
+	changed|=KEY_HOTKEYVIRTUALKEY|CHG_HOTKEYSCANCODE;
+	binded_key=new_key_binding; 
+}
 
 std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &path) const
 { 
@@ -60,6 +87,60 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 	}
 	
 	return L"";
+}
+
+bool SuiteSettings::MapVkToSc(DWORD src_vk, BINDED_KEY &dst_key) const
+{
+	//MapVirtualKeyEx while being available since Win 95 expanded it's capabilities over time
+	//Initially it supported only basic MAPVK_VK_TO_VSC, MAPVK_VSC_TO_VK and MAPVK_VK_TO_CHAR - it produced only ambidextrous mod VKs, single-byte SCs and didn't understand left/right-handed mod VKs and multi-byte SCs
+	//Win NT added support for MAPVK_VSC_TO_VK_EX, function became able to produce left/right-handed mod VKs (using only MAPVK_VSC_TO_VK_EX) and uderstand left/right-handed mod VKs (in MAPVK_VK_TO_VSC and future MAPVK_VK_TO_VSC_EX)
+	//Win Vista added support for MAPVK_VK_TO_VSC_EX, function became able to produce multi-byte SCs (using only MAPVK_VK_TO_VSC_EX) and understand multi-byte SCs (in MAPVK_VSC_TO_VK and MAPVK_VSC_TO_VK_EX)
+	//In case of errors function returns 0 that is invalid value for both VK and SC
+
+	UINT dst_sc;
+	
+	//First try to get multi-byte SC from whatever VK passed
+	if ((dst_sc=MapVirtualKeyEx(src_vk, MAPVK_VK_TO_VSC_EX, initial_hkl))) {
+		if (HIBYTE(dst_sc)==0xE0||HIBYTE(dst_sc)==0xE1) 
+			dst_key.ext=true;
+		else
+			dst_key.ext=false;	
+	//Previous attempt failed because of invalid VK or MAPVK_VK_TO_VSC_EX not being available (assuming latter)
+	//Now try to get single-byte SC from whatever VK passed
+	} else if ((dst_sc=MapVirtualKeyEx(src_vk, MAPVK_VK_TO_VSC, initial_hkl))) { 
+		dst_key.ext=false;
+	//Previous attempt failed because of invalid VK or function not being able to understand left/right-handed mod VKs
+	//Check if latter was the case and repeat attempt with matching ambidextrous mod VK
+	//N.B.: left/right-handed mod VK to ambidextrous mod VK conversion trick is the same one that MapVirtualKeyEx uses internally
+	} else if (src_vk>=VK_LSHIFT&&src_vk<=VK_RMENU&&(dst_sc=MapVirtualKeyEx(((src_vk-VK_LSHIFT)/2+VK_SHIFT), MAPVK_VK_TO_VSC, initial_hkl))) {
+		dst_key.ext=false;
+	//We have invalid VK, now it's official, so fail miserably
+	} else return false;
+	
+	dst_key.sc=LOBYTE(dst_sc);
+	return true;
+}
+
+bool SuiteSettings::MapScToVk(DWORD src_sc, BINDED_KEY &dst_key) const
+{
+	//See notes about MapVirtualKeyEx in MapVkToSc above
+	
+	UINT dst_vk;
+	
+	//First try to get left/right-handed VK from whatever SC passed
+	if ((dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK_EX, initial_hkl))) {
+	//Previous attempt failed because of invalid SC or MAPVK_VSC_TO_VK_EX not being available or function not being able to understand multi-byte SCs
+	//Check if latter was the case and try with single-byte SC
+	} else if (((src_sc&~(DWORD)0xFF)==0xE000||(src_sc&~(DWORD)0xFF)==0xE100)&&(src_sc=src_sc&0xFF, dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK_EX, initial_hkl))) { 
+	//Previous attempt failed because of invalid SC or MAPVK_VSC_TO_VK_EX not being available
+	//Assuming latter and try to get ambidextrous VK with single-byte SC 
+	//N.B.: src_sc is now single-byte or invalid after previous if-statement and if MAPVK_VSC_TO_VK_EX is not supported function won't understand multi-byte SCs anyway
+	} else if ((dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK, initial_hkl))) { 
+	//We have invalid SC, now it's official, so fail miserably
+	} else return false;
+	
+	dst_key.vk=LOBYTE(dst_vk);
+	return true;
 }
 
 //------------------------------ INI -------------------------------
@@ -82,9 +163,11 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 #endif
 	}
 	
-	//Leave default values if settings are not stored in ini file
-	if (!CheckIfIniStored(ini_path, ini_section))
+	//Leave default values and mark all settings as changed if settings are not stored in ini file
+	if (!CheckIfIniStored(ini_path, ini_section)) {
+		changed=CHG_ALLKEYS;
 		return;
+	}
 	
 	stored=true;
 		
@@ -92,15 +175,23 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	IniSzQueryValue(KEY_ONHOTKEYLONGPRESSCFGPATH, this->lhk_cfg_path);
 	IniSzQueryValue(KEY_SNKPATH, snk_path);
 	
+	DWORD binded_sc;
+	DWORD binded_vk;
 	bool sc_found=IniDwordQueryValue(KEY_HOTKEYSCANCODE, binded_sc);
 	bool vk_found=IniDwordQueryValue(KEY_HOTKEYVIRTUALKEY, binded_vk);
-	if (sc_found&&!vk_found) {
-		//If SC was in registry but VK wasn't - make VK from SC
-		binded_vk=MapVirtualKeyEx(binded_sc, MAPVK_VSC_TO_VK, initial_hkl);
+	if (sc_found) {
+		if (HIBYTE(binded_sc)==0xE0||HIBYTE(binded_sc)==0xE1) 
+			binded_key.ext=true;
+		else
+			binded_key.ext=false;	
+		binded_key.sc=LOBYTE(binded_sc);
+		//If SC was in ini file but VK wasn't - make VK from SC
+		if (!vk_found) MapScToVk(binded_sc, binded_key);
 	}
-	if (!sc_found&&vk_found) {
-		//If VK was in registry but SC wasn't - make SC from VK
-		binded_sc=MapVirtualKeyEx(binded_vk, MAPVK_VK_TO_VSC, initial_hkl);
+	if (vk_found) {
+		binded_key.vk=LOBYTE(binded_vk);
+		//If VK was in ini file but SC wasn't - make SC from VK
+		if (!sc_found) MapVkToSc(binded_vk, binded_key);
 	}
 	//In case if both VK and SC wern't found - default values will be kept
 	
@@ -223,42 +314,47 @@ bool SuiteSettingsIni::SaveSettings()
 	
 	bool save_succeeded=true;
 	
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYCFGPATH, shk_cfg_path.c_str(), ini_path.c_str()))
+	if (changed&CHG_ONHOTKEYCFGPATH&&!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYCFGPATH, shk_cfg_path.c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path.c_str(), ini_path.c_str()))
+	if (changed&CHG_ONHOTKEYLONGPRESSCFGPATH&&!WritePrivateProfileString(ini_section.c_str(), KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path.c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str()))
+	if (changed&CHG_SNKPATH&&!WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString(binded_sc, 8).c_str(), ini_path.c_str()))
+	if (changed&CHG_HOTKEYSCANCODE&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString((binded_key.ext?0xE000:0x0)|binded_key.sc, 8).c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_vk, 8).c_str(), ini_path.c_str()))
+	if (changed&CHG_HOTKEYVIRTUALKEY&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_key.vk, 8).c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	switch (mod_key) {
-		case ModKeyType::CTRL_ALT:
-			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLALT, ini_path.c_str()))
-				save_succeeded=false;
-			break;
-		case ModKeyType::SHIFT_ALT:
-			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_SHIFTALT, ini_path.c_str()))
-				save_succeeded=false;
-			break;
-		case ModKeyType::CTRL_SHIFT:
-			if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLSHIFT, ini_path.c_str()))
-				save_succeeded=false;
-			break;
+	if (changed&CHG_HOTKEYMODIFIERKEY)
+		switch (mod_key) {
+			case ModKeyType::CTRL_ALT:
+				if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLALT, ini_path.c_str()))
+					save_succeeded=false;
+				break;
+			case ModKeyType::SHIFT_ALT:
+				if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_SHIFTALT, ini_path.c_str()))
+					save_succeeded=false;
+				break;
+			case ModKeyType::CTRL_SHIFT:
+				if (!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYMODIFIERKEY, VAL_CTRLSHIFT, ini_path.c_str()))
+					save_succeeded=false;
+				break;
+		}
+	
+	if (changed&CHG_LONGPRESSENABLED) {
+		DWORD long_press_dw=long_press?1:0;
+		if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, DwordToHexString(long_press_dw, 8).c_str(), ini_path.c_str()))
+			save_succeeded=false;
 	}
 	
-	DWORD long_press_dw=long_press?1:0;
-	if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, DwordToHexString(long_press_dw, 8).c_str(), ini_path.c_str()))
-		save_succeeded=false;
-	
-	if (!stored&&save_succeeded)
+	if (save_succeeded) {
 		stored=true;
+		changed=0;
+	}
 	
 	return save_succeeded;
 }
@@ -351,30 +447,40 @@ SuiteSettingsReg::SuiteSettingsReg():
 {
 	HKEY reg_key;
 	
-	//Leave default values if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
+	//Leave default values and mark all settings as changed if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
 	if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
 		user=true;
 		stored=true;
 	} else {
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
 			stored=true;
-		else 
+		else {
+			changed=CHG_ALLKEYS;
 			return;
+		}
 	}
 	
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path);
 	RegSzQueryValue(reg_key, KEY_SNKPATH, snk_path);
 	
+	DWORD binded_sc;
+	DWORD binded_vk;
 	bool sc_found=RegDwordQueryValue(reg_key, KEY_HOTKEYSCANCODE, binded_sc);
 	bool vk_found=RegDwordQueryValue(reg_key, KEY_HOTKEYVIRTUALKEY, binded_vk);
-	if (sc_found&&!vk_found) {
+	if (sc_found) {
+		if (HIBYTE(binded_sc)==0xE0||HIBYTE(binded_sc)==0xE1) 
+			binded_key.ext=true;
+		else
+			binded_key.ext=false;	
+		binded_key.sc=LOBYTE(binded_sc);
 		//If SC was in registry but VK wasn't - make VK from SC
-		binded_vk=MapVirtualKeyEx(binded_sc, MAPVK_VSC_TO_VK, initial_hkl);
+		if (!vk_found) MapScToVk(binded_sc, binded_key);
 	}
-	if (!sc_found&&vk_found) {
+	if (vk_found) {
+		binded_key.vk=LOBYTE(binded_vk);
 		//If VK was in registry but SC wasn't - make SC from VK
-		binded_sc=MapVirtualKeyEx(binded_vk, MAPVK_VK_TO_VSC, initial_hkl);
+		if (!sc_found) MapVkToSc(binded_vk, binded_key);
 	}
 	//In case if both VK and SC wern't found - default values will be kept
 	
@@ -467,44 +573,55 @@ bool SuiteSettingsReg::SaveSettings()
 	
 	bool save_succeeded=true;
 	
-	if (RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_ONHOTKEYCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
-	if (RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_ONHOTKEYLONGPRESSCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
-	if (RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_SNKPATH&&RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
-	if (RegSetValueEx(reg_key, KEY_HOTKEYSCANCODE, 0, REG_DWORD, (BYTE*)&binded_sc, sizeof(DWORD))!=ERROR_SUCCESS)
-		save_succeeded=false;
-	
-	if (RegSetValueEx(reg_key, KEY_HOTKEYVIRTUALKEY, 0, REG_DWORD, (BYTE*)&binded_vk, sizeof(DWORD))!=ERROR_SUCCESS)
-		save_succeeded=false;
-	
-	switch (mod_key) {
-		case ModKeyType::CTRL_ALT:
-			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLALT, sizeof(VAL_CTRLALT))!=ERROR_SUCCESS)
-				save_succeeded=false;
-			break;
-		case ModKeyType::SHIFT_ALT:
-			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_SHIFTALT, sizeof(VAL_SHIFTALT))!=ERROR_SUCCESS)
-				save_succeeded=false;
-			break;
-		case ModKeyType::CTRL_SHIFT:
-			if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLSHIFT, sizeof(VAL_CTRLSHIFT))!=ERROR_SUCCESS)
-				save_succeeded=false;
-			break;
+	if (changed&CHG_HOTKEYSCANCODE) {
+		DWORD binded_sc=(binded_key.ext?0xE000:0x0)|binded_key.sc;
+		if (RegSetValueEx(reg_key, KEY_HOTKEYSCANCODE, 0, REG_DWORD, (BYTE*)&binded_sc, sizeof(DWORD))!=ERROR_SUCCESS)
+			save_succeeded=false;
 	}
 	
-	DWORD long_press_dw=long_press?1:0;
-	if (RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD))!=ERROR_SUCCESS)
-		save_succeeded=false;
+	if (changed&CHG_HOTKEYVIRTUALKEY) {
+		DWORD binded_vk=binded_key.vk;
+		if (RegSetValueEx(reg_key, KEY_HOTKEYVIRTUALKEY, 0, REG_DWORD, (BYTE*)&binded_vk, sizeof(DWORD))!=ERROR_SUCCESS)
+			save_succeeded=false;
+	}
+	
+	if (changed&CHG_HOTKEYMODIFIERKEY)
+		switch (mod_key) {
+			case ModKeyType::CTRL_ALT:
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLALT, sizeof(VAL_CTRLALT))!=ERROR_SUCCESS)
+					save_succeeded=false;
+				break;
+			case ModKeyType::SHIFT_ALT:
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_SHIFTALT, sizeof(VAL_SHIFTALT))!=ERROR_SUCCESS)
+					save_succeeded=false;
+				break;
+			case ModKeyType::CTRL_SHIFT:
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLSHIFT, sizeof(VAL_CTRLSHIFT))!=ERROR_SUCCESS)
+					save_succeeded=false;
+				break;
+		}
+	
+	if (changed&CHG_LONGPRESSENABLED) {
+		DWORD long_press_dw=long_press?1:0;
+		if (RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD))!=ERROR_SUCCESS)
+			save_succeeded=false;
+	}
 	
 	RegCloseKey(reg_key);
 	
-	if (!stored&&save_succeeded)
+	if (save_succeeded) {
 		stored=true;
+		changed=0;
+	}
 	
 	return save_succeeded;
 }

@@ -100,7 +100,7 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 		return DwordToHexString(oem_vk, 2);
 }
 
-std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
+std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
 {
 	std::wstring hk_str=L"";
 	
@@ -110,13 +110,13 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 	if (type==HkStrType::FULL||type==HkStrType::MOD_KEY) {
 		switch (mod_key) {
 			case ModKeyType::CTRL_ALT:
-				hk_str=L"Ctrl+Alt+";
+				hk_str=L"Ctrl + Alt + ";
 				break;
 			case ModKeyType::SHIFT_ALT:
-				hk_str=L"Shift+Alt+";
+				hk_str=L"Shift + Alt + ";
 				break;
 			case ModKeyType::CTRL_SHIFT:
-				hk_str=L"Ctrl+Shift+";
+				hk_str=L"Ctrl + Shift + ";
 				break;
 		}
 	}
@@ -124,7 +124,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 	//Mouse buttons and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
 	//Other excluded keys also can be set through register but in this case they will be displayed as hex characters signaling user that something is not right
 	if (type==HkStrType::FULL||type==HkStrType::VK) {
-		switch (vk) {
+		switch (key.vk) {
 			case VK_SPACE:
 				hk_str+=L"Space";
 				break;
@@ -134,7 +134,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 			case VK_CANCEL:
 				//Break is a special case
 				//It is always a two-key combination: Control followed by Break
-				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on AT/XT keyboard)
+				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on IBM PC/XT/AT keyboard)
 				hk_str+=L"Break";
 				break;
 			case VK_BACK:
@@ -144,10 +144,14 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=L"Tab";
 				break;
 			case VK_CLEAR:
-				hk_str+=L"Clear";
+				//It's alternative function of Num[5]
+				if (key.ext)
+					hk_str+=L"Clear";
+				else
+					hk_str+=L"Num 5";
 				break;
 			case VK_PAUSE:
-				//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on AT/XT keyboard)
+				//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on IBM PC/XT/AT keyboard)
 				hk_str+=L"Pause";
 				break;
 			case VK_CAPITAL:
@@ -178,51 +182,83 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=L"ModeChange";
 				break;
 			case VK_PRIOR:
-				hk_str+=L"PgUp";
+				if (key.ext)
+					hk_str+=L"PgUp";
+				else
+					hk_str+=L"Num 9";
 				break;
 			case VK_NEXT:
-				hk_str+=L"PgDn";
+				if (key.ext)
+					hk_str+=L"PgDn";
+				else
+					hk_str+=L"Num 3";
 				break;
 			case VK_END:
-				hk_str+=L"End";
+				if (key.ext)
+					hk_str+=L"End";
+				else
+					hk_str+=L"Num 1";
 				break;
 			case VK_HOME:
-				hk_str+=L"Home";
+				if (key.ext)
+					hk_str+=L"Home";
+				else
+					hk_str+=L"Num 7";
 				break;
 			case VK_LEFT:
-				hk_str+=L"Left";
+				if (key.ext)
+					hk_str+=L"Left";
+				else
+					hk_str+=L"Num 4";
 				break;
 			case VK_RIGHT:
-				hk_str+=L"Right";
+				if (key.ext)
+					hk_str+=L"Right";
+				else
+					hk_str+=L"Num 6";
 				break;
 			case VK_UP:
-				hk_str+=L"Up";
+				if (key.ext)
+					hk_str+=L"Up";
+				else
+					hk_str+=L"Num 8";
 				break;
 			case VK_DOWN:
-				hk_str+=L"Down";
+				if (key.ext)
+					hk_str+=L"Down";
+				else
+					hk_str+=L"Num 2";
 				break;
 			case VK_SELECT:
 				hk_str+=L"Select";
 				break;
 			case VK_PRINT:
+				//Used on old Nokia Data 121-key keyboards
 				hk_str+=L"Print";
 				break;
 			case VK_EXECUTE:
+				//Marked as "non used" in docs
 				hk_str+=L"Execute";
 				break;
 			case VK_SNAPSHOT:
-				//For some reason on Windows VK_SNAPSHOT is shared between SysRq and PrtScn scancodes
-				//Also PrtScn's scan code is shared between PrtScn and Num[*] virtual keys (because historically it first came as Num[*]'s alternative on AT/XT keyboard)
-				if (sc==0x54)
+				//Starting with Windows 3.0 VK_SNAPSHOT is shared between SysRq and PrtScn scancodes
+				//Also PrtScn's scan code is shared between PrtScn and Num[*] virtual keys (because historically it first came as Num[*]'s alternative on IBM PC/XT/AT keyboard)
+				if (key.sc==0x54)
 					hk_str+=L"SysRq";
 				else
 					hk_str+=L"PrtScn";
 				break;
 			case VK_INSERT:
-				hk_str+=L"Ins";
+				if (key.ext)
+					hk_str+=L"Ins";
+				else
+					hk_str+=L"Num 0";
 				break;
 			case VK_DELETE:
-				hk_str+=L"Del";
+				if (key.ext)
+					hk_str+=L"Del";
+				else
+					hk_str+=L"NumDec";
 				break;
 			case VK_HELP:
 				hk_str+=L"Help";
@@ -240,24 +276,26 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=L"Sleep";
 				break;
 			case VK_MULTIPLY:
-				hk_str+=L"Num[ * ]";
+				hk_str+=L"Num *";
 				break;
 			case VK_ADD:
-				hk_str+=L"Num[ + ]";
+				hk_str+=L"Num +";
 				break;
+			case 0xC2:	
+				//VK_ABNT_C2, replaces VK_SEPARATOR on Brazilian kb
 			case VK_SEPARATOR:
 				//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
-				hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)MapVirtualKey(VK_SEPARATOR, MAPVK_VK_TO_CHAR), L' ', L']'};
+				hk_str+=L"NumTnd";
 				break;
 			case VK_SUBTRACT:
-				hk_str+=L"Num[ - ]";
+				hk_str+=L"Num - ";
 				break;
 			case VK_DECIMAL:
 				//Decimal separator, localized (can be comma or period)
-				hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)MapVirtualKey(VK_DECIMAL, MAPVK_VK_TO_CHAR), L' ', L']'};
+				hk_str+=L"NumDec";
 				break;
 			case VK_DIVIDE:
-				//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there were no Num[/] on AT/XT keyboard)
+				//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there was no Num[/] on IBM PC/XT/AT keyboard)
 				hk_str+=L"Num[ / ]";
 				break;
 			case VK_NUMLOCK:
@@ -339,7 +377,8 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=GetOemChar(L'?', L'/', vk, sc);
 				break;
 			case VK_OEM_3:
-				hk_str+=GetOemChar(L'~', L'`', vk, sc);
+				//[ ~ ` ] on US kb and [ @ ' ] on UK kb
+				hk_str+=GetOemChar(L'~', L'@', vk, sc);
 				break;
 			case VK_OEM_4:
 				hk_str+=GetOemChar(L'{', L'[', vk, sc);
@@ -351,16 +390,21 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=GetOemChar(L'}', L']', vk, sc);
 				break;
 			case VK_OEM_7:
-				hk_str+=GetOemChar(L'"', L'\'', vk, sc);
+				//[ " ' ] on US kb and [ ~ # ] on UK kb
+				hk_str+=GetOemChar(L'"', L'~', vk, sc);
 				break;
 			case VK_OEM_8:
-				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb
-				hk_str+=GetOemChar(L'§', L'!', vk, sc);
+				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb and [ ¬ ` ] on UK QWERTY kb
+				hk_str+=GetOemChar(L'§', L'¬', vk, sc);
 				break;
 			case VK_OEM_102:
 				//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
 				//Also present on non-102 AZERTY kb as [ > < ]
 				hk_str+=GetOemChar(L'|', L'>', vk, sc);
+				break;
+			case 0xC1:	//VK_ABNT_C1
+				//Additional OEM key on Brazilian kb
+				hk_str+=GetOemChar(L'?', L'/', vk, sc);
 				break;
 			case VK_OEM_AX:
 				hk_str+=L"AX";
@@ -369,27 +413,59 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				hk_str+=L"Process";
 				break;
 			case VK_ATTN:
+				//Present on 122-key keyboard
 				hk_str+=L"Attn";
 				break;
 			case VK_CRSEL:
+				//Present on 122-key keyboard
 				hk_str+=L"CrSel";
 				break;
 			case VK_EXSEL:
+				//Present on 122-key keyboard
 				hk_str+=L"ExSel";
 				break;
 			case VK_EREOF:
+				//Present on 122-key keyboard
 				hk_str+=L"ErEOF";
 				break;
 			case VK_PLAY:
+				//Present on 122-key keyboard
 				hk_str+=L"Play";
 				break;
 			case VK_ZOOM:
+				//Present on 122-key keyboard
 				hk_str+=L"Zoom";
 				break;
 			case VK_PA1:
+				//Present on 122-key keyboard
 				hk_str+=L"PA1";
 				break;
+			case VK_PA2:
+				//Present on 122-key keyboard
+				hk_str+=L"PA2";
+				break;
+			case VK_PA3:
+				//Present on 122-key keyboard
+				hk_str+=L"PA3";
+				break;
 			case VK_OEM_CLEAR:
+				//Present on 122-key keyboard
+				hk_str+=L"Clear";
+				break;
+			case VK_NONAME:
+				//Present on 122-key keyboard
+				hk_str+=L"Noname";
+				break;
+			case VK_ICO_HELP:
+				//Present on Olivetti keyboard
+				hk_str+=L"Help";
+				break;
+			case VK_ICO_00:
+				//Present on Olivetti keyboard
+				hk_str+=L"00";
+				break;
+			case VK_ICO_CLEAR:
+				//Present on Olivetti keyboard
 				hk_str+=L"Clear";
 				break;
 			default:
@@ -408,6 +484,15 @@ std::wstring GetHotkeyString(ModKeyType mod_key, DWORD vk, DWORD sc, HkStrType t
 				} else if (vk>=0x70&&vk<=0x87) {
 					//Function F1-F24 keys
 					hk_str+=L"F"+std::to_wstring(vk-0x6F);
+				} else if (key.sc=0x5E&&key.ext) {
+					//Power management Power key
+					hk_str+=L"Power";
+				} else if (key.sc=0x5F&&key.ext) {
+					//Power management Sleep key
+					hk_str+=L"Sleep";
+				} else if (key.sc=0x63&&key.ext) {
+					//Power management Wake key
+					hk_str+=L"Wake";
 				} else {
 					//Unknown, reserved and rest of OEM specific keys goes here
 					hk_str+=DwordToHexString(vk, 2);

@@ -511,19 +511,19 @@ bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, st
 	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, NULL, &buf_len)!=ERROR_SUCCESS)
 		return false;
 	
-	//If key is not of REG_SZ type - return to keep default var value 
-	if (key_type!=REG_SZ)
+	//If key is not of REG_EXPAND_SZ type - return to keep default var value 
+	if (key_type!=REG_EXPAND_SZ)
 		return false;
 	
 	//Returned buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
 	wchar_t data_buf[buf_len/sizeof(wchar_t)];
 	
 	//If for some reason we get read error - return to keep default var value
-	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)&data_buf, &buf_len)!=ERROR_SUCCESS)
+	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)data_buf, &buf_len)!=ERROR_SUCCESS)
 		return false;
 	
-	//If key is not of REG_SZ type or returned data is not NULL-terminated - return to keep default var value 
-	if (key_type!=REG_SZ||data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0')
+	//If key is not of REG_EXPAND_SZ type or returned data is not NULL-terminated - return to keep default var value 
+	if (key_type!=REG_EXPAND_SZ||data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0')
 		return false;
 	
 	var=data_buf;
@@ -573,13 +573,13 @@ bool SuiteSettingsReg::SaveSettings()
 	
 	bool save_succeeded=true;
 	
-	if (changed&CHG_ONHOTKEYCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_ONHOTKEYCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_EXPAND_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
-	if (changed&CHG_ONHOTKEYLONGPRESSCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_ONHOTKEYLONGPRESSCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_EXPAND_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
-	if (changed&CHG_SNKPATH&&RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
+	if (changed&CHG_SNKPATH&&RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_EXPAND_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
 		save_succeeded=false;
 	
 	if (changed&CHG_HOTKEYSCANCODE) {
@@ -597,15 +597,15 @@ bool SuiteSettingsReg::SaveSettings()
 	if (changed&CHG_HOTKEYMODIFIERKEY)
 		switch (mod_key) {
 			case ModKeyType::CTRL_ALT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLALT, sizeof(VAL_CTRLALT))!=ERROR_SUCCESS)
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_CTRLALT, sizeof(VAL_CTRLALT))!=ERROR_SUCCESS)
 					save_succeeded=false;
 				break;
 			case ModKeyType::SHIFT_ALT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_SHIFTALT, sizeof(VAL_SHIFTALT))!=ERROR_SUCCESS)
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_SHIFTALT, sizeof(VAL_SHIFTALT))!=ERROR_SUCCESS)
 					save_succeeded=false;
 				break;
 			case ModKeyType::CTRL_SHIFT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_SZ, (BYTE*)VAL_CTRLSHIFT, sizeof(VAL_CTRLSHIFT))!=ERROR_SUCCESS)
+				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_CTRLSHIFT, sizeof(VAL_CTRLSHIFT))!=ERROR_SUCCESS)
 					save_succeeded=false;
 				break;
 		}

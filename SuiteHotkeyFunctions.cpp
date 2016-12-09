@@ -15,7 +15,7 @@
 
 KeyTriplet::KeyTriplet():
 	OnModKey(std::bind(&KeyTriplet::OnCtrlAlt, this, std::placeholders::_1, std::placeholders::_2)), 
-	hk_binded_vk(DEFAULT_VK), hk_binded_sc(DEFAULT_SC), hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
+	hk_binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
 {}
 
 bool KeyTriplet::OnCtrlAlt(DWORD vk, bool key_up)
@@ -195,7 +195,7 @@ bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_eve
 				BINDED_KEY binded_key={LOBYTE(kb_event->vkCode) /* vk */, LOBYTE(kb_event->scanCode) /* sc */, kb_event->flags&LLKHF_EXTENDED /* ext */};
 				//We are passing BINDED_KEY as WPARAM because, even taking align into account, it spans 3 byte which is less than WPARAM size on both x86 and x86_64
 				static_assert(sizeof(BINDED_KEY)<=sizeof(WPARAM), L"sizeof(BINDED_KEY) should be less or equal sizeof(WPARAM)");
-				PostMessage(dlg_hwnd, bind_wm, (WPARAM)binded_key, (LPARAM)kb_event->time);
+				PostMessage(dlg_hwnd, bind_wm, (WPARAM)binded_key.tuple, (LPARAM)kb_event->time);
 				return true;
 		}
 	}

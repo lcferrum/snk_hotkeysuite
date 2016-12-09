@@ -359,7 +359,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"LaunchApp2";
 				break;
 			case VK_OEM_1:
-				hk_str+=GetOemChar(L':', L';', vk, sc);
+				hk_str+=GetOemChar(L':', L';', key.vk, key.sc);
 				break;
 			case VK_OEM_PLUS:
 				hk_str+=L"[ + ]";
@@ -374,37 +374,37 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"[ . ]";
 				break;
 			case VK_OEM_2:
-				hk_str+=GetOemChar(L'?', L'/', vk, sc);
+				hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
 				break;
 			case VK_OEM_3:
 				//[ ~ ` ] on US kb and [ @ ' ] on UK kb
-				hk_str+=GetOemChar(L'~', L'@', vk, sc);
+				hk_str+=GetOemChar(L'~', L'@', key.vk, key.sc);
 				break;
 			case VK_OEM_4:
-				hk_str+=GetOemChar(L'{', L'[', vk, sc);
+				hk_str+=GetOemChar(L'{', L'[', key.vk, key.sc);
 				break;
 			case VK_OEM_5:
-				hk_str+=GetOemChar(L'|', L'\\', vk, sc);
+				hk_str+=GetOemChar(L'|', L'\\', key.vk, key.sc);
 				break;
 			case VK_OEM_6:
-				hk_str+=GetOemChar(L'}', L']', vk, sc);
+				hk_str+=GetOemChar(L'}', L']', key.vk, key.sc);
 				break;
 			case VK_OEM_7:
 				//[ " ' ] on US kb and [ ~ # ] on UK kb
-				hk_str+=GetOemChar(L'"', L'~', vk, sc);
+				hk_str+=GetOemChar(L'"', L'~', key.vk, key.sc);
 				break;
 			case VK_OEM_8:
 				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb and [ ¬ ` ] on UK QWERTY kb
-				hk_str+=GetOemChar(L'§', L'¬', vk, sc);
+				hk_str+=GetOemChar(L'§', L'¬', key.vk, key.sc);
 				break;
 			case VK_OEM_102:
 				//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
 				//Also present on non-102 AZERTY kb as [ > < ]
-				hk_str+=GetOemChar(L'|', L'>', vk, sc);
+				hk_str+=GetOemChar(L'|', L'>', key.vk, key.sc);
 				break;
 			case 0xC1:	//VK_ABNT_C1
 				//Additional OEM key on Brazilian kb
-				hk_str+=GetOemChar(L'?', L'/', vk, sc);
+				hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
 				break;
 			case VK_OEM_AX:
 				hk_str+=L"AX";
@@ -440,11 +440,11 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				//Present on 122-key keyboard
 				hk_str+=L"PA1";
 				break;
-			case VK_PA2:
+			case 0x50: //VK_PA2
 				//Present on 122-key keyboard
 				hk_str+=L"PA2";
 				break;
-			case VK_PA3:
+			case 0x51: //VK_PA3
 				//Present on 122-key keyboard
 				hk_str+=L"PA3";
 				break;
@@ -469,21 +469,21 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"Clear";
 				break;
 			default:
-				if (vk>=0x30&&vk<=0x39) {
+				if (key.vk>=0x30&&key.vk<=0x39) {
 					//0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x30+0x30 */, L' ', L']'};
-				} else if (vk>=0x41&&vk<=0x5A) {
+					hk_str+={L'[', L' ', (wchar_t)key.vk /* vk-0x30+0x30 */, L' ', L']'};
+				} else if (key.vk>=0x41&&key.vk<=0x5A) {
 					//A-Z keys
 					//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
-					hk_str+={L'[', L' ', (wchar_t)vk /* vk-0x41+0x41 */, L' ', L']'};
-				} else if (vk>=0x60&&vk<=0x69) {
+					hk_str+={L'[', L' ', (wchar_t)key.vk /* vk-0x41+0x41 */, L' ', L']'};
+				} else if (key.vk>=0x60&&key.vk<=0x69) {
 					//Numpad 0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(vk-0x30) /* vk-0x60+0x30 */, L' ', L']'};
-				} else if (vk>=0x70&&vk<=0x87) {
+					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */, L' ', L']'};
+				} else if (key.vk>=0x70&&key.vk<=0x87) {
 					//Function F1-F24 keys
-					hk_str+=L"F"+std::to_wstring(vk-0x6F);
+					hk_str+=L"F"+std::to_wstring(key.vk-0x6F);
 				} else if (key.sc=0x5E&&key.ext) {
 					//Power management Power key
 					hk_str+=L"Power";
@@ -495,7 +495,7 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 					hk_str+=L"Wake";
 				} else {
 					//Unknown, reserved and rest of OEM specific keys goes here
-					hk_str+=DwordToHexString(vk, 2);
+					hk_str+=DwordToHexString(key.vk, 2);
 				}
 		}
 	}

@@ -14,9 +14,14 @@
 #define ERR_SUITEMAIN	0x0200
 
 typedef struct {
-	BYTE vk;
-	BYTE sc;
-	bool ext;
+	union {
+		struct {
+			BYTE vk;
+			BYTE sc;
+			bool ext;
+		};
+		DWORD tuple;
+	};
 } BINDED_KEY;
 
 enum class HkStrType:char {FULL, MOD_KEY, VK};

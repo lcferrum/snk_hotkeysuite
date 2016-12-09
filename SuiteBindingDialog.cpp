@@ -51,7 +51,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 			}
 		case WM_BINDSC:
 			if (!bd_dlgprc_param->binded_key.sc) {
-				bd_dlgprc_param->binded_key=(BINDED_KEY)wParam;
+				bd_dlgprc_param->binded_key.tuple=(DWORD)wParam;
 				bd_dlgprc_param->hk_engine->Stop();
 				EnableWindow(GetDlgItem(hwndDlg, IDC_CONFIRM_SC), TRUE);
 				EnableWindow(GetDlgItem(hwndDlg, IDC_RETRY_SC), TRUE);

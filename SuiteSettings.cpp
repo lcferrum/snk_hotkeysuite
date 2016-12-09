@@ -41,7 +41,7 @@
 extern pSHGetSpecialFolderPath fnSHGetSpecialFolderPath;
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
-	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, initial_hkl(GetKeyboardLayout(0)), stored(false), changed(0)
+	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, initial_hkl(GetKeyboardLayout(0)), stored(false), changed(0),
 	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
@@ -54,21 +54,21 @@ SuiteSettings::SuiteSettings():
 	SuiteSettings(DEFAULT_SHK_CFG_PATH, DEFAULT_LHK_CFG_PATH, DEFAULT_SNK_PATH)
 {}
 
-inline void SuiteSettings::SetLongPress(bool enabled) 
+void SuiteSettings::SetLongPress(bool enabled) 
 { 
 	changed|=CHG_LONGPRESSENABLED;
 	long_press=enabled; 
 }
 
-inline void SuiteSettings::SetModKey(ModKeyType new_key) 
+void SuiteSettings::SetModKey(ModKeyType new_key) 
 { 
 	changed|=CHG_HOTKEYMODIFIERKEY;
 	mod_key=new_key; 
 }
 
-inline void SuiteSettings::SetBindedKey(BINDED_KEY new_key_binding) 
+void SuiteSettings::SetBindedKey(BINDED_KEY new_key_binding) 
 { 
-	changed|=KEY_HOTKEYVIRTUALKEY|CHG_HOTKEYSCANCODE;
+	changed|=CHG_HOTKEYVIRTUALKEY|CHG_HOTKEYSCANCODE;
 	binded_key=new_key_binding; 
 }
 

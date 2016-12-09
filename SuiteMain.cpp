@@ -95,10 +95,12 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			if (hk_engine->IsRunning()) {
 				hk_engine->Stop();
 				sender->ChangeIconTooltip(SNK_HS_TITLE L": Stopped");
+				sender->ChangeIcon(IDI_HSSTOPICO);
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 			} else {
 				if (!hk_engine->Start()) break;
 				sender->ChangeIconTooltip(SNK_HS_TITLE L": Running");
+				sender->ChangeIcon(IDI_HSTNAICO);
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Stop"); 
 			}
 			return true;

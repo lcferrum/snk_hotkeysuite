@@ -87,7 +87,7 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 			while (--hkl_len>=0)
 				if ((layout_vk=LOBYTE(VkKeyScanEx(def_char, hkl_lst[hkl_len])))==MapVirtualKeyEx(oem_sc, MAPVK_VSC_TO_VK, hkl_lst[hkl_len]))
 					//Default char is found on OEM vk for one of the layouts - return it
-					return {L'[', L' ', def_char, L' ', L']'};	
+					return {def_char};
 		}
 	}
 	
@@ -95,9 +95,13 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 	if (alt_char!=L'\0')
 		return GetOemChar(alt_char, L'\0', oem_vk, oem_sc);
 	else if (wchar_t mapped_char=(wchar_t)MapVirtualKey(oem_vk, MAPVK_VK_TO_CHAR))
-		return {L'[', L' ', mapped_char, L' ', L']'};
+		return {mapped_char};
 	else
 		return DwordToHexString(oem_vk, 2);
+}
+
+std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key)
+{
 }
 
 std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
@@ -135,7 +139,10 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				//Break is a special case
 				//It is always a two-key combination: Control followed by Break
 				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on IBM PC/XT/AT keyboard)
-				hk_str+=L"Break";
+				if (key.ext)
+					hk_str+=L"Break";
+				else
+					hk_str+=L"ScrLock";
 				break;
 			case VK_BACK:
 				hk_str+=L"BS";
@@ -148,11 +155,14 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				if (key.ext)
 					hk_str+=L"Clear";
 				else
-					hk_str+=L"Num 5";
+					hk_str+=L"Num5";
 				break;
 			case VK_PAUSE:
 				//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on IBM PC/XT/AT keyboard)
-				hk_str+=L"Pause";
+				if (key.ext)
+					hk_str+=L"NumLock";
+				else
+					hk_str+=L"Pause";
 				break;
 			case VK_CAPITAL:
 				hk_str+=L"CapsLock";
@@ -185,49 +195,49 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				if (key.ext)
 					hk_str+=L"PgUp";
 				else
-					hk_str+=L"Num 9";
+					hk_str+=L"Num9";
 				break;
 			case VK_NEXT:
 				if (key.ext)
 					hk_str+=L"PgDn";
 				else
-					hk_str+=L"Num 3";
+					hk_str+=L"Num3";
 				break;
 			case VK_END:
 				if (key.ext)
 					hk_str+=L"End";
 				else
-					hk_str+=L"Num 1";
+					hk_str+=L"Num1";
 				break;
 			case VK_HOME:
 				if (key.ext)
 					hk_str+=L"Home";
 				else
-					hk_str+=L"Num 7";
+					hk_str+=L"Num7";
 				break;
 			case VK_LEFT:
 				if (key.ext)
 					hk_str+=L"Left";
 				else
-					hk_str+=L"Num 4";
+					hk_str+=L"Num4";
 				break;
 			case VK_RIGHT:
 				if (key.ext)
 					hk_str+=L"Right";
 				else
-					hk_str+=L"Num 6";
+					hk_str+=L"Num6";
 				break;
 			case VK_UP:
 				if (key.ext)
 					hk_str+=L"Up";
 				else
-					hk_str+=L"Num 8";
+					hk_str+=L"Num8";
 				break;
 			case VK_DOWN:
 				if (key.ext)
 					hk_str+=L"Down";
 				else
-					hk_str+=L"Num 2";
+					hk_str+=L"Num2";
 				break;
 			case VK_SELECT:
 				hk_str+=L"Select";
@@ -252,13 +262,13 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				if (key.ext)
 					hk_str+=L"Ins";
 				else
-					hk_str+=L"Num 0";
+					hk_str+=L"Num0";
 				break;
 			case VK_DELETE:
 				if (key.ext)
 					hk_str+=L"Del";
 				else
-					hk_str+=L"NumDec";
+					hk_str+=L"NumDecSep";
 				break;
 			case VK_HELP:
 				hk_str+=L"Help";
@@ -276,27 +286,27 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"Sleep";
 				break;
 			case VK_MULTIPLY:
-				hk_str+=L"Num *";
+				hk_str+=L"Num*";
 				break;
 			case VK_ADD:
-				hk_str+=L"Num +";
+				hk_str+=L"Num+";
 				break;
 			case 0xC2:	
 				//VK_ABNT_C2, replaces VK_SEPARATOR on Brazilian kb
 			case VK_SEPARATOR:
 				//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
-				hk_str+=L"NumTnd";
+				hk_str+=L"NumTndSep";
 				break;
 			case VK_SUBTRACT:
-				hk_str+=L"Num - ";
+				hk_str+=L"Num-";
 				break;
 			case VK_DECIMAL:
 				//Decimal separator, localized (can be comma or period)
-				hk_str+=L"NumDec";
+				hk_str+=L"NumDecSep";
 				break;
 			case VK_DIVIDE:
 				//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there was no Num[/] on IBM PC/XT/AT keyboard)
-				hk_str+=L"Num[ / ]";
+				hk_str+=L"Num/";
 				break;
 			case VK_NUMLOCK:
 				hk_str+=L"NumLock";
@@ -362,16 +372,16 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=GetOemChar(L':', L';', key.vk, key.sc);
 				break;
 			case VK_OEM_PLUS:
-				hk_str+=L"[ + ]";
+				hk_str+={L'+'};
 				break;
 			case VK_OEM_COMMA:
-				hk_str+=L"[ , ]";
+				hk_str+={L','};
 				break;
 			case VK_OEM_MINUS:
-				hk_str+=L"[ - ]";
+				hk_str+={L'-'};
 				break;
 			case VK_OEM_PERIOD:
-				hk_str+=L"[ . ]";
+				hk_str+={L'.'};
 				break;
 			case VK_OEM_2:
 				hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
@@ -472,15 +482,15 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				if (key.vk>=0x30&&key.vk<=0x39) {
 					//0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'[', L' ', (wchar_t)key.vk /* vk-0x30+0x30 */, L' ', L']'};
+					hk_str+={(wchar_t)key.vk /* vk-0x30+0x30 */};
 				} else if (key.vk>=0x41&&key.vk<=0x5A) {
 					//A-Z keys
 					//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
-					hk_str+={L'[', L' ', (wchar_t)key.vk /* vk-0x41+0x41 */, L' ', L']'};
+					hk_str+={(wchar_t)key.vk /* vk-0x41+0x41 */};
 				} else if (key.vk>=0x60&&key.vk<=0x69) {
 					//Numpad 0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'N', L'u', L'm', L'[', L' ', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */, L' ', L']'};
+					hk_str+={L'N', L'u', L'm', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */};
 				} else if (key.vk>=0x70&&key.vk<=0x87) {
 					//Function F1-F24 keys
 					hk_str+=L"F"+std::to_wstring(key.vk-0x6F);

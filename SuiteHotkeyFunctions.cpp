@@ -9,7 +9,7 @@
 #define FLAG_HK_2ND	(1<<1)
 #define FLAG_HK_3RD	(1<<2)
 #define FLAG_HK_ALL	(FLAG_HK_1ST|FLAG_HK_2ND|FLAG_HK_3RD)
-#define LONG_PRESS_DURATION 3000	//3 sec (keep in mind that this define is compared with derivative of GetTickCount() that can have resolution up to 55ms)
+#define LONG_PRESS_DURATION 2500	//2.5 sec (keep in mind that this define is compared with derivative of GetTickCount() that can have resolution up to 55ms)
 
 #define FAKE_SC	0x200	//Undocumented windows fake scancode flag
 

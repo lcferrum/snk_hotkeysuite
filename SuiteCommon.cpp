@@ -131,31 +131,19 @@ std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t*
 {
 	//Function is designed to make a warning for user that this binding may not work if some of modifier keys are pressed
 	//This is because historically for some keys modifier keys affect not only vk but also sc
-	bool issue_wrn=false;
+	std::wstring wrn_str=L"";
 	
 	if ((mod_key==ModKeyType::SHIFT_ALT||mod_key==ModKeyType::CTRL_ALT)&&key.sc==0x37&&key.ext) {
 		//PrtScn (E037) with Alt pressed results in SysRq sc (84)
-		issue_wrn=true;
+		wrn_str+=L"Alt";
 	} else if ((mod_key==ModKeyType::CTRL_SHIFT||mod_key==ModKeyType::CTRL_ALT)&&key.sc==0x45) {
 		//Pause (45) with Ctrl pressed results in Break sc (E046)
-		issue_wrn=true;
+		wrn_str+=L"Ctrl";
 	}
 	
-	if (issue_wrn) {
-		std::wstring wrn_str=L"";
+	if (wrn_str.length()) {		
 		if (prefix)
-			wrn_str=prefix;
-		switch (mod_key) {
-			case ModKeyType::CTRL_ALT:
-				wrn_str+=L"Ctrl + Alt";
-				break;
-			case ModKeyType::SHIFT_ALT:
-				wrn_str+=L"Shift + Alt";
-				break;
-			case ModKeyType::CTRL_SHIFT:
-				wrn_str+=L"Ctrl + Shift";
-				break;
-		}
+			wrn_str.insert(0, prefix);
 		if (postfix)
 			wrn_str+=postfix;
 		return wrn_str;

@@ -47,6 +47,33 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 	return L"";
 }
 
+bool CreateDirTree(const std::wstring trg_pth) 
+{
+	//Recursively creating directory tree for trg_pth by searching for backslashes in path
+	//For this function to work trg_pth should hold only absolute path to file or empty string
+	//Target path can be UNC one
+	//So we skipping first two characters from backslash search that are either leading double-backslash of UNC path or drive name of normal path
+	//If we get npos with wstring.find_first_of - string was empty or we have reached file name
+	//That's why we should check empty paths separately so not to get false-positive
+	if (!trg_pth.length())
+		return false;
+	
+	size_t prev_backslash=2;
+	DWORD dw_err;
+	while ((prev_backslash=trg_pth.find_first_of(L'\\', prev_backslash))!=std::wstring::npos) {
+		//Only ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signals that everything ok and we can continue creating directories
+		//ERROR_BAD_PATHNAME occurs instead of ERROR_ALREADY_EXISTS when we try to create directory in place of server name in UNC path
+		//When path is totally wrong (e.g. drive doesn't exist or we have file in place of one of the directories) ERROR_PATH_NOT_FOUND returned instead
+		//When path has invalid symbols ERROR_INVALID_NAME returned
+		//We can also have ERROR_ACCESS_DENIED in case we dosen't have sufficient rights to create directory
+		//All errors besides ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signal that continuing the loop is fruitless - we already failed to create directory tree
+		if (!CreateDirectory(trg_pth.substr(0, prev_backslash++).c_str(), NULL)&&(dw_err=GetLastError(), dw_err!=ERROR_ALREADY_EXISTS&&dw_err!=ERROR_BAD_PATHNAME))
+			return false;
+	}
+	
+	return true;
+}
+
 std::wstring DwordToHexString(DWORD dw, int hex_width)
 {
 	std::wstringstream hex_vk;

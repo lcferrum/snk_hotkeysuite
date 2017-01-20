@@ -14,11 +14,11 @@
 #define FAKE_SC	0x200	//Undocumented windows fake scancode flag
 
 KeyTriplet::KeyTriplet():
-	OnModKey(std::bind(&KeyTriplet::OnCtrlAlt, this, std::placeholders::_1, std::placeholders::_2)), 
+	OnModKey(std::bind(&KeyTriplet::CtrlAltEventHandler, this, std::placeholders::_1, std::placeholders::_2)), OnShortHotkey(), OnLongHotkey(),
 	hk_binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, hk_long_press(false), hk_state(0), hk_down_tick(0), hk_up(true)
 {}
 
-bool KeyTriplet::OnCtrlAlt(DWORD vk, bool key_up)
+bool KeyTriplet::CtrlAltEventHandler(DWORD vk, bool key_up)
 {
 	switch (vk) {
 		case VK_LCONTROL:
@@ -40,7 +40,7 @@ bool KeyTriplet::OnCtrlAlt(DWORD vk, bool key_up)
 	}
 }
 
-bool KeyTriplet::OnCtrlShift(DWORD vk, bool key_up)
+bool KeyTriplet::CtrlShiftEventHandler(DWORD vk, bool key_up)
 {
 	switch (vk) {
 		case VK_LCONTROL:
@@ -62,7 +62,7 @@ bool KeyTriplet::OnCtrlShift(DWORD vk, bool key_up)
 	}
 }
 
-bool KeyTriplet::OnShiftAlt(DWORD vk, bool key_up)
+bool KeyTriplet::ShiftAltEventHandler(DWORD vk, bool key_up)
 {
 	switch (vk) {
 		case VK_LMENU:
@@ -95,7 +95,7 @@ bool KeyTriplet::OnTargetKey(DWORD vk, DWORD sc, bool ext, bool key_up)
 		return false;
 }
 
-bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
+bool KeyTriplet::KeyPressEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 {
 	//Good paper on scancodes can be found here http://www.quadibloc.com/comp/scan.htm or in "Windows Platform Design Notes / Keyboard Scan Code Specification"
 	//Over time IBM PC keyboards evolved, received new keys but maintained backward compatibility with software that expects some old as fuck 83-key keyboard
@@ -139,15 +139,17 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 			if (!hk_up&&hk_long_press) {
 				if (kb_event->time>=hk_down_tick) {	//Excludes moment of system timer wrap around after 49.7 days of uptime
 					if (kb_event->time-hk_down_tick>LONG_PRESS_DURATION) {
-						MessageBeep(MB_ICONERROR);	//Long hotkey press (>LONG_PRESS_DURATION msec)
 #ifdef DEBUG
+						MessageBeep(MB_ICONERROR);
 						std::wcerr<<L"LONG PRESS KEYUP HOTKEY ENGAGED"<<std::endl;
 #endif
+						OnLongHotkey();		//Long hotkey press (>LONG_PRESS_DURATION msec)
 					} else {
-						MessageBeep(MB_ICONINFORMATION);	//Ordinary hotkey press
 #ifdef DEBUG
+						MessageBeep(MB_ICONERROR);
 						std::wcerr<<L"SINGLE PRESS KEYUP HOTKEY ENGAGED"<<std::endl;
 #endif
+						OnShortHotkey();	//Ordinary hotkey press
 					}
 				}
 			}
@@ -158,10 +160,11 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 				if (hk_long_press)
 					hk_down_tick=kb_event->time;
 				else {
-					MessageBeep(MB_ICONINFORMATION);	//Ordinary hotkey press
 #ifdef DEBUG
+					MessageBeep(MB_ICONERROR);
 					std::wcerr<<L"SINGLE PRESS KEYDOWN HOTKEY ENGAGED"<<std::endl;
 #endif
+					OnShortHotkey();	//Ordinary hotkey press
 				}
 			}
 			return true;
@@ -171,7 +174,7 @@ bool KeyTriplet::OnKeyPress(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 	return false; 
 }
 
-bool BindKey(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
+bool BindKeyEventHandler(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 {
 	//For a long story behind scancodes see KeyTriplet::OnKeyPress above
 

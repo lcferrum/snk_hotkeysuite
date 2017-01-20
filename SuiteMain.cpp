@@ -2,12 +2,18 @@
 #include "TaskbarNotificationAreaIcon.h"
 #include "SuiteHotkeyFunctions.h"
 #include "SuiteBindingDialog.h"
+#include "SuiteExterns.h"
 #include "HotkeyEngine.h"
 #include "SuiteCommon.h"
 #include "Res.h"
 #include <string>
+#include <functional>
+
+extern pTaskDialog fnTaskDialog;
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
+
+void HotkeyEventHandler(SuiteSettings *settings, bool long_press);
 
 int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 {
@@ -55,8 +61,10 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 	OnKeyTriplet.SetBindedKey(settings->GetBindedKey());
+	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, settings, false));
+	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, settings, true));
 	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
-	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::OnKeyPress, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
+	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+2;
 	}
@@ -78,6 +86,23 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	settings->SaveSettings();	//Main parts of HotkeySuite are deinitialized and now it's time to save settings
 	
 	return msg.wParam;
+}
+
+void HotkeyEventHandler(SuiteSettings *settings, bool long_press) {
+	std::wstring snk_cmdline=L"\""+settings->GetSnkPath()+L"\" /cmd=\"";
+	if (long_press)
+		snk_cmdline+=settings->GetLhkCfgPath();
+	else
+		snk_cmdline+=settings->GetShkCfgPath();
+	snk_cmdline+=L"\"";
+	wchar_t cmdline_buf[snk_cmdline.length()+1];
+	wcscpy(cmdline_buf, snk_cmdline.c_str());
+	STARTUPINFO si={sizeof(STARTUPINFO)};
+	PROCESS_INFORMATION pi={};
+	if (CreateProcess(NULL, cmdline_buf, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
 }
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
@@ -106,11 +131,31 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			}
 			return true;
 		case IDM_EDIT_SHK:
-			MessageBox(NULL, L"ID_EDIT_SHK", L"SNK_HS", MB_OK);
-			return true;
 		case IDM_EDIT_LHK:
-			MessageBox(NULL, L"ID_EDIT_LHK", L"SNK_HS", MB_OK);
-			return true;
+			{
+				std::wstring (SuiteSettings::*fnGetCfgPath)()=LOWORD(wParam)==IDM_EDIT_SHK?&settings->GetShkCfgPath:&settings->GetLhkCfgPath;
+				
+				DWORD dwAttrib=GetFileAttributes((settings->*fnGetCfgPath)().c_str());
+				if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+					std::wstring msg_text=L"File \""+(settings->*fnGetCfgPath)()+L"\" doesn't exist.\n\nDo you want it to be created?";
+					bool create_file=false;
+					if (fnTaskDialog) {
+						int btn_clicked;
+						fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, msg_text.c_str(), TDCBF_YES_BUTTON|TDCBF_NO_BUTTON, TD_INFORMATION_ICON, &btn_clicked);
+						create_file=btn_clicked==IDYES;
+					} else {
+						create_file=MessageBox(NULL, msg_text.c_str(), SNK_HS_TITLE, MB_ICONASTERISK|MB_YESNO|MB_DEFBUTTON1)==IDYES;
+					}
+					
+					if (create_file&&CreateDirTree((settings->*fnGetCfgPath)())) {
+						CloseHandle(CreateFile((settings->*fnGetCfgPath)().c_str(), GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL));
+					} else
+						return true;
+				}
+				
+				ShellExecute(NULL, NULL, (settings->*fnGetCfgPath)().c_str(), NULL, NULL, SW_SHOWNORMAL);
+				return true;
+			}
 		case IDM_SET_EN_LHK:
 			hk_was_running=hk_engine->Stop();
 			if (settings->GetLongPress()) {
@@ -189,7 +234,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
 					case BD_DLGPRC_CANCEL:
-						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::OnKeyPress, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
 						sender->Enable();
 						return true;
 				}

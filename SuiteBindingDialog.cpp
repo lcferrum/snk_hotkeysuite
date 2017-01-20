@@ -44,7 +44,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				}
 				
 				//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
-				if (!bd_dlgprc_param->hk_engine->StartNew(std::bind(BindKey, hwndDlg, WM_BINDSC, std::placeholders::_1, std::placeholders::_2)))
+				if (!bd_dlgprc_param->hk_engine->StartNew(std::bind(BindKeyEventHandler, hwndDlg, WM_BINDSC, std::placeholders::_1, std::placeholders::_2)))
 					EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR, hFont);
 				
 				return TRUE;

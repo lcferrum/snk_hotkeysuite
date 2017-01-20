@@ -51,14 +51,15 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 			OnKeyTriplet.SetCtrlShift();
 			break;
 	}
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
+	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
+	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+	OnKeyTriplet.SetBindedKey(settings->GetBindedKey());
 	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
 	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::OnKeyPress, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+2;
 	}
-	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
-	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 	
 	//Main thread's message loop
 	//GetMessage returns -1 if error (probably happens only with invalid input parameters) and 0 if WM_QUIT 

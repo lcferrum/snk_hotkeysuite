@@ -1,13 +1,13 @@
-#ifndef SUITEEXTRAS_H
-#define SUITEEXTRAS_H
+#ifndef SUITEEXTERNS_H
+#define SUITEEXTERNS_H
 
 #include <memory>
 #include <windows.h>
 #include <commctrl.h>
 
-class SuiteExtras {
+class SuiteExterns {
 private:
-	static std::unique_ptr<SuiteExtras> instance;
+	static std::unique_ptr<SuiteExterns> instance;
 	
 	HMODULE hShell32;
 	HMODULE hComctl32;
@@ -15,11 +15,11 @@ private:
 	void LoadFunctions();
 	void UnloadFunctions();
 	
-	SuiteExtras();
+	SuiteExterns();
 public:
-	~SuiteExtras();
-	SuiteExtras(const SuiteExtras&)=delete;				//Get rid of default copy constructor
-	SuiteExtras& operator=(const SuiteExtras&)=delete;	//Get rid of default copy assignment operator
+	~SuiteExterns();
+	SuiteExterns(const SuiteExterns&)=delete;				//Get rid of default copy constructor
+	SuiteExterns& operator=(const SuiteExterns&)=delete;	//Get rid of default copy assignment operator
 	
 	static bool MakeInstance();	
 };
@@ -28,4 +28,4 @@ typedef HRESULT (WINAPI *pSHGetFolderPath)(HWND hwndOwner, int nFolder, HANDLE h
 typedef BOOL (WINAPI *pSHGetSpecialFolderPath)(HWND hwndOwner, LPWSTR lpszPath, int csidl, BOOL fCreate);
 typedef HRESULT (WINAPI *pTaskDialog)(HWND hWndParent, HINSTANCE hInstance, PCWSTR pszWindowTitle, PCWSTR pszMainInstruction, PCWSTR pszContent, TASKDIALOG_COMMON_BUTTON_FLAGS dwCommonButtons, PCWSTR pszIcon, int *pnButton);
 
-#endif //SUITEEXTRAS_H
+#endif //SUITEEXTERNS_H

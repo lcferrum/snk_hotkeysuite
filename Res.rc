@@ -1,5 +1,6 @@
 #include <winver.h>
 #include <winuser.h>
+#include "Version.h"
 #include "Res.h"
 
 //Note on VERSIONINFO
@@ -10,8 +11,8 @@
 //FILEFLAGS is complete bogus - Details/Version dialog never displays anything regarding those flags, they are totally ignored by Windows
 
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION 1,0,0,0
-  PRODUCTVERSION 1,0,0,0
+  FILEVERSION HS_VSVI_VERSION
+  PRODUCTVERSION HS_VSVI_VERSION
   FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
   FILEFLAGS 0x0
   FILEOS VOS__WINDOWS32
@@ -23,13 +24,13 @@ BEGIN
 		BLOCK "040904B0"
 		BEGIN
 			VALUE "FileDescription", "SnK HotkeySuite"
-			VALUE "FileVersion", "1.0.0.0"
+			VALUE "FileVersion", HS_STR_VERSION
 			VALUE "CompanyName", "Lcferrum"
-			VALUE "LegalCopyright", "Copyright (c) 2016 Lcferrum"
+			VALUE "LegalCopyright", "Copyright (c) " HS_CRIGHT_YEARS "Lcferrum"
 			VALUE "InternalName", "HotkeySuite"
 			VALUE "OriginalFilename", "HotkeySuite.exe"
 			VALUE "ProductName", "SnK HotkeySuite"
-			VALUE "ProductVersion", "1.0.0.0"
+			VALUE "ProductVersion", HS_STR_VERSION
 		END
 	END
 	BLOCK "VarFileInfo"
@@ -66,14 +67,14 @@ BEGIN
 	END
 END
 
-IDD_BINDINGDLG DIALOGEX 10, 10, 262, 65
+IDD_BINDINGDLG DIALOGEX 10, 10, 262, 60
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | DS_SHELLFONT | DS_3DLOOK | DS_NOIDLEMSG | WS_CLIPSIBLINGS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg"
 EXSTYLE WS_EX_TOPMOST | WS_EX_APPWINDOW
 CAPTION "Rebind []"
 BEGIN
-	DEFPUSHBUTTON	"Confirm", IDC_CONFIRM_SC, 68, 43, 59, 16, WS_DISABLED
-	PUSHBUTTON		"Retry", IDC_RETRY_SC, 132, 43, 59, 16, WS_DISABLED
-	PUSHBUTTON		"Cancel", IDC_CANCEL_SC, 196, 43, 59, 16, WS_DISABLED
-	LTEXT			"Press any key...", IDC_BD_VIEWER, 7, 7, 247, 29, SS_CENTER | SS_CENTERIMAGE | SS_SUNKEN
+	DEFPUSHBUTTON	"Confirm", IDC_CONFIRM_SC, 68, 38, 59, 16, WS_DISABLED
+	PUSHBUTTON		"Retry", IDC_RETRY_SC, 132, 38, 59, 16, WS_DISABLED
+	PUSHBUTTON		"Cancel", IDC_CANCEL_SC, 196, 38, 59, 16, WS_DISABLED
+	LTEXT			"Press any key...", IDC_BD_VIEWER, 7, 7, 247, 25, SS_CENTER | SS_SUNKEN
 END

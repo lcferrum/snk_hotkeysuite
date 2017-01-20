@@ -1,5 +1,5 @@
 #include "SuiteMain.h"
-#include "SuiteExtras.h"
+#include "SuiteExterns.h"
 #include "SuiteCommon.h"
 #include "SuiteSettings.h"
 #include <memory>
@@ -17,7 +17,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmd
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 #endif
-	SuiteExtras::MakeInstance();
+	SuiteExterns::MakeInstance();
 	
 	//TODO: process lpCmdLine
 	

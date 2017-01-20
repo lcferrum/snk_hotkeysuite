@@ -1,5 +1,5 @@
 #include "SuiteCommon.h"
-#include "SuiteExtras.h"
+#include "SuiteExterns.h"
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -100,8 +100,40 @@ std::wstring GetOemChar(wchar_t def_char, wchar_t alt_char, DWORD oem_vk, DWORD 
 		return DwordToHexString(oem_vk, 2);
 }
 
-std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key)
+std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t* prefix, const wchar_t* postfix, const wchar_t* defval)
 {
+	//Function is designed to make a warning for user that this binding may not work if some of modifier keys are pressed
+	//This is because historically for some keys modifier keys affect not only vk but also sc
+	bool issue_wrn=false;
+	
+	if ((mod_key==ModKeyType::SHIFT_ALT||mod_key==ModKeyType::CTRL_ALT)&&key.sc==0x37&&key.ext) {
+		//PrtScn (E037) with Alt pressed results in SysRq sc (84)
+		issue_wrn=true;
+	} else if ((mod_key==ModKeyType::CTRL_SHIFT||mod_key==ModKeyType::CTRL_ALT)&&key.sc==0x45) {
+		//Pause (45) with Ctrl pressed results in Break sc (E046)
+		issue_wrn=true;
+	}
+	
+	if (issue_wrn) {
+		std::wstring wrn_str=L"";
+		if (prefix)
+			wrn_str=prefix;
+		switch (mod_key) {
+			case ModKeyType::CTRL_ALT:
+				wrn_str+=L"Ctrl + Alt";
+				break;
+			case ModKeyType::SHIFT_ALT:
+				wrn_str+=L"Shift + Alt";
+				break;
+			case ModKeyType::CTRL_SHIFT:
+				wrn_str+=L"Ctrl + Shift";
+				break;
+		}
+		if (postfix)
+			wrn_str+=postfix;
+		return wrn_str;
+	} else
+		return defval;
 }
 
 std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
@@ -109,24 +141,28 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 	std::wstring hk_str=L"";
 	
 	if (prefix)
-		hk_str+=prefix;
+		hk_str=prefix;
 	
 	if (type==HkStrType::FULL||type==HkStrType::MOD_KEY) {
 		switch (mod_key) {
 			case ModKeyType::CTRL_ALT:
-				hk_str=L"Ctrl + Alt + ";
+				hk_str+=L"Ctrl + Alt";
 				break;
 			case ModKeyType::SHIFT_ALT:
-				hk_str=L"Shift + Alt + ";
+				hk_str+=L"Shift + Alt";
 				break;
 			case ModKeyType::CTRL_SHIFT:
-				hk_str=L"Ctrl + Shift + ";
+				hk_str+=L"Ctrl + Shift";
 				break;
 		}
 	}
 	
+	if (type==HkStrType::FULL)
+		hk_str+=L" + ";
+	
 	//Mouse buttons and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
 	//Other excluded keys also can be set through register but in this case they will be displayed as hex characters signaling user that something is not right
+	//Function is trying to name keys more positionwise - e.g. independent of Shift, NumLock state and selected layout
 	if (type==HkStrType::FULL||type==HkStrType::VK) {
 		switch (key.vk) {
 			case VK_SPACE:
@@ -151,7 +187,8 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"Tab";
 				break;
 			case VK_CLEAR:
-				//It's alternative function of Num[5]
+				//It's a less known alternative function of Num[5]
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Clear";
 				else
@@ -192,48 +229,56 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				hk_str+=L"ModeChange";
 				break;
 			case VK_PRIOR:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"PgUp";
 				else
 					hk_str+=L"Num9";
 				break;
 			case VK_NEXT:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"PgDn";
 				else
 					hk_str+=L"Num3";
 				break;
 			case VK_END:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"End";
 				else
 					hk_str+=L"Num1";
 				break;
 			case VK_HOME:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Home";
 				else
 					hk_str+=L"Num7";
 				break;
 			case VK_LEFT:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Left";
 				else
 					hk_str+=L"Num4";
 				break;
 			case VK_RIGHT:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Right";
 				else
 					hk_str+=L"Num6";
 				break;
 			case VK_UP:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Up";
 				else
 					hk_str+=L"Num8";
 				break;
 			case VK_DOWN:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Down";
 				else
@@ -259,12 +304,14 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 					hk_str+=L"PrtScn";
 				break;
 			case VK_INSERT:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Ins";
 				else
 					hk_str+=L"Num0";
 				break;
 			case VK_DELETE:
+				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
 				if (key.ext)
 					hk_str+=L"Del";
 				else

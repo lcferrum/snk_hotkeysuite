@@ -1,33 +1,33 @@
-#include "SuiteExtras.h"
+#include "SuiteExterns.h"
 
 pSHGetFolderPath fnSHGetFolderPath=NULL;
 pSHGetSpecialFolderPath fnSHGetSpecialFolderPath=NULL;
 pTaskDialog fnTaskDialog=NULL;
 
-std::unique_ptr<SuiteExtras> SuiteExtras::instance;
+std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
-SuiteExtras::SuiteExtras(): 
+SuiteExterns::SuiteExterns(): 
 	hShell32(NULL), hComctl32(NULL)
 {
 	LoadFunctions();
 }
 
-SuiteExtras::~SuiteExtras() {
+SuiteExterns::~SuiteExterns() {
 	UnloadFunctions();
 }
 
-bool SuiteExtras::MakeInstance() 
+bool SuiteExterns::MakeInstance() 
 {
 	if (instance)
 		return false;
 	
-	instance.reset(new SuiteExtras());
+	instance.reset(new SuiteExterns());
 	return true;
 }
 
 //Checking if DLLs are alredy loaded before LoadLibrary is cool but redundant
 //This method is private and called (and designed to be called) only once - in constructor before everything else
-void SuiteExtras::LoadFunctions() 
+void SuiteExterns::LoadFunctions() 
 {
 	hShell32=LoadLibrary(L"shell32.dll");
 	hComctl32=LoadLibrary(L"comctl32.dll");
@@ -43,7 +43,7 @@ void SuiteExtras::LoadFunctions()
 }
 
 //And here we are testing for NULLs because LoadLibrary can fail in method above
-void SuiteExtras::UnloadFunctions() 
+void SuiteExterns::UnloadFunctions() 
 {
 	if (hShell32) FreeLibrary(hShell32);
 	if (hComctl32) FreeLibrary(hComctl32);

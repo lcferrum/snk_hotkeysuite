@@ -1,4 +1,4 @@
-2016-04-15  Lcferrum <lcferrum@yandex.com>
+2017-XX-XX  Lcferrum <lcferrum@yandex.com>
 	
-	* Release X.X
+	* Release 1.0
 	

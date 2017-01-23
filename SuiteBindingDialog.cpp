@@ -59,7 +59,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 				//We should set focus to default button (it's not set by default because button was disabled) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
 				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CONFIRM_SC), TRUE);
 				SetDlgItemText(hwndDlg, IDC_BD_VIEWER, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->binded_key, HkStrType::VK, L"Rebind to ", 
-					GetHotkeyWarning(bd_dlgprc_param->settings->GetModKey(), bd_dlgprc_param->binded_key, L"?\r\nWarning: may not work with ", L" modifier key!", L"?").c_str()).c_str());
+					GetHotkeyWarning(bd_dlgprc_param->settings->GetModKey(), bd_dlgprc_param->binded_key, L"?\nWarning: may not work with ", L" modifier key!", L"?").c_str()).c_str());
 			}
 			return TRUE;
 		case WM_CLOSE:
@@ -77,7 +77,7 @@ INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARA
 						EnableWindow(GetDlgItem(hwndDlg, IDC_RETRY_SC), FALSE);
 						EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_SC), FALSE);
 						bd_dlgprc_param->binded_key.sc=0;
-						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...");
+						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...\n(Ctrl, Alt and Shift keys are ignored)");
 						//If we fail with starting binding keyboard hook - exit immediately with BD_DLGPRC_ERROR result
 						if (!bd_dlgprc_param->hk_engine->Start())
 							EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR);

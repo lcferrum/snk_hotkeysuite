@@ -512,14 +512,6 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 				//Present on 122-key keyboard
 				hk_str+=L"PA1";
 				break;
-			case 0x50: //VK_PA2
-				//Present on 122-key keyboard
-				hk_str+=L"PA2";
-				break;
-			case 0x51: //VK_PA3
-				//Present on 122-key keyboard
-				hk_str+=L"PA3";
-				break;
 			case VK_OEM_CLEAR:
 				//Present on 122-key keyboard
 				hk_str+=L"Clear";

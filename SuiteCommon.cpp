@@ -1,4 +1,5 @@
 #include "SuiteCommon.h"
+#include "SuiteVersion.h"
 #include "SuiteExterns.h"
 #include <algorithm>
 #include <iostream>

@@ -4,7 +4,11 @@
 #include "Res.h"
 #include <functional>
 
-BOOL EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont=NULL)
+namespace BindingDialog {
+	BOOL EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont=NULL);
+}
+
+BOOL BindingDialog::EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont)
 {
 	//Perform all the deinitilization of initialized in WM_INITDIALOG things here
 	
@@ -16,7 +20,7 @@ BOOL EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont=NULL)
 	return EndDialog(hDlg, nResult);
 }
 
-INT_PTR CALLBACK BindingDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	BINDING_DLGPRC_PARAM *bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)GetWindowLongPtr(hwndDlg, DWLP_USER);
 	

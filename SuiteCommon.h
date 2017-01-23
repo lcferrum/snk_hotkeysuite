@@ -4,14 +4,15 @@
 #include <string>
 #include <windows.h>
 
-#define SNK_HS_TITLE	L"HotkeySuite"	
+#define DEFAULT_VK			VK_BACK	//Backspace vk and sc
+#define DEFAULT_SC			0x0E
+#define DEFAULT_EXT			false
 
-#define DEFAULT_VK	VK_BACK	//Backspace vk and sc
-#define DEFAULT_SC	0x0E
-#define DEFAULT_EXT	false
+#define DLGBX_FN_INV_PARAM	0
+#define DLGBX_FN_FAILED		-1
 
-#define ERR_SUITE		0x0100
-#define ERR_SUITEMAIN	0x0200
+#define ERR_SUITE			0x0100
+#define ERR_SUITEMAIN		0x0200
 
 typedef struct {
 	union {

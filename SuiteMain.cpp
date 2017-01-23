@@ -2,8 +2,10 @@
 #include "TaskbarNotificationAreaIcon.h"
 #include "SuiteHotkeyFunctions.h"
 #include "SuiteBindingDialog.h"
+#include "SuiteAboutDialog.h"
 #include "SuiteExterns.h"
 #include "HotkeyEngine.h"
+#include "SuiteVersion.h"
 #include "SuiteCommon.h"
 #include "Res.h"
 #include <string>
@@ -222,7 +224,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//Though ICC_STANDARD_CLASSES can be passed to InitCommonControlsEx, it actually does nothing - "standard" controls are really initialized by the system
 				//Also these functions has nothing to do with "Win XP"/"ComCtl32 v6+" style - just supply proper manifest to make "standard" controls use it
 				//IDD_BINDINGDLG uses only "standard" controls
-				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialogProc, (LPARAM)&bd_dlgprc_param)) {
+				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_BINDINGDLG), sender->GetIconWindow(), BindingDialog::DialogProc, (LPARAM)&bd_dlgprc_param)) {
 					case BD_DLGPRC_ERROR:
 					case DLGBX_FN_INV_PARAM:
 					case DLGBX_FN_FAILED:
@@ -235,6 +237,22 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
 					case BD_DLGPRC_CANCEL:
 						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+						sender->Enable();
+						return true;
+				}
+				break;
+			}
+		case IDM_ABOUT:
+			{
+				//Blah blah blah... see comments on IDM_SET_CUSTOM
+				sender->Enable(false);
+				hk_was_running=hk_engine->Stop();
+				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, 0)) {
+					case DLGBX_FN_INV_PARAM:
+					case DLGBX_FN_FAILED:
+						break;
+					case AD_DLGPRC_WHATEVER:
+						if (hk_was_running&&!hk_engine->Start()) break;
 						sender->Enable();
 						return true;
 				}

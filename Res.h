@@ -6,7 +6,8 @@
 #define IDI_HSTNAICO		101
 #define IDR_ICONMENU		102
 #define IDD_BINDINGDLG		103
-#define IDI_HSSTOPICO		104		
+#define IDI_HSSTOPICO		104
+#define IDD_ABOUTDLG		105
 #define IDM_EXIT			40001
 #define IDM_STOP_START		40002
 #define IDM_EDIT_SHK		40003
@@ -21,6 +22,7 @@
 #define IDC_CANCEL_SC		30002
 #define IDC_BD_VIEWER		30003
 #define IDC_RETRY_SC		30004
+#define IDC_CLOSE_ABOUT		30005
 
 #define WM_HSTNAICO			(WM_USER+1)
 #define WM_BINDSC			(WM_USER+2)

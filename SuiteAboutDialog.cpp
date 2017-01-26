@@ -58,6 +58,10 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 						return TRUE;
 				}
 			}
+			if (wParam==IDCANCEL) {
+				EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
+				return TRUE;
+			}
 			return FALSE;
 		default:
 			return FALSE;

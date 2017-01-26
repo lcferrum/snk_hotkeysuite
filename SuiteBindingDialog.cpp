@@ -81,6 +81,10 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 						return TRUE;
 				}
 			}
+			if (wParam==IDCANCEL) {
+				EndDialog(hwndDlg, BD_DLGPRC_CANCEL);
+				return TRUE;
+			}
 			return FALSE;
 		default:
 			return FALSE;

@@ -4,22 +4,6 @@
 #include "Res.h"
 #include <functional>
 
-namespace BindingDialog {
-	BOOL EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont=NULL);
-}
-
-BOOL BindingDialog::EndDialogWithDeinit(HWND hDlg, INT_PTR nResult, HFONT hFont)
-{
-	//Perform all the deinitilization of initialized in WM_INITDIALOG things here
-	
-	if (hFont)
-		DeleteObject(hFont);
-	else
-		DeleteObject((HFONT)SendDlgItemMessage(hDlg, IDC_BD_VIEWER, WM_GETFONT, 0, 0));
-	
-	return EndDialog(hDlg, nResult);
-}
-
 INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	BINDING_DLGPRC_PARAM *bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)GetWindowLongPtr(hwndDlg, DWLP_USER);
@@ -49,7 +33,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				
 				//If we fail with starting binding keyboard hook - exit immediately with -1 result which indicates error
 				if (!bd_dlgprc_param->hk_engine->StartNew(std::bind(BindKeyEventHandler, hwndDlg, WM_BINDSC, std::placeholders::_1, std::placeholders::_2)))
-					EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR, hFont);
+					EndDialog(hwndDlg, BD_DLGPRC_ERROR);
 				
 				return TRUE;
 			}
@@ -69,7 +53,10 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 		case WM_CLOSE:
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
 			bd_dlgprc_param->hk_engine->Stop();
-			EndDialogWithDeinit(hwndDlg, BD_DLGPRC_CANCEL);
+			EndDialog(hwndDlg, BD_DLGPRC_CANCEL);
+			return TRUE;
+		case WM_DESTROY:
+			DeleteObject((HFONT)SendDlgItemMessage(hwndDlg, IDC_BD_VIEWER, WM_GETFONT, 0, 0));
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls
@@ -84,13 +71,13 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 						SetDlgItemText(hwndDlg, IDC_BD_VIEWER, L"Press any key...\n(Ctrl, Alt and Shift keys are ignored)");
 						//If we fail with starting binding keyboard hook - exit immediately with BD_DLGPRC_ERROR result
 						if (!bd_dlgprc_param->hk_engine->Start())
-							EndDialogWithDeinit(hwndDlg, BD_DLGPRC_ERROR);
+							EndDialog(hwndDlg, BD_DLGPRC_ERROR);
 						return TRUE;
 					case IDC_CONFIRM_SC:
-						EndDialogWithDeinit(hwndDlg, BD_DLGPRC_OK);
+						EndDialog(hwndDlg, BD_DLGPRC_OK);
 						return TRUE;
 					case IDC_CANCEL_SC:
-						EndDialogWithDeinit(hwndDlg, BD_DLGPRC_CANCEL);
+						EndDialog(hwndDlg, BD_DLGPRC_CANCEL);
 						return TRUE;
 				}
 			}

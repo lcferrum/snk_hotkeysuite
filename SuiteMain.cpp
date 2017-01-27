@@ -247,7 +247,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//Blah blah blah... see comments on IDM_SET_CUSTOM
 				sender->Enable(false);
 				hk_was_running=hk_engine->Stop();
-				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, 0)) {
+				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, (LPARAM)settings)) {
 					case DLGBX_FN_INV_PARAM:
 					case DLGBX_FN_FAILED:
 						break;

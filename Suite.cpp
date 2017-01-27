@@ -4,6 +4,7 @@
 #include "SuiteSettings.h"
 #include <memory>
 #include <windows.h>
+#include <typeinfo> 
 
 #ifdef DEBUG
 #include <iostream>
@@ -48,6 +49,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		std::wcerr<<L"STORED SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 	}
+	
+	SuiteSettings *polytest=Settings.get();
+	std::wcerr<<L"SuiteSettings=SuiteSettings: "<<(typeid(*polytest)==typeid(SuiteSettings)?L"TRUE":L"FALSE")<<std::endl;
+	std::wcerr<<L"SuiteSettings=SuiteSettingsReg: "<<(typeid(*polytest)==typeid(SuiteSettingsReg)?L"TRUE":L"FALSE")<<std::endl;
+	std::wcerr<<L"SuiteSettings=SuiteSettingsIni: "<<(typeid(*polytest)==typeid(SuiteSettingsIni)?L"TRUE":L"FALSE")<<std::endl;
+	std::wcerr<<L"SuiteSettings=SuiteSettingsSection: "<<(typeid(*polytest)==typeid(SuiteSettingsSection)?L"TRUE":L"FALSE")<<std::endl;
+	std::wcerr<<L"SuiteSettings=SuiteSettingsAppData: "<<(typeid(*polytest)==typeid(SuiteSettingsAppData)?L"TRUE":L"FALSE")<<std::endl;
 	
 	if (!Settings->SaveSettings()) {
 		ErrorMessage(L"Failed to load settings!");

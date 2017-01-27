@@ -1,4 +1,5 @@
 #include "SuiteAboutDialog.h"
+#include "SuiteSettings.h"
 #include "Res.h"
 
 namespace AboutDialog {
@@ -7,9 +8,18 @@ namespace AboutDialog {
 
 INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	SuiteSettings *settings=(SuiteSettings*)GetWindowLongPtr(hwndDlg, DWLP_USER);
+
 	switch (uMsg) {
 		case WM_INITDIALOG:
 			{
+				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
+				settings=(SuiteSettings*)lParam;
+				
+				SetDlgItemText(hwndDlg, IDC_EXE_LOC, GetExecutableFileName().c_str());
+				SetDlgItemText(hwndDlg, IDC_SNK_LOC, settings->GetSnkPath().c_str());
+				SetDlgItemText(hwndDlg, IDC_CFG_LOC, settings->GetStoredLocation().c_str());
+				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
 				if (hIcon) {
@@ -33,7 +43,9 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 						SetProp(hwndCtl, L"PROP_ULINE_FONT", (HANDLE)hFont);
 				}
 				
-				return TRUE;
+				//We should set focus to default button (because we are returning FALSE from WM_INITDIALOG) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
+				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CLOSE_ABOUT), TRUE);
+				return FALSE;	//Returning false so not set default focus on edit control
 			}
 		case WM_CTLCOLORSTATIC:
 			if (GetDlgItem(hwndDlg, IDC_PROJECT_HOME)==(HWND)lParam) {
@@ -55,6 +67,19 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 						return TRUE;
 					case IDC_PROJECT_HOME:
 						ShellExecute(NULL, L"open", L"https://github.com/lcferrum", NULL, NULL, SW_SHOWNORMAL);
+						return TRUE;
+					case IDC_EXE_OPEN:
+						ShellExecute(NULL, L"open", GetExecutableFileName(L"").c_str(), NULL, NULL, SW_SHOWNORMAL);
+						return TRUE;
+					case IDC_SNK_OPEN:
+						{
+							size_t last_backslash;
+							if ((last_backslash=settings->GetSnkPath().find_last_of(L'\\'))!=std::wstring::npos)
+								ShellExecute(NULL, L"open", settings->GetSnkPath().substr(0, last_backslash).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							return TRUE;
+						}
+					case IDC_CFG_OPEN:
+						ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
 						return TRUE;
 				}
 			}

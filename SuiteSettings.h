@@ -18,7 +18,7 @@ protected:
 	HKL initial_hkl;
 	//Stored indicates if external setting source exists - if it doesn't exist SaveSettings should create it before attempting to write settings
 	//If SaveSettings was succesfull and setting wern't stored initially - stored is set to true (otherwise stored value remains the same)
-	//Setting source doesn't necessary includes settings themselves - it could be empty
+	//Setting source doesn't necessary include settings themselves - it could be empty
 	bool stored;
 	//Each set bit in changed variable indicate which setting was changed since last succesfull SaveSettings call
 	unsigned char changed;

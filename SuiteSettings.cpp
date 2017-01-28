@@ -225,14 +225,11 @@ bool SuiteSettingsIni::IniSzQueryValue(const wchar_t* key_name, std::wstring &va
 	wchar_t data_buf[MAX_PATH+1];	//One more character is added so not to trigger ERROR_MORE_DATA if read string fits exactly in MAX_PATH
 	
 	//GetPrivateProfileString have an interesting behaviour
-	//In case of any error (file not found, section not found, key not found) lpDefault will be copied to lpReturnedString and returned size will be set accordingly (length of lpDefault)
-	//If lpReturnedString buffer can't hold all of read string - it will be truncated to nSize-1 characters and NULL-terminated
-	//So to check if there really was any error while reading key it's necessary to check GetLastError returned value which will be ERROR_FILE_NOT_FOUND if anything bad happened
-	//If read string (not including NULL-terminator) equals or more than nSize-1 - GetLastError will return ERROR_MORE_DATA
+	//In case of any error (file not found, section not found, key not found) lpDefault will be copied to lpReturnedString and returned size will be set accordingly (length of lpDefault) and GetLastError will return ERROR_SUCCESS
+	//If lpReturnedString buffer can't hold all of read string - it will be truncated and NULL-terminated and GetLastError will return some error
 	//Setting lpDefault to NULL merely results in empty string being used for lpDefault
-	GetPrivateProfileString(ini_section.c_str(), key_name, NULL, data_buf, MAX_PATH+1, ini_path.c_str());
 	
-	if (GetLastError()==ERROR_SUCCESS) {
+	if (GetPrivateProfileString(ini_section.c_str(), key_name, NULL, data_buf, MAX_PATH+1, ini_path.c_str())&&GetLastError()==ERROR_SUCCESS) {
 		var=data_buf;
 #ifdef DEBUG
 		std::wcerr<<key_name<<L"="<<std::hex<<data_buf<<std::endl;
@@ -248,10 +245,8 @@ bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) c
 	
 	//GetPrivateProfileInt understands only decimals so using custom version for reading DWORDs
 	//For more on GetPrivateProfileString behaviour see IniSzQueryValue function
-	GetPrivateProfileString(ini_section.c_str(), key_name, NULL, data_buf, 15, ini_path.c_str());
 	
-	DWORD derr;
-	if (GetLastError()==ERROR_SUCCESS) {
+	if (GetPrivateProfileString(ini_section.c_str(), key_name, NULL, data_buf, 15, ini_path.c_str())&&GetLastError()==ERROR_SUCCESS) {
 		wchar_t* non_ul_char;
 		DWORD dw_buf=wcstoul(data_buf, &non_ul_char, 0);
 		//endptr will be set to the first non-integer character of str
@@ -278,12 +273,11 @@ bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wst
 	
 	//Check if section exists
 	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer
-	//If buffer is too small - returned list is truncated to buffer size, terminated with two NULLs and GetLastError is ERROR_MORE_DATA
-	//If there are no keys in section and section exists - function succeeds (GetLastError=ERROR_SUCCESS) but return buffer should be at least 2 character in size so not to get ERROR_MORE_DATA
-	//In all other cases (file or section doesn't exist) GetLastError=ERROR_FILE_NOT_FOUND
-	wchar_t section_test_buf[2];
-	GetPrivateProfileString(section.c_str(), NULL, NULL, section_test_buf, 2, path.c_str());
-	if (GetLastError()==ERROR_FILE_NOT_FOUND)
+	//If buffer is too small - returned list is truncated, terminated with two NULLs, returned size is nSize-2 and GetLastError returns some error
+	//If lpAppName doesn't exists - returned size is 0 and GetLastError returns some error
+	//If lpAppName exists but empty - returned size is 0 but GetLastError returns ERROR_SUCCESS
+	wchar_t section_test_buf[8];	//8 - some dummy buffer size large enough so not to trigger false negative result if section exists and not empty
+	if (GetPrivateProfileString(section.c_str(), NULL, NULL, section_test_buf, 8, path.c_str())==0&&GetLastError()!=ERROR_SUCCESS)
 		return false;
 	
 	return true;
@@ -440,6 +434,7 @@ SuiteSettingsReg::SuiteSettingsReg():
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
 			stored=true;
 		else {
+			user=true;
 			changed=CHG_ALLKEYS;
 			return;
 		}

@@ -3,6 +3,8 @@
 #include "Res.h"
 #include <typeinfo> 
 
+#include <iostream>
+
 namespace AboutDialog {
 	INT_PTR CALLBACK StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
 }
@@ -35,20 +37,32 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hIcon, 0);
 				}
 				
-				HWND hwndCtl=GetDlgItem(hwndDlg, IDC_PROJECT_HOME);
+				HWND hwndHlinkCtl=GetDlgItem(hwndDlg, IDC_PROJECT_HOME);
 				
-				SetProp(hwndCtl, L"PROP_ORIG_STATIC_PROC", (HANDLE)GetWindowLongPtr(hwndCtl, GWLP_WNDPROC));
-				SetWindowLongPtr(hwndCtl, GWLP_WNDPROC, (LONG_PTR)StaticProc);
+				SetProp(hwndHlinkCtl, L"PROP_ORIG_STATIC_PROC", (HANDLE)GetWindowLongPtr(hwndHlinkCtl, GWLP_WNDPROC));
+				SetWindowLongPtr(hwndHlinkCtl, GWLP_WNDPROC, (LONG_PTR)StaticProc);
 				
+				//Resizing hyperlink to text size (so mouse hover will look properly)
+				//Also, setting default and underlined fonts for hyperlink
 				//Created font should be destroyed before destroying dialog so not to leak resources
-				HFONT hFont=(HFONT)SendMessage(hwndCtl, WM_GETFONT, 0, 0);
+				HFONT hFont=(HFONT)SendMessage(hwndHlinkCtl, WM_GETFONT, 0, 0);
+				SetProp(hwndHlinkCtl, L"PROP_DEF_FONT", (HANDLE)hFont);
+				HDC hdcHlinkCtl=GetDC(hwndHlinkCtl);
+				HGDIOBJ hGdiObj=SelectObject(hdcHlinkCtl, hFont);
+				wchar_t hlink_text_buf[64];	//Ofcourse text can be longer than that, but here we are hardcoding reasonable limit for hyperlink caption text (cross-mentioned in the .rc)
+				if (int hlink_text_len=GetWindowText(hwndHlinkCtl, hlink_text_buf, 64)) {
+					SIZE szHlinkCtl;
+					GetTextExtentPoint32(hdcHlinkCtl, hlink_text_buf, hlink_text_len, &szHlinkCtl);	//Passing string length to GetTextExtentPoint32 instead of "character count" is not by the book so don't use UTF16 surrogate pairs in hyperlink caption (cross-mentioned in the .rc)
+					SetWindowPos(hwndHlinkCtl, hwndDlg, 0, 0, szHlinkCtl.cx, szHlinkCtl.cy, SWP_NOMOVE|SWP_NOZORDER|SWP_SHOWWINDOW);
+				}
+				SelectObject(hdcHlinkCtl, hGdiObj);
+				ReleaseDC(hwndHlinkCtl, hdcHlinkCtl);
 				LOGFONT logfont;
-				SetProp(hwndCtl, L"PROP_DEF_FONT", (HANDLE)hFont);
-				SetProp(hwndCtl, L"PROP_ULINE_FONT", NULL);
+				SetProp(hwndHlinkCtl, L"PROP_ULINE_FONT", NULL);
 				if (GetObject(hFont, sizeof(logfont), &logfont)) {
 					logfont.lfUnderline=TRUE;
 					if (hFont=CreateFontIndirect(&logfont))
-						SetProp(hwndCtl, L"PROP_ULINE_FONT", (HANDLE)hFont);
+						SetProp(hwndHlinkCtl, L"PROP_ULINE_FONT", (HANDLE)hFont);
 				}
 				
 				//We should set focus to default button (because we are returning FALSE from WM_INITDIALOG) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
@@ -73,9 +87,6 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_CLOSE_ABOUT:
 						EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 						return TRUE;
-					case IDC_PROJECT_HOME:
-						ShellExecute(NULL, L"open", L"https://github.com/lcferrum", NULL, NULL, SW_SHOWNORMAL);
-						return TRUE;
 					case IDC_EXE_OPEN:
 						ShellExecute(NULL, L"open", GetExecutableFileName(L"").c_str(), NULL, NULL, SW_SHOWNORMAL);
 						return TRUE;
@@ -91,7 +102,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 						return TRUE;
 				}
 			}
-			if (wParam==IDCANCEL) {
+			if (wParam==IDCANCEL) {	//Handler for ESC
 				EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 				return TRUE;
 			}
@@ -118,12 +129,7 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 			
 			break;
 		case WM_MOUSEMOVE:
-			if (GetCapture()!=hwndCtl) {
-				if (HANDLE hFont=GetProp(hwndCtl, L"PROP_ULINE_FONT"))
-					SendMessage(hwndCtl, WM_SETFONT, (WPARAM)hFont, FALSE);
-				InvalidateRect(hwndCtl, NULL, FALSE);
-				SetCapture(hwndCtl);
-			} else {
+			if (GetCapture()==hwndCtl) {
 				RECT rect;
 				POINT pt={LOWORD(lParam), HIWORD(lParam)};
 				
@@ -131,11 +137,21 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 				ClientToScreen(hwndCtl, &pt);
 
 				if (!PtInRect(&rect, pt)) {
-					SendMessage(hwndCtl, WM_SETFONT, (WPARAM)GetProp(hwndCtl, L"PROP_DEF_FONT"), FALSE);
-					InvalidateRect(hwndCtl, NULL, FALSE);
 					ReleaseCapture();
 				}
+			} else {
+				if (HANDLE hFont=GetProp(hwndCtl, L"PROP_ULINE_FONT"))
+					SendMessage(hwndCtl, WM_SETFONT, (WPARAM)hFont, FALSE);
+				InvalidateRect(hwndCtl, NULL, FALSE);
+				SetCapture(hwndCtl);
 			}
+			break;
+		case WM_CAPTURECHANGED:
+			SendMessage(hwndCtl, WM_SETFONT, (WPARAM)GetProp(hwndCtl, L"PROP_DEF_FONT"), FALSE);
+			InvalidateRect(hwndCtl, NULL, FALSE);
+			break;
+		case WM_LBUTTONUP:
+			ShellExecute(NULL, L"open", L"https://github.com/lcferrum", NULL, NULL, SW_SHOWNORMAL);
 			break;
 		case WM_SETCURSOR:
 			//Since IDC_HAND is not available on all operating systems, we will load the arrow cursor if IDC_HAND is not present

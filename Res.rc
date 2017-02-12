@@ -97,7 +97,7 @@ BEGIN
 	LTEXT			"Built on " __DATE__ " at " __TIME__, -1, 41, 23, 231, 8
 	LTEXT			"Copyright (c) " HS_CRIGHT_YEARS " Lcferrum", -1, 41, 34, 231, 8
 	LTEXT			"Licensed under BSD license - see LICENSE.TXT file for details", -1, 41, 45, 231, 8
-	LTEXT			"github.com/lcferrum", IDC_PROJECT_HOME, 41, 56, 64, 8, SS_NOTIFY
+	LTEXT			"github.com/lcferrum", IDC_PROJECT_HOME, 41, 56, 0, 8, SS_NOTIFY	//width is 0 because it will be resized in the code anyway (63 chars is hardcoded limit for now, don't use surrogate pairs)
 	LTEXT			"Executable Path:", -1, 14, 83, 100, 8
 	EDITTEXT 		IDC_EXE_LOC, 14, 94, 209, 14, ES_LEFT | ES_AUTOHSCROLL | ES_READONLY | WS_BORDER | WS_TABSTOP
 	PUSHBUTTON		"&Explore", IDC_EXE_OPEN, 226, 94, 50, 14

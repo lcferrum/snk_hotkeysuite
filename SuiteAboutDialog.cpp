@@ -80,12 +80,13 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
 			EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 			return TRUE;
+		case WM_SYSCOMMAND:
+			if (wParam!=SC_CONTEXTHELP)
+				return FALSE;
+			//If user pressed help button - fall down to WM_HELP
 		case WM_HELP:
-			if (GetKeyState(VK_F1)&0x8000) {	//F1 is pressed
-				std::wcerr<<L"HELP FOR (F1) "<<((HELPINFO*)lParam)->iCtrlId<<L" / "<<((HELPINFO*)lParam)->dwContextId<<std::endl;
-			} else {
-				std::wcerr<<L"HELP FOR "<<((HELPINFO*)lParam)->iCtrlId<<L" / "<<((HELPINFO*)lParam)->dwContextId<<std::endl;
-			}
+			//Because SC_CONTEXTHELP is trapped, the only way to receive WM_HELP is by pressing F1
+			ShellExecute(NULL, L"open", GetExecutableFileName(L"\\README.TXT").c_str(), NULL, NULL, SW_SHOWNORMAL);
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls

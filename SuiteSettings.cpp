@@ -363,10 +363,14 @@ SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
 //------------------------------ APPDATA -------------------------------
 
 SuiteSettingsAppData::SuiteSettingsAppData():
-	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(), SUITE_INI_SECTION)
+	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(Location::AUTO), SUITE_INI_SECTION)
 {}
 
-std::wstring SuiteSettingsAppData::GetIniAppDataPath()
+SuiteSettingsAppData::SuiteSettingsAppData(bool current_user):
+	SuiteSettingsIni(L"%HS_INI_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_INI_PATH%\\" DEFAULT_LHK_CFG_PATH, GetIniAppDataPath(current_user?Location::CURRENT_USER:Location::ALL_USERS), SUITE_INI_SECTION)
+{}
+
+std::wstring SuiteSettingsAppData::GetIniAppDataPath(Location loc)
 {
 	//We have three functions that can retrieve APPDATA path: SHGetSpecialFolderPath (shell32 v4.71+), SHGetFolderPath (v5.0+) and SHGetKnownFolderPath (v6.0+)
 	//By using SHGetSpecialFolderPath we can ensure that APPDATA path could be retreived on Win 98+ and Win 2000+ out of the box, and on Win 95 and Win NT4 with IE 4.0 installed
@@ -396,14 +400,20 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath()
 		//System APPDATA is CSIDL_COMMON_APPDATA (shell32 v5.0+)
 		
 		std::wstring user_path;		
-		if (fnCheckIfAppDataStored(CSIDL_APPDATA, user_path))
-			return user_path;
+		if (fnCheckIfAppDataStored(CSIDL_APPDATA, user_path)&&loc==Location::AUTO)
+			loc=Location::CURRENT_USER;
 		
 		std::wstring system_path;		
-		if (fnCheckIfAppDataStored(CSIDL_COMMON_APPDATA, system_path))
-			return system_path;
-		else
-			return user_path;
+		if (fnCheckIfAppDataStored(CSIDL_COMMON_APPDATA, system_path)&&loc==Location::AUTO)
+			loc=Location::ALL_USERS;
+		
+		switch (loc) {
+			case Location::CURRENT_USER:
+			case Location::AUTO:
+				return user_path;
+			case Location::ALL_USERS:
+				return system_path;
+		}
 	} else	
 		return L"";
 }
@@ -421,23 +431,36 @@ bool SuiteSettingsAppData::SaveSettings()
 
 //------------------------------ REGISTRY -------------------------------
 
-SuiteSettingsReg::SuiteSettingsReg():
-	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), user(false)
+SuiteSettingsReg::SuiteSettingsReg(Hive hive):
+	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), hive(hive)
 {
 	HKEY reg_key;
 	
 	//Leave default values and mark all settings as changed if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
-		user=true;
-		stored=true;
-	} else {
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
-			stored=true;
-		else {
-			user=true;
-			changed=CHG_ALLKEYS;
-			return;
-		}
+	switch (hive) {
+		case Hive::LOCAL_MACHINE:
+		case Hive::CURRENT_USER:
+			if (RegOpenKeyEx(hive==Hive::CURRENT_USER?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
+				stored=true;
+			else {
+				changed=CHG_ALLKEYS;
+				return;
+			}
+			break;
+		case Hive::AUTO:
+			hive=Hive::CURRENT_USER;
+			if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
+				stored=true;
+			} else {
+				if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
+					hive=Hive::LOCAL_MACHINE;
+					stored=true;
+				} else {
+					changed=CHG_ALLKEYS;
+					return;
+				}
+			}
+			break;
 	}
 	
 	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
@@ -481,6 +504,14 @@ SuiteSettingsReg::SuiteSettingsReg():
 		
 	RegCloseKey(reg_key);
 }
+
+SuiteSettingsReg::SuiteSettingsReg():
+	SuiteSettingsReg(Hive::AUTO)
+{}
+
+SuiteSettingsReg::SuiteSettingsReg(bool current_user):
+	SuiteSettingsReg(current_user?Hive::CURRENT_USER:Hive::LOCAL_MACHINE)
+{}
 
 bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var) const
 {
@@ -536,7 +567,7 @@ bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name,
 
 std::wstring SuiteSettingsReg::GetStoredLocation()
 {
-	return std::wstring(user?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
+	return std::wstring(hive!=Hive::LOCAL_MACHINE?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
 }
 
 bool SuiteSettingsReg::SaveSettings()
@@ -544,10 +575,10 @@ bool SuiteSettingsReg::SaveSettings()
 	HKEY reg_key;
 	
 	if (stored) {
-		if (RegOpenKeyEx(user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_SET_VALUE, &reg_key)!=ERROR_SUCCESS)
+		if (RegOpenKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_SET_VALUE, &reg_key)!=ERROR_SUCCESS)
 			return false;
 	} else {
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
+		if (RegCreateKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
 			return false;
 	}
 	

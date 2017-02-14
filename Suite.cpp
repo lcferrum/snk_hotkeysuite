@@ -37,47 +37,68 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				if (cmd_argc>2) {
 					cmd_res=CmdRes::ERR_MANY_ARGS;
 				} else if (!wcscmp(cmd_argv[0], L"/schedule")) {
-					if (cmd_argc==1)
-						cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-					else
-						cmd_res=CmdRes::ERR_MANY_ARGS;
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/autostart")) {
-					if (cmd_argc==1)
-						cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-					else
-						cmd_res=CmdRes::ERR_MANY_ARGS;
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/remove")) {
-					if (cmd_argc==1)
-						cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-					else
-						cmd_res=CmdRes::ERR_MANY_ARGS;
-				} else if (!wcscmp(cmd_argv[0], L"/reg")) {
-					if (cmd_argc==1) {
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+				} else if (!wcscmp(cmd_argv[0], L"/load_reg")) {
+					if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], L"current_user", wcslen(cmd_argv[1]))) {
+							Settings.reset(new SuiteSettingsReg(true));
+							cmd_res=CmdRes::SETTINGS_SET;
+#ifdef DEBUG
+							std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+						} else if (!wcsncmp(cmd_argv[1], L"local_machine", wcslen(cmd_argv[1]))) {
+							Settings.reset(new SuiteSettingsReg(false));
+							cmd_res=CmdRes::SETTINGS_SET;
+#ifdef DEBUG
+							std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
 						Settings.reset(new SuiteSettingsReg());
 						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
 						std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-					} else
-						cmd_res=CmdRes::ERR_MANY_ARGS;
-				} else if (!wcscmp(cmd_argv[0], L"/ini")) {
-					if (cmd_argc==1)
-						Settings.reset(new SuiteSettingsIni());
-					else
+					}
+				} else if (!wcscmp(cmd_argv[0], L"/load_ini")) {
+					if (cmd_argc>1)
 						Settings.reset(new SuiteSettingsIni(cmd_argv[1]));
+					else
+						Settings.reset(new SuiteSettingsIni());
+					cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
 					std::wcerr<<L"SET SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-					cmd_res=CmdRes::SETTINGS_SET;
-				} else if (!wcscmp(cmd_argv[0], L"/appdata")) {
-					if (cmd_argc==1) {
+				} else if (!wcscmp(cmd_argv[0], L"/load_appdata")) {
+					if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], L"current_user", wcslen(cmd_argv[1]))) {
+							Settings.reset(new SuiteSettingsAppData(true));
+							cmd_res=CmdRes::SETTINGS_SET;
+#ifdef DEBUG
+							std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+						} else if (!wcsncmp(cmd_argv[1], L"all_users", wcslen(cmd_argv[1]))) {
+							Settings.reset(new SuiteSettingsAppData(false));
+							cmd_res=CmdRes::SETTINGS_SET;
+#ifdef DEBUG
+							std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
 						Settings.reset(new SuiteSettingsAppData());
 						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
 						std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-					} else
-						cmd_res=CmdRes::ERR_MANY_ARGS;
+					}
 				} else {
 					cmd_res=CmdRes::ERR_UNKNOWN;
 				}

@@ -52,15 +52,18 @@ public:
 
 class SuiteSettingsReg: public SuiteSettings {
 private:
+	enum class Hive:char {AUTO, CURRENT_USER, LOCAL_MACHINE};
 	bool RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var) const;
 	bool RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name, DWORD &var) const;
+	SuiteSettingsReg(Hive hive);
 protected:
-	bool user;
+	Hive hive;
 public:
 	virtual std::wstring GetStoredLocation();
 	virtual bool SaveSettings();
 	
-	SuiteSettingsReg();
+	SuiteSettingsReg();						//Auto chooses hive - depending on what registry path is available (defaults to CURRENT_USER)
+	SuiteSettingsReg(bool current_user);	//Forces hive - CURRENT_USER or LOCAL_MACHINE
 };
 
 class SuiteSettingsIni: public SuiteSettings {
@@ -92,11 +95,13 @@ public:
 
 class SuiteSettingsAppData: public SuiteSettingsIni {
 private:
-	static std::wstring GetIniAppDataPath();
+	enum class Location:char {AUTO, CURRENT_USER, ALL_USERS};
+	static std::wstring GetIniAppDataPath(Location loc);
 public:
 	virtual bool SaveSettings();
 
-	SuiteSettingsAppData();
+	SuiteSettingsAppData();						//Auto chooses appdata location - depending on what appdata path is available (defaults to CURRENT_USER)
+	SuiteSettingsAppData(bool current_user);	//Forces appdata location - current or all users
 };
 
 #endif //SUITESETTINGS_H

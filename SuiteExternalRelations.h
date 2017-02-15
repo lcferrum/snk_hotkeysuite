@@ -3,7 +3,8 @@
 
 #include <windows.h>
 
-class SnkExtRel {
-};
+namespace SnkExtRel {
+	int Schedule(bool current_user);
+}
 
 #endif //SUITEEXTERNALRELATIONS_H

@@ -1,5 +1,6 @@
 #include "SuiteExternalRelations.h"
 #include <windows.h>
+#include <initguid.h>
 #include <mstask.h>
 
 int SnkExtRel::Schedule(bool current_user)
@@ -7,7 +8,7 @@ int SnkExtRel::Schedule(bool current_user)
 	CoInitialize(NULL);
 	
 	ITaskScheduler *pITS;
-	if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pITS)))) {
+	if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
 		ITask *pITask;
 		if (SUCCEEDED(pITS->NewWorkItem(L"SnK HotkeySuite", CLSID_CTask, IID_ITask, (IUnknown**)&pITask))) {
 			IPersistFile *pIPersistFile;

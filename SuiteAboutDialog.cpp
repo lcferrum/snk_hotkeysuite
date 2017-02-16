@@ -73,7 +73,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			if (GetDlgItem(hwndDlg, IDC_PROJECT_HOME)==(HWND)lParam) {
 				SetTextColor((HDC)wParam, RGB(0, 0, 192));
 				SetBkMode((HDC)wParam, TRANSPARENT);
-				return (INT_PTR)GetSysColorBrush(COLOR_MENU);
+				return (INT_PTR)GetSysColorBrush(COLOR_BTNFACE);
 			} else
 				return FALSE;
 		case WM_CLOSE:

@@ -25,6 +25,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	std::unique_ptr<SuiteSettings> Settings;
 
 	CmdRes cmd_res=CmdRes::DEFAULT;
+	int ext_res;
+	const wchar_t ARG_ALL[]=L"all";
+	const wchar_t ARG_CUR[]=L"current";
 	if (wcslen(lpCmdLine)) {
 		wchar_t** cmd_argv;
 		int cmd_argc;	
@@ -37,27 +40,37 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 			if (cmd_argc) {
 				if (cmd_argc>2) {
 					cmd_res=CmdRes::ERR_MANY_ARGS;
-				} else if (!wcscmp(cmd_argv[0], L"/schedule")) {
-					//cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-					SnkExtRel::Schedule(true);
-					return 0;
-				} else if (!wcscmp(cmd_argv[0], L"/autostart")) {
-					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-				} else if (!wcscmp(cmd_argv[0], L"/remove")) {
-					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
-				} else if (!wcscmp(cmd_argv[0], L"/set_reg")) {
+				} else if (!wcscmp(cmd_argv[0], L"/S")) {
 					if (cmd_argc>1) {
-						if (!wcsncmp(cmd_argv[1], L"current_user", wcslen(cmd_argv[1]))) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::Schedule(true);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::Schedule(false);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
+				} else if (!wcscmp(cmd_argv[0], L"/A")) {
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+				} else if (!wcscmp(cmd_argv[0], L"/R")) {
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+				} else if (!wcscmp(cmd_argv[0], L"/r")) {
+					if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsReg(true));
 							cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
+							std::wcerr<<L"SET SETTINGS_REG (CURRENT): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-						} else if (!wcsncmp(cmd_argv[1], L"local_machine", wcslen(cmd_argv[1]))) {
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsReg(false));
 							cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
+							std::wcerr<<L"SET SETTINGS_REG (ALL): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 						} else {
 							cmd_res=CmdRes::ERR_UNKNOWN;
@@ -66,31 +79,35 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 						Settings.reset(new SuiteSettingsReg());
 						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-						std::wcerr<<L"SET SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
+						std::wcerr<<L"SET SETTINGS_REG (AUTO): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 					}
-				} else if (!wcscmp(cmd_argv[0], L"/set_ini")) {
-					if (cmd_argc>1)
-						Settings.reset(new SuiteSettingsIni(cmd_argv[1]));
-					else
-						Settings.reset(new SuiteSettingsIni());
-					cmd_res=CmdRes::SETTINGS_SET;
-#ifdef DEBUG
-					std::wcerr<<L"SET SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
-#endif
-				} else if (!wcscmp(cmd_argv[0], L"/set_appdata")) {
+				} else if (!wcscmp(cmd_argv[0], L"/i")) {
 					if (cmd_argc>1) {
-						if (!wcsncmp(cmd_argv[1], L"current_user", wcslen(cmd_argv[1]))) {
+						Settings.reset(new SuiteSettingsIni(cmd_argv[1]));
+#ifdef DEBUG
+						std::wcerr<<L"SET SETTINGS_INI (PATH): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+					} else {
+						Settings.reset(new SuiteSettingsIni());
+#ifdef DEBUG
+						std::wcerr<<L"SET SETTINGS_INI (AUTO): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+#endif
+					}
+					cmd_res=CmdRes::SETTINGS_SET;
+				} else if (!wcscmp(cmd_argv[0], L"/a")) {
+					if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsAppData(true));
 							cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+							std::wcerr<<L"SET SETTINGS_APPDATA (CURRENT): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-						} else if (!wcsncmp(cmd_argv[1], L"all_users", wcslen(cmd_argv[1]))) {
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsAppData(false));
 							cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+							std::wcerr<<L"SET SETTINGS_APPDATA (ALL): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 						} else {
 							cmd_res=CmdRes::ERR_UNKNOWN;
@@ -99,7 +116,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 						Settings.reset(new SuiteSettingsAppData());
 						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
-						std::wcerr<<L"SET SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+						std::wcerr<<L"SET SETTINGS_APPDATA (AUTO): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 					}
 				} else {
@@ -113,6 +130,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 			return ERR_SUITE+2;
 		}
 	}
+	
+	if (cmd_res==CmdRes::EXTERNAL_CALLED)
+		return ext_res;
 	
 	if (cmd_res!=CmdRes::DEFAULT&&cmd_res!=CmdRes::SETTINGS_SET) {
 		if (cmd_res==CmdRes::ERR_UNKNOWN) ErrorMessage(L"Unknown command line argument!");

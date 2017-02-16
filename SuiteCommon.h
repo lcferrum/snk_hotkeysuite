@@ -13,6 +13,7 @@
 
 #define ERR_SUITE			0x0100
 #define ERR_SUITEMAIN		0x0200
+#define ERR_SUITEEXTREL		0x0300
 
 typedef struct {
 	union {

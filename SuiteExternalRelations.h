@@ -3,7 +3,7 @@
 
 #include <windows.h>
 
-namespace SnkExtRel {
+namespace SuiteExtRel {
 	int Schedule(bool current_user);
 }
 

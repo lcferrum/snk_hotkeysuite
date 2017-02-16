@@ -66,7 +66,7 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 #ifdef DEBUG
 		std::wcerr<<L"SCHEDULE: Task Scheduler 2.0 available"<<std::endl;
 #endif
-		 ITaskDefinition *pTask;
+		ITaskDefinition *pTask;
 		if (SUCCEEDED(pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t()))&&
 			SUCCEEDED(pService->NewTask(0, &pTask))) {
 			ret=0;	

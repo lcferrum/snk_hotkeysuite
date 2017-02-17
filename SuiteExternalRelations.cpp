@@ -5,7 +5,6 @@
 #include <initguid.h>
 #include <mstask.h>
 #include <taskschd.h>
-#include <comutil.h>
 #include <lmcons.h>
 #include "taskschd_hs.h"
 
@@ -14,7 +13,7 @@
 #endif
 
 namespace SuiteExtRel {
-	int Schedule10(bool current_user);
+	int Schedule10(bool &na);
 	int Schedule20(bool &na, bool current_user);
 }
 
@@ -24,17 +23,25 @@ int SuiteExtRel::Schedule(bool current_user)
 	bool na;
 	
 	ret=Schedule20(na, current_user);
-	if (na) ret=Schedule10(current_user);
+	if (na) {
+		if (!current_user) {
+			//In Task Scheduler 1.0 you can't run task for any logged on user by using BUILTIN\Users group as user like in 2.0
+			ErrorMessage(L"Task Scheduler 1.0 doesn't support scheduling GUI apps for all users!");
+			return ERR_SUITEEXTREL+3;
+		} else if ((ret=Schedule10(na), na)) {
+			ErrorMessage(L"Task Scheduler 1.0 not available!");
+			return ERR_SUITEEXTREL+4;
+		}
+	}
 	if (ret) ErrorMessage(L"Error scheduling SnK HotkeySuite!");
 	
 	return ret;
 }
 
-int SuiteExtRel::Schedule10(bool current_user)
+int SuiteExtRel::Schedule10(bool &na)
 {
-	if (!current_user) return ERR_SUITEEXTREL+3;	//In Task Scheduler 1.0 you can't run task for any logged on user by using BUILTIN\Users group as user like in 2.0
-	
 	int ret=ERR_SUITEEXTREL+1;
+	na=false;
 	
 	CoInitialize(NULL);
 	
@@ -47,6 +54,9 @@ int SuiteExtRel::Schedule10(bool current_user)
 	
 	ITaskScheduler *pITS;
 	if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
+#ifdef DEBUG
+		std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
+#endif
 		ITask *pITask;
 		if (SUCCEEDED(pITS->NewWorkItem(tname.c_str(), CLSID_CTask, IID_ITask, (IUnknown**)&pITask))) {
 			ITaskTrigger *pITaskTrigger;
@@ -76,6 +86,9 @@ int SuiteExtRel::Schedule10(bool current_user)
 			pITask->Release();
 		}
 		pITS->Release();
+	} else {
+		na=true;
+		ret=0;
 	}
 	
 	CoUninitialize();
@@ -96,7 +109,8 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 		std::wcerr<<L"SCHEDULE: Task Scheduler 2.0 available"<<std::endl;
 #endif
 		ITaskDefinition *pTask;
-		if (SUCCEEDED(pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t()))&&
+		VARIANT empty_var={VT_EMPTY};
+		if (SUCCEEDED(pService->Connect(empty_var, empty_var, empty_var, empty_var))&&
 			SUCCEEDED(pService->NewTask(0, &pTask))) {
 			ret=0;	
 			pTask->Release();

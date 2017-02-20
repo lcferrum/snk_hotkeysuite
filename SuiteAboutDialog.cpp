@@ -3,8 +3,6 @@
 #include "Res.h"
 #include <typeinfo> 
 
-#include <iostream>
-
 namespace AboutDialog {
 	INT_PTR CALLBACK StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
 }

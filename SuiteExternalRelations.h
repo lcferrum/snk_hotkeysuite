@@ -5,6 +5,9 @@
 
 namespace SuiteExtRel {
 	int Schedule(bool current_user);
+	int Unschedule(bool current_user);
+	int AddToAutorun(bool current_user);
+	int RemoveFromAutorun(bool current_user);
 }
 
 #endif //SUITEEXTERNALRELATIONS_H

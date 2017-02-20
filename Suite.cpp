@@ -57,7 +57,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				} else if (!wcscmp(cmd_argv[0], L"/A")) {
 					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/U")) {
-					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+					if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::Unschedule(true);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::Unschedule(false);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
 				} else if (!wcscmp(cmd_argv[0], L"/R")) {
 					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/r")) {

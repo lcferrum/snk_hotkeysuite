@@ -102,14 +102,20 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 	na=false;
 	
 	CoInitialize(NULL);	//Same as CoInitializeEx(NULL, COINIT_APARTMENTTHREADED), whatever, we don't need COINIT_MULTITHREADED
-	CoInitializeSecurity(NULL,-1,NULL,NULL,RPC_C_AUTHN_LEVEL_PKT_PRIVACY,RPC_C_IMP_LEVEL_IMPERSONATE,NULL,0,NULL);
+	//CoInitializeSecurity(NULL,-1,NULL,NULL,RPC_C_AUTHN_LEVEL_PKT_PRIVACY,RPC_C_IMP_LEVEL_IMPERSONATE,NULL,0,NULL);
 	
-	wchar_t uname[UNLEN+1];
-	DWORD uname_len=UNLEN+1;
-	GetUserName(uname, &uname_len);
-	std::wstring tname(L"SnK HotkeySuite [");
-	tname.append(uname);
-	tname.append({L']'});
+	std::wstring tname(L"SnK HotkeySuite");
+	BSTR uname_bstr=NULL;	
+	if (current_user) {
+		wchar_t uname[UNLEN+1];
+		DWORD uname_len=UNLEN+1;
+		GetUserName(uname, &uname_len);
+		tname.append({L' ', L'['});
+		tname.append(uname);
+		tname.append({L']'});
+	} else {
+		uname_bstr=SysAllocString(L"Users");
+	}
 	
 	ITaskService *pService;
 	if (SUCCEEDED(CoCreateInstance(CLSID_TaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskService, (void**)&pService))) {
@@ -120,51 +126,65 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 		VARIANT empty_var={VT_EMPTY};
 		if (SUCCEEDED(pService->Connect(empty_var, empty_var, empty_var, empty_var))&&
 			SUCCEEDED(pService->NewTask(0, &pTask))) {
-			ITriggerCollection *pTriggerCollection;
-			if (SUCCEEDED(pTask->get_Triggers(&pTriggerCollection))) {
-				ITrigger *pTrigger;
-				if (SUCCEEDED(pTriggerCollection->Create(TASK_TRIGGER_LOGON, &pTrigger))) {
-					ILogonTrigger *pLogonTrigger;
-					if (SUCCEEDED(pTrigger->QueryInterface(IID_ILogonTrigger, (void**)&pLogonTrigger))) {
-						if (BSTR tname_bstr=SysAllocString(tname.c_str())) {
-							IActionCollection *pActionCollection;
-							if (SUCCEEDED(pLogonTrigger->put_Id(tname_bstr))&&
-								SUCCEEDED(pTask->get_Actions(&pActionCollection))) {
-								IAction *pAction;
-								if (SUCCEEDED(pActionCollection->Create(TASK_ACTION_EXEC, &pAction))) {
-									IExecAction *pExecAction;
-									if (SUCCEEDED(pAction->QueryInterface(IID_IExecAction, (void**)&pExecAction))) {
-										if (BSTR hspath_bstr=SysAllocString(GetExecutableFileName().c_str())) {
-											if (SUCCEEDED(pExecAction->put_Path(hspath_bstr))) {
-												if (BSTR root_bstr=SysAllocString(L"\\")) {
-													ITaskFolder *pRootFolder;
-													if (SUCCEEDED(pService->GetFolder(root_bstr, &pRootFolder))) {
-														IRegisteredTask *pRegisteredTask;
-														HRESULT hr=pRootFolder->RegisterTaskDefinition(tname_bstr, pTask, TASK_CREATE_OR_UPDATE, empty_var, empty_var, TASK_LOGON_INTERACTIVE_TOKEN, empty_var, &pRegisteredTask);
-														if (SUCCEEDED(hr)) {
-															ret=0;
-															pRegisteredTask->Release();
+			IPrincipal *pPrincipal;
+			if (SUCCEEDED(pTask->get_Principal(&pPrincipal))) {
+				ITaskSettings *pTaskSettings;
+				if (SUCCEEDED(pPrincipal->put_RunLevel(TASK_RUNLEVEL_HIGHEST))&&
+					(current_user?true:(uname_bstr&&SUCCEEDED(pPrincipal->put_GroupId(uname_bstr))))&&
+					SUCCEEDED(pTask->get_Settings(&pTaskSettings))) {
+					if (BSTR infinite_bstr=SysAllocString(L"PT0S")) {
+						ITriggerCollection *pTriggerCollection;
+						if (SUCCEEDED(pTaskSettings->put_ExecutionTimeLimit(infinite_bstr))&&
+							SUCCEEDED(pTaskSettings->put_StopIfGoingOnBatteries(VARIANT_FALSE))&&
+							SUCCEEDED(pTaskSettings->put_DisallowStartIfOnBatteries(VARIANT_FALSE))&&
+							SUCCEEDED(pTask->get_Triggers(&pTriggerCollection))) {
+							ITrigger *pTrigger;
+							if (SUCCEEDED(pTriggerCollection->Create(TASK_TRIGGER_LOGON, &pTrigger))) {
+								IActionCollection *pActionCollection;
+								if (SUCCEEDED(pTask->get_Actions(&pActionCollection))) {
+									IAction *pAction;
+									if (SUCCEEDED(pActionCollection->Create(TASK_ACTION_EXEC, &pAction))) {
+										IExecAction *pExecAction;
+										if (SUCCEEDED(pAction->QueryInterface(IID_IExecAction, (void**)&pExecAction))) {
+											if (BSTR hspath_bstr=SysAllocString(GetExecutableFileName().c_str())) {
+												if (BSTR hsdir_bstr=SysAllocString(GetExecutableFileName(L"").c_str())) {
+													BSTR root_bstr;
+													if (SUCCEEDED(pExecAction->put_Path(hspath_bstr))&&
+														SUCCEEDED(pExecAction->put_WorkingDirectory(hsdir_bstr))&&
+														(root_bstr=SysAllocString(L"\\"))) {
+														ITaskFolder *pRootFolder;
+														if (SUCCEEDED(pService->GetFolder(root_bstr, &pRootFolder))) {
+															if (BSTR tname_bstr=SysAllocString(tname.c_str())) {
+																IRegisteredTask *pRegisteredTask;
+																if (SUCCEEDED(pRootFolder->RegisterTaskDefinition(tname_bstr, pTask, TASK_CREATE_OR_UPDATE, empty_var, empty_var, TASK_LOGON_INTERACTIVE_TOKEN, empty_var, &pRegisteredTask))) {
+																	ret=0;
+																	pRegisteredTask->Release();
+																}
+																SysFreeString(tname_bstr);
+															}
+															pRootFolder->Release();
 														}
-														pRootFolder->Release();
+														SysFreeString(root_bstr);
 													}
-													SysFreeString(root_bstr);
+													SysFreeString(hsdir_bstr);
 												}
+												SysFreeString(hspath_bstr);
 											}
-											SysFreeString(hspath_bstr);
+											pExecAction->Release();
 										}
-										pExecAction->Release();
+										pAction->Release();
 									}
-									pAction->Release();
+									pActionCollection->Release();
 								}
-								pActionCollection->Release();
+								pTrigger->Release();
 							}
-							SysFreeString(tname_bstr);
+							pTriggerCollection->Release();
 						}
-						pLogonTrigger->Release();
+						SysFreeString(infinite_bstr);
 					}
-					pTrigger->Release();
+					pTaskSettings->Release();
 				}
-				pTriggerCollection->Release();
+				pPrincipal->Release();
 			}
 			pTask->Release();
 		}
@@ -173,6 +193,9 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 		na=true;
 		ret=0;
 	}
+	
+	if (uname_bstr)
+		SysFreeString(uname_bstr);
 	
 	CoUninitialize();
 	

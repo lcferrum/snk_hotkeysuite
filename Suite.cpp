@@ -56,6 +56,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 					}
 				} else if (!wcscmp(cmd_argv[0], L"/A")) {
 					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+				} else if (!wcscmp(cmd_argv[0], L"/U")) {
+					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/R")) {
 					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
 				} else if (!wcscmp(cmd_argv[0], L"/r")) {

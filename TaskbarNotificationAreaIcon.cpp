@@ -179,6 +179,9 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 				if (wParam==SPI_SETWORKAREA)
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
+			case WM_CLOSE:
+				instance->CloseAndQuit();
+				return 0;
 			case WM_COMMAND:
 				if (instance->enabled&&OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))
 					return 0;

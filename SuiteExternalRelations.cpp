@@ -33,7 +33,7 @@ int SuiteExtRel::Schedule(bool current_user)
 			return ERR_SUITEEXTREL+4;
 		}
 	}
-	if (ret) ErrorMessage(L"Error scheduling SnK HotkeySuite!");
+	if (ret) ErrorMessage(L"Error scheduling SnK HotkeySuite! Make sure that you have Admin rights before scheduling a task.");
 	
 	return ret;
 }
@@ -58,6 +58,8 @@ int SuiteExtRel::Schedule10(bool &na)
 		std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
 #endif
 		ITask *pITask;
+		//ITask->Delete w/ ITask->NewWorkItem: if task exists - we are silently recreating it
+		pITS->Delete(tname.c_str());
 		if (SUCCEEDED(pITS->NewWorkItem(tname.c_str(), CLSID_CTask, IID_ITask, (IUnknown**)&pITask))) {
 			ITaskTrigger *pITaskTrigger;
 			WORD piNewTrigger;
@@ -102,7 +104,6 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 	na=false;
 	
 	CoInitialize(NULL);	//Same as CoInitializeEx(NULL, COINIT_APARTMENTTHREADED), whatever, we don't need COINIT_MULTITHREADED
-	//CoInitializeSecurity(NULL,-1,NULL,NULL,RPC_C_AUTHN_LEVEL_PKT_PRIVACY,RPC_C_IMP_LEVEL_IMPERSONATE,NULL,0,NULL);
 	
 	std::wstring tname(L"SnK HotkeySuite");
 	BSTR uname_bstr=NULL;	
@@ -156,6 +157,7 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user)
 														if (SUCCEEDED(pService->GetFolder(root_bstr, &pRootFolder))) {
 															if (BSTR tname_bstr=SysAllocString(tname.c_str())) {
 																IRegisteredTask *pRegisteredTask;
+																//ITaskService->NewTask w/ TASK_CREATE_OR_UPDATE: if task exists - we are silently recreating it
 																if (SUCCEEDED(pRootFolder->RegisterTaskDefinition(tname_bstr, pTask, TASK_CREATE_OR_UPDATE, empty_var, empty_var, TASK_LOGON_INTERACTIVE_TOKEN, empty_var, &pRegisteredTask))) {
 																	ret=0;
 																	pRegisteredTask->Release();

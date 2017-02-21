@@ -38,15 +38,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 				std::wcerr<<L"ARG["<<tst_argc<<L"] = \""<<cmd_argv[tst_argc]<<L"\""<<std::endl;
 #endif		
 			if (cmd_argc) {
-				if (cmd_argc>2) {
-					cmd_res=CmdRes::ERR_MANY_ARGS;
-				} else if (!wcscmp(cmd_argv[0], L"/S")) {
-					if (cmd_argc>1) {
+				if (!wcscmp(cmd_argv[0], L"/S")) {
+					if (cmd_argc>4) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
 						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
-							ext_res=SuiteExtRel::Schedule(true);
+							ext_res=SuiteExtRel::Schedule(true, cmd_argv+2, cmd_argc-2);
 							cmd_res=CmdRes::EXTERNAL_CALLED;
 						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
-							ext_res=SuiteExtRel::Schedule(false);
+							ext_res=SuiteExtRel::Schedule(false, cmd_argv+2, cmd_argc-2);
 							cmd_res=CmdRes::EXTERNAL_CALLED;
 						} else {
 							cmd_res=CmdRes::ERR_UNKNOWN;
@@ -55,9 +55,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 						cmd_res=CmdRes::ERR_FEW_ARGS;
 					}
 				} else if (!wcscmp(cmd_argv[0], L"/A")) {
-					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+					if (cmd_argc>4) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::AddToAutorun(true, cmd_argv+2, cmd_argc-2);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::AddToAutorun(false, cmd_argv+2, cmd_argc-2);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
 				} else if (!wcscmp(cmd_argv[0], L"/U")) {
-					if (cmd_argc>1) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
 						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
 							ext_res=SuiteExtRel::Unschedule(true);
 							cmd_res=CmdRes::EXTERNAL_CALLED;
@@ -71,9 +87,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 						cmd_res=CmdRes::ERR_FEW_ARGS;
 					}
 				} else if (!wcscmp(cmd_argv[0], L"/R")) {
-					cmd_res=CmdRes::ERR_NOT_IMPLEMENTED;
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::RemoveFromAutorun(true);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::RemoveFromAutorun(false);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
 				} else if (!wcscmp(cmd_argv[0], L"/r")) {
-					if (cmd_argc>1) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
 						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsReg(true));
 							cmd_res=CmdRes::SETTINGS_SET;
@@ -97,20 +129,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 					}
 				} else if (!wcscmp(cmd_argv[0], L"/i")) {
-					if (cmd_argc>1) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
 						Settings.reset(new SuiteSettingsIni(cmd_argv[1]));
+						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
 						std::wcerr<<L"SET SETTINGS_INI (PATH): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 					} else {
 						Settings.reset(new SuiteSettingsIni());
+						cmd_res=CmdRes::SETTINGS_SET;
 #ifdef DEBUG
 						std::wcerr<<L"SET SETTINGS_INI (AUTO): INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
 					}
-					cmd_res=CmdRes::SETTINGS_SET;
 				} else if (!wcscmp(cmd_argv[0], L"/a")) {
-					if (cmd_argc>1) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
 						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
 							Settings.reset(new SuiteSettingsAppData(true));
 							cmd_res=CmdRes::SETTINGS_SET;

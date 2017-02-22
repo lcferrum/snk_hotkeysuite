@@ -15,6 +15,8 @@ extern pTaskDialog fnTaskDialog;
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
 
+void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender);
+void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical);
 void HotkeyEventHandler(SuiteSettings *settings, bool long_press);
 
 int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
@@ -27,7 +29,9 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
 	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
-		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+		std::bind(CloseEventHandler, settings, std::placeholders::_1),
+		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
 	if (!SnkIcon->IsValid()) {
 		ErrorMessage(L"Failed to create icon!");
 		return ERR_SUITEMAIN+1;
@@ -268,3 +272,15 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	return true;
 }
 
+void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender)
+{
+	//Settings will be saved after message loop exits
+	sender->CloseAndQuit();	//Sets WM_QUIT's wParam to 0
+}
+
+void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical)
+{
+	//Session is about to end - there is a chance that process will be terminated right after this event handler exits, abandoning all the code after mesage loop
+	//So saving settings now but not exiting app - it will be terminated anyway
+	settings->SaveSettings();
+}

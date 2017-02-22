@@ -23,6 +23,8 @@ public:
 	~SuiteExterns();
 	SuiteExterns(const SuiteExterns&)=delete;				//Get rid of default copy constructor
 	SuiteExterns& operator=(const SuiteExterns&)=delete;	//Get rid of default copy assignment operator
+	SuiteExterns(const SuiteExterns&&)=delete;				//Get rid of default move constructor
+	SuiteExterns& operator=(const SuiteExterns&&)=delete;	//Get rid of default move assignment operator
 	
 	static bool MakeInstance();	
 };

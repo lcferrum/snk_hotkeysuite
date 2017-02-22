@@ -14,10 +14,14 @@
 class TskbrNtfAreaIcon {
 public:
 	typedef std::function<bool(TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)> WmCommandFn;
+	typedef std::function<void(TskbrNtfAreaIcon* sender)> WmCloseFn;
+	typedef std::function<void(TskbrNtfAreaIcon* sender, bool critical)> WmEndsessionTrueFn;
 private:
 	static std::unique_ptr<TskbrNtfAreaIcon> instance;
 	static UINT WmTaskbarCreated;
 	static WmCommandFn OnWmCommand;	//WM_COMMAND msg is passed to OnWmCommand - it should return true if msg is fully processed or false if msg should be processed by DefWindowProc
+	static WmCloseFn OnWmClose;	//WM_CLOSE msg (omitting params) is passed to OnWmClose
+	static WmEndsessionTrueFn OnWmEndsessionTrue;	//WM_ENDSESSION w/ wParam=TRUE msg (omitting params, but w/ critical flag) is passed to OnWmEndsessionTrue
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	
 	bool valid;
@@ -30,7 +34,7 @@ private:
 	
 	TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid);
 public:
-	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand);	
+	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue);	
 	bool IsValid();
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
 	void ChangeIcon(UINT icon_resid);
@@ -48,6 +52,8 @@ public:
 	~TskbrNtfAreaIcon();
 	TskbrNtfAreaIcon(const TskbrNtfAreaIcon&)=delete;				//Get rid of default copy constructor
 	TskbrNtfAreaIcon& operator=(const TskbrNtfAreaIcon&)=delete;	//Get rid of default copy assignment operator
+	TskbrNtfAreaIcon(const TskbrNtfAreaIcon&&)=delete;				//Get rid of default move constructor
+	TskbrNtfAreaIcon& operator=(const TskbrNtfAreaIcon&&)=delete;	//Get rid of default move assignment operator
 };
 
 #endif //TASKBARNOTIFICATIONAREAICON_H

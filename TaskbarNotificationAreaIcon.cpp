@@ -1,15 +1,19 @@
 #include "TaskbarNotificationAreaIcon.h"
 
-#define ICON_UID	0	//Only one icon allowed
+#define ICON_UID	0	//Only one icon per app allowed
 
 std::unique_ptr<TskbrNtfAreaIcon> TskbrNtfAreaIcon::instance;
 UINT TskbrNtfAreaIcon::WmTaskbarCreated=RegisterWindowMessage(L"TaskbarCreated");
 TskbrNtfAreaIcon::WmCommandFn TskbrNtfAreaIcon::OnWmCommand;
+TskbrNtfAreaIcon::WmCloseFn TskbrNtfAreaIcon::OnWmClose;
+TskbrNtfAreaIcon::WmEndsessionTrueFn TskbrNtfAreaIcon::OnWmEndsessionTrue;
 
-TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand)
+TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue)
 {
-	instance.reset(nullptr);	//Before assigning new OnWmCommand make sure that previous instance is destroyed
+	instance.reset(nullptr);	//Before assigning new event handlers make sure that previous instance is destroyed
 	TskbrNtfAreaIcon::OnWmCommand=std::move(OnWmCommand);
+	TskbrNtfAreaIcon::OnWmClose=std::move(OnWmClose);
+	TskbrNtfAreaIcon::OnWmEndsessionTrue=std::move(OnWmEndsessionTrue);
 	instance.reset(new TskbrNtfAreaIcon(hInstance, icon_wm, icon_tooltip, icon_resid, icon_class, icon_menuid, default_menuid));
 	return instance.get();
 }
@@ -179,8 +183,13 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 				if (wParam==SPI_SETWORKAREA)
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
-			case WM_CLOSE:
-				instance->CloseAndQuit();
+			case WM_CLOSE:			//Though icon window has no (X) button, WM_CLOSE is sent when opening menu and pressing Alt+F4 and by Task Scheduler to GUI apps in response to stopping task
+				if (instance->enabled&&OnWmCommand)
+					OnWmClose(instance.get());
+				return 0;
+			case WM_ENDSESSION:		//WM_ENDSESSION w/ wParam=TRUE is sent apps when user session is about to end - when this message is answered, app can be terminated at any moment (even before exiting message loop)
+				if (wParam==TRUE&&instance->enabled&&OnWmEndsessionTrue)
+					OnWmEndsessionTrue(instance.get(), lParam&ENDSESSION_CRITICAL);
 				return 0;
 			case WM_COMMAND:
 				if (instance->enabled&&OnWmCommand&&OnWmCommand(instance.get(), wParam, lParam))

@@ -32,6 +32,8 @@ public:
 	~HotkeyEngine();
 	HotkeyEngine(const HotkeyEngine&)=delete;				//Get rid of default copy constructor
 	HotkeyEngine& operator=(const HotkeyEngine&)=delete;	//Get rid of default copy assignment operator
+	HotkeyEngine(const HotkeyEngine&&)=delete;				//Get rid of default move constructor
+	HotkeyEngine& operator=(const HotkeyEngine&&)=delete;	//Get rid of default move assignment operator
 };
 
 #endif //HOTKEYENGINE_H

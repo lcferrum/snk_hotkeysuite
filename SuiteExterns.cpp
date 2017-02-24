@@ -36,7 +36,8 @@ void SuiteExterns::LoadFunctions()
 
 	if (hShell32) {
 		fnSHGetFolderPath=(pSHGetFolderPath)GetProcAddress(hShell32, "SHGetFolderPathW");
-		fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, "SHGetSpecialFolderPathW");
+		if (!(fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, "SHGetSpecialFolderPathW")))
+			fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, (char*)175);	//Try to export by ordinal (will work only under NT)
 	}
 	
 	if (hComctl32) {

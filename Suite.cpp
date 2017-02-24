@@ -23,6 +23,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 	SuiteExterns::MakeInstance();
 	std::unique_ptr<SuiteSettings> Settings;
+	
+	//Even though SuiteSettings supports storing configs in registry and in INI files on per-section basis - we doesn't support it for now
+	//Storing setting in INI on per-section basis is not so useful feature
+	//While storing settings in the registry seems to be useful, it's also controversial: SnK scripts can't be stored in the registry and should be stored elsewhere
+	//Currently SnK scripts are stored with binary for registry settings, so they can't be used out of the box for per-user (in contrast with per-machine) use
 
 	CmdRes cmd_res=CmdRes::DEFAULT;
 	int ext_res;
@@ -105,32 +110,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 					} else {
 						cmd_res=CmdRes::ERR_FEW_ARGS;
 					}
-				} else if (!wcscmp(cmd_argv[0], L"/r")) {
-					if (cmd_argc>2) {
-						cmd_res=CmdRes::ERR_MANY_ARGS;
-					} else if (cmd_argc>1) {
-						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
-							Settings.reset(new SuiteSettingsReg(true));
-							cmd_res=CmdRes::SETTINGS_SET;
-#ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_REG (CURRENT): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
-#endif
-						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
-							Settings.reset(new SuiteSettingsReg(false));
-							cmd_res=CmdRes::SETTINGS_SET;
-#ifdef DEBUG
-							std::wcerr<<L"SET SETTINGS_REG (ALL): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
-#endif
-						} else {
-							cmd_res=CmdRes::ERR_UNKNOWN;
-						}
-					} else {
-						Settings.reset(new SuiteSettingsReg());
-						cmd_res=CmdRes::SETTINGS_SET;
-#ifdef DEBUG
-						std::wcerr<<L"SET SETTINGS_REG (AUTO): REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
-#endif
-					}
 				} else if (!wcscmp(cmd_argv[0], L"/i")) {
 					if (cmd_argc>2) {
 						cmd_res=CmdRes::ERR_MANY_ARGS;
@@ -201,17 +180,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		if (!Settings->IsStored()) {
 			Settings.reset(new SuiteSettingsAppData());
 			if (!Settings->IsStored()) {
-				Settings.reset(new SuiteSettingsReg());
-				if (!Settings->IsStored()) {
-					Settings.reset(new SuiteSettingsIni());
+				Settings.reset(new SuiteSettingsIni());
 #ifdef DEBUG
-					std::wcerr<<L"DEFAULT SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
+				std::wcerr<<L"DEFAULT SETTINGS_INI: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;
 #endif
-				} else {
-#ifdef DEBUG
-					std::wcerr<<L"STORED SETTINGS_REG: REG_KEY="<<Settings->GetStoredLocation()<<std::endl;
-#endif
-				}
 			} else {
 #ifdef DEBUG
 				std::wcerr<<L"STORED SETTINGS_APPDATA: INI_PATH="<<Settings->GetStoredLocation()<<std::endl;

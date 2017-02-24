@@ -1,7 +1,6 @@
 #include "SuiteSettings.h"
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
-#include <functional>
 #include <cstdlib>
 #include <cwchar>
 #include <shlobj.h>
@@ -374,16 +373,42 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath(Location loc)
 {
 	//We have three functions that can retrieve APPDATA path: SHGetSpecialFolderPath (shell32 v4.71+), SHGetFolderPath (v5.0+) and SHGetKnownFolderPath (v6.0+)
 	//By using SHGetSpecialFolderPath we can ensure that APPDATA path could be retreived on Win 98+ and Win 2000+ out of the box, and on Win 95 and Win NT4 with IE 4.0 installed
+	//N.B.: Actually SHGetSpecialFolderPathW (i.e. UNICODE version) available since  v4.0 but is exported only by ordinal (175) in pre v4.71 versions
 	if (fnSHGetSpecialFolderPath) {
 		//SHGetSpecialFolderPath(NULL, buffer, CSIDL, TRUE) is equivalent to SHGetFolderPath(NULL, CSIDL|CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, buffer)
 		//Though SHGetSpecialFolderPath is considered deprecated it is still available even in most recent versions of Windows for backward compatibility
-		std::function<bool(int, std::wstring&)> fnCheckIfAppDataStored=[](int csidl, std::wstring& ret_path_str){
+		auto fnCheckIfAppDataStored=[](int csidl, std::wstring& ret_path_str)->bool{
 			//SHGetSpecialFolderPath's lpszPath should be MAX_PATH in length
 			wchar_t path_buf[MAX_PATH];
 			
-			//If SHGetSpecialFolderPath fails - ret_path_str not modified
-			//If SHGetSpecialFolderPath succeeds - ret_path_str will contain valid path even if CheckIfIniStored fails
-			if (fnSHGetSpecialFolderPath(NULL, path_buf, csidl, TRUE)==TRUE) {
+			auto fnGetCommonAppDataPath=[path_buf, csidl]()->bool{
+				bool ret=false;
+				if (csidl==CSIDL_COMMON_APPDATA) {
+					//In case of CSIDL_COMMON_APPDATA that is not available on shell32 v4.0-4.72 we still have the power to save the show
+					//Windows stores common special folder paths under HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders
+					//And even if CSIDL may not be known to this version of SHGetSpecialFolderPath, it's path can still be found in the registry
+					//So why do we need SHGetSpecialFolderPath in first place if special folder paths are actually stored in the registry?
+					//For two reasons (assuming that CSIDL is known to this version of SHGetSpecialFolderPath): 
+					// Some CSIDLs are never stored in the registry (not CSIDL_COMMON_APPDATA case) - SHGetSpecialFolderPath gets paths elsewhere for these CSIDLs
+					// Registry value may not be found in the registry (for one or another reason) - that's kind of error and in this case SHGetSpecialFolderPath returns localized CSIDL name appended to windows directory path
+					//So we'll try to find CSIDL_COMMON_APPDATA in the registry where it is stored under value named (always unlocalized) "Common AppData"
+					//If this value not found, we won't be able to emulate SHGetSpecialFolderPath error handling routine because localized CSIDL name won't be present in string table for this version of shell32
+					HKEY reg_key;
+					if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
+						DWORD buf_len=MAX_PATH*sizeof(wchar_t);	//Buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
+						DWORD key_type;
+						//If returned data is not NULL-terminated or not of single-string type - it's also an error 
+						if (RegQueryValueEx(reg_key, L"Common AppData", NULL, &key_type, (LPBYTE)path_buf, &buf_len)==ERROR_SUCCESS&&(key_type==REG_EXPAND_SZ||key_type==REG_SZ)&&path_buf[buf_len/sizeof(wchar_t)-1]==L'\0')
+							ret=true;
+						RegCloseKey(reg_key);
+					}
+				}
+				return ret;
+			};
+			
+			//If SHGetSpecialFolderPath and fnGetCommonAppDataPath fails - ret_path_str not modified
+			//If SHGetSpecialFolderPath or fnGetCommonAppDataPath succeeds - ret_path_str will contain valid path even if CheckIfIniStored fails
+			if ((fnSHGetSpecialFolderPath(NULL, path_buf, csidl, TRUE)==TRUE)||fnGetCommonAppDataPath()) {
 				ret_path_str=path_buf;
 				
 				//Only in case of drive's root returned string ends with backslash
@@ -392,12 +417,14 @@ std::wstring SuiteSettingsAppData::GetIniAppDataPath(Location loc)
 				
 				ret_path_str+=SUITE_APPDATA_DIR DEFAULT_INI_PATH;
 				return CheckIfIniStored(ret_path_str, SUITE_INI_SECTION);
-			} else			
+			} else
 				return false;
 		};
 		
 		//Using CSIDL_APPDATA for user APPDATA instead of CSIDL_LOCAL_APPDATA because former is available from shell32 v4.71+ while latter from v5.0+
+		//And because app configs should be roamed
 		//System APPDATA is CSIDL_COMMON_APPDATA (shell32 v5.0+)
+		//N.B.: Contradicting to what MSDN says, CSIDL_APPDATA is available since v4.0, but not CSIDL_LOCAL_APPDATA or CSIDL_COMMON_APPDATA - they are really only available since v5.0
 		
 		std::wstring user_path;		
 		if (fnCheckIfAppDataStored(CSIDL_APPDATA, user_path)&&loc==Location::AUTO)

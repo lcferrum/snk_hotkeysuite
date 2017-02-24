@@ -19,14 +19,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				
 				SetDlgItemText(hwndDlg, IDC_EXE_LOC, GetExecutableFileName().c_str());
 				SetDlgItemText(hwndDlg, IDC_SNK_LOC, settings->GetSnkPath().c_str());
-				if (typeid(*settings).hash_code()==typeid(SuiteSettingsReg).hash_code()) {
-					if (!settings->GetStoredLocation().find(L"HKEY_CURRENT_USER"))
-						SetDlgItemText(hwndDlg, IDC_CFG_LOC, L"Settings are stored in the registry (per user)");
-					else
-						SetDlgItemText(hwndDlg, IDC_CFG_LOC, L"Settings are stored in the registry (for all users)");
-					EnableWindow(GetDlgItem(hwndDlg, IDC_CFG_OPEN), false);
-				} else
-					SetDlgItemText(hwndDlg, IDC_CFG_LOC, settings->GetStoredLocation().c_str());
+				SetDlgItemText(hwndDlg, IDC_CFG_LOC, settings->GetStoredLocation().c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);

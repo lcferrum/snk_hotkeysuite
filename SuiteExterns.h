@@ -14,6 +14,7 @@ private:
 	HMODULE hShell32;
 	HMODULE hComctl32;
 	HMODULE hSecur32;
+	HMODULE hShfolder;
 	
 	void LoadFunctions();
 	void UnloadFunctions();

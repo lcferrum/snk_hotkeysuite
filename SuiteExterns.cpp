@@ -43,7 +43,9 @@ void SuiteExterns::LoadFunctions()
 	if (hShell32) {
 		fnSHGetFolderPathShell32=(pSHGetFolderPath)GetProcAddress(hShell32, "SHGetFolderPathW");
 		if (!(fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, "SHGetSpecialFolderPathW")))
-			fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, (char*)175);	//Try to export by ordinal (will work only under NT)
+			//Try to export by ordinal
+			//WARNING: on Win 9x/Me version of shell32.dll this will export SHGetSpecialFolderPathA (ANSI version) instead
+			fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, (char*)175);
 	}
 	
 	if (hComctl32) {

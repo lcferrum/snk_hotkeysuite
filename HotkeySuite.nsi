@@ -24,10 +24,10 @@ RequestExecutionLevel admin
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_RUN "HotkeySuite.exe"
-!define MUI_FINISHPAGE_RUN_PARAMETERS ""
+!define MUI_FINISHPAGE_RUN "$INSTDIR\HotkeySuite.exe"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "/a current"
 !define MUI_FINISHPAGE_RUN_TEXT "Run HotkeySuite"
-!define MUI_FINISHPAGE_SHOWREADME "README.TXT"
+!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.TXT"
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "Show HotkeySuite readme"
 !insertmacro MUI_PAGE_FINISH
 
@@ -45,14 +45,22 @@ SectionGroup /e "HotkeySuite" Grp_HS
 	SectionEnd
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
-		SetOutPath $INSTDIR
+		SetOutPath "$APPDATA\SnK HotkeySuite"
 		File /oname=on_hotkey.txt "snk_default_script.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
 		${if} ${AtLeastWinVista}
-			ExecWait '"$INSTDIR\HotkeySuite.exe /S all"'
+			${if} $MultiUser.InstallMode == AllUsers
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /S all /a current'
+			${else}
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /S current /a current'
+			${endif}
 		${else}
-			ExecWait '"$INSTDIR\HotkeySuite.exe /A all"'
+			${if} $MultiUser.InstallMode == AllUsers
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /A all /a current'
+			${else}
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /A current /a current'
+			${endif}
 		${endif}
 	SectionEnd
 SectionGroupEnd

@@ -95,7 +95,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 }
 
 void HotkeyEventHandler(SuiteSettings *settings, bool long_press) {
-	std::wstring snk_cmdline=L"\""+settings->GetSnkPath()+L"\" /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=\"";
+	std::wstring snk_cmdline=L"\""+settings->GetSnkPath()+L"\" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=\"";
 	if (long_press)
 		snk_cmdline+=settings->GetLhkCfgPath();
 	else

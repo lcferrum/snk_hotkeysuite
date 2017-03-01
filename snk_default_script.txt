@@ -1,0 +1,16 @@
+#	This is default script for SnK
+#	With this script SnK will first try to search for and kill fullscreen app that has highest cpu load
+#	If no such app is found it will next try with not responding (hung) app and DirectX app
+#	In the end, if everything else fails, it will just kill any process that has highest CPU load
+#	+v enables message box pop up at the end of exection showing results
+#
+#	Internally HotkeySuite does several things before executing any SnK scripts
+#	First of all it will run /sec switch so you don't need to add it here
+#	/sec switch prevents accidentially launching several SnKs in quick succession
+#	Then it beeps (with /bpp switch) signaling that it is about to load SnK script
+#	And right before loading the script it blacklists it's own PID so not to be killed accidentially by SnK
+#
+#	This script is most suitable for the situations when some fullscreen video game or other resource demanding app has hanged the system
+#	It can be used as a good starting point for writing something more specialized or sophisticated
+#	For other SnK commands and features check out SnK readme
++v /fsc /inr /d3d /cpu

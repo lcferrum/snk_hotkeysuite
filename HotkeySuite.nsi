@@ -14,6 +14,7 @@
 !include MUI2.nsh
 !include Sections.nsh
 !include LogicLib.nsh
+!include FileFunc.nsh
 !include WinVer.nsh
 
 OutFile "HotkeySuiteSetup.exe"
@@ -39,7 +40,30 @@ RequestExecutionLevel admin
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "Show HotkeySuite readme"
 !insertmacro MUI_PAGE_FINISH
 
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_TEXT "Delete SnK HotkeySuite settings"
+!define MUI_FINISHPAGE_RUN_NOTCHECKED
+!define MUI_FINISHPAGE_RUN_FUNCTION un.deleteStoredSettings
+!insertmacro MUI_UNPAGE_FINISH
+
 !insertmacro MUI_LANGUAGE "English"
+
+!getdllversion "HotkeySuite.exe" APPVER_
+!getdllversion "..\snk\SnK.exe" SNKVER_
+!searchparse /file "SuiteVersion.h" '#define HS_CRIGHT_YEARS	"' CRIGHT_YEARS '"'
+VIProductVersion "${APPVER_1}.${APPVER_2}.0.0"
+VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "SnK HotkeySuite Setup"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Lcferrum"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (c) ${CRIGHT_YEARS} Lcferrum"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "InternalName" "HotkeySuiteSetup"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "HotkeySuiteSetup.exe"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APPNAME}"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}"
 
 SectionGroup /e "HotkeySuite" Grp_HS
 	Section "Executable" Sec_HS
@@ -50,14 +74,6 @@ SectionGroup /e "HotkeySuite" Grp_HS
 		File "CHANGELOG.TXT"
 		File "LICENSE.TXT"
 		File "README.TXT"
-		
-		WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
-		WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME}"
-		WriteRegStr SHCTX "${UNINST_KEY}" "UninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode'
-		WriteRegStr SHCTX "${UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode /S'
-		WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "5"
-		
-		WriteUninstaller "$INSTDIR\${UNINST_NAME}"
 	SectionEnd
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
@@ -95,15 +111,62 @@ Section /o "Add to PATH" Sec_PATH
 	MessageBox MB_OK "Sec_PATH"
 SectionEnd
 
-Section "Uninstall"
+Section "-Postinstall"
+	WriteUninstaller "$INSTDIR\${UNINST_NAME}"
+
+	WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME}"
+	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayVersion" "${APPVER_1}.${APPVER_2}"
+	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\HotkeySuite.exe,0"
+	WriteRegStr SHCTX "${UNINST_KEY}" "Publisher" "Lcferrum"
+	WriteRegStr SHCTX "${UNINST_KEY}" "URLInfoAbout" "https://github.com/lcferrum"
+	WriteRegStr SHCTX "${UNINST_KEY}" "UninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode'
+	WriteRegStr SHCTX "${UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode /S'
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "NoModify" "1"
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "NoRepair" "1"
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "VersionMajor" "${APPVER_1}"
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "VersionMinor" "${APPVER_2}"
+	
+	${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+	IntFmt $0 "0x%08X" $0
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "$0"
+SectionEnd
+
+Section "Uninstall"	
 	DeleteRegKey SHCTX "${UNINST_KEY}"
+	
+	${if} ${AtLeastWinVista}
+		${if} $MultiUser.InstallMode == AllUsers
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /U all'
+		${else}
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /U current'
+		${endif}
+	${else}
+		${if} $MultiUser.InstallMode == AllUsers
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /R all'
+		${else}
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /R current'
+		${endif}
+	${endif}
+		
+	Delete "$INSTDIR\HotkeySuite.exe"
+	Delete "$INSTDIR\CHANGELOG.TXT"
+	Delete "$INSTDIR\LICENSE.TXT"
+	Delete "$INSTDIR\README.TXT"
+	Delete "$INSTDIR\SnK.exe"
+	Delete "$INSTDIR\SnKh.exe"
+	Delete "$INSTDIR\SNK.CHANGELOG.TXT"
+	Delete "$INSTDIR\SNK.README.TXT"
+	Delete "$INSTDIR\DetectMatrix.html"
+	Delete "$INSTDIR\${UNINST_NAME}"
+	RMDir "$INSTDIR"
 SectionEnd
 
 LangString DESC_Grp_HS ${LANG_ENGLISH} "Install HotkeySuite with additional options."
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
 LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation."
 LangString DESC_Sec_AUTORUN ${LANG_ENGLISH} "Add HotkeySuite to Autorun (pre-Vista) or schedule it using Task Scheduler (Vista and above)."
-LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution. If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable. So HotkeySuite and bundeled SnK will be available from command prompt."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -124,6 +187,12 @@ Function un.onInit
 FunctionEnd
 
 Function patchInstdirNT4
+	;There is a bug (or rather oversight) in MultiUser.nsh
+	;If it detects that Windows version is less than Win2k it assumes that NSIS is unable to get $LOCALAPPDATA path and replaces it with $PROGRAMFILES
+	;This misconception probably stems from MSDN docs that say that CSIDL_LOCAL_APPDATA is available since v5.0 of shell32.dll, which is available only from Win2k onwards
+	;What they don't say is that there is shfolder.dll that emulates CSIDL_LOCAL_APPDATA for older versions of shell32.dll
+	;This shfolder.dll is bundeled with IE5 (or as part of Platform SDK Redistributable) that can be installed on NT4 and NSIS (at least since v3.01) will use it instead of shell32.dll if it is available
+	;And even when shfolder.dll is unavailable on NT4 (and so $LOCALAPPDATA returns nothing), local AppData path still can be queried here using registry
 	${ifnot} ${AtLeastWin2000}
 	${andif} $MultiUser.InstallMode == CurrentUser
 	${andif} $MultiUser.InstDir == ""
@@ -131,7 +200,15 @@ Function patchInstdirNT4
 			StrCpy $INSTDIR "$LOCALAPPDATA\${APPNAME}"
 		${else}
 			ReadRegStr $INSTDIR HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Local AppData"
-			StrCpy $INSTDIR "$INSTDIR\${APPNAME}"
+			${if} "$INSTDIR" == ""
+				StrCpy $INSTDIR "$PROGRAMFILES\${APPNAME}"
+			${else}
+				StrCpy $INSTDIR "$INSTDIR\${APPNAME}"
+			${endif}
 		${endif}
 	${endif}
+FunctionEnd
+
+Function un.deleteStoredSettings
+	RMDir /r "$APPDATA\${APPNAME}"
 FunctionEnd

@@ -110,6 +110,38 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 					} else {
 						cmd_res=CmdRes::ERR_FEW_ARGS;
 					}
+				} else if (!wcscmp(cmd_argv[0], L"/P")) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::AddToPath(true);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::AddToPath(false);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
+				} else if (!wcscmp(cmd_argv[0], L"/C")) {
+					if (cmd_argc>2) {
+						cmd_res=CmdRes::ERR_MANY_ARGS;
+					} else if (cmd_argc>1) {
+						if (!wcsncmp(cmd_argv[1], ARG_CUR, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::RemoveFromPath(true);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else if (!wcsncmp(cmd_argv[1], ARG_ALL, wcslen(cmd_argv[1]))) {
+							ext_res=SuiteExtRel::RemoveFromPath(false);
+							cmd_res=CmdRes::EXTERNAL_CALLED;
+						} else {
+							cmd_res=CmdRes::ERR_UNKNOWN;
+						}
+					} else {
+						cmd_res=CmdRes::ERR_FEW_ARGS;
+					}
 				} else if (!wcscmp(cmd_argv[0], L"/i")) {
 					if (cmd_argc>2) {
 						cmd_res=CmdRes::ERR_MANY_ARGS;

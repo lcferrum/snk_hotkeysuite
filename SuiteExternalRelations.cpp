@@ -65,7 +65,9 @@ int SuiteExtRel::AddToAutorun(bool current_user, wchar_t** argv, int argc)
 	int ret=ERR_SUITEEXTREL+6;
 	
 	HKEY reg_key;
-	if (RegOpenKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &reg_key)==ERROR_SUCCESS) {
+	//There is a chance that Run key doesn't exists (e.g. on freshly installed OS)
+	//So we are using RegCreateKeyEx here - it will just open the key if it already exists or create one otherwise
+	if (RegCreateKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)==ERROR_SUCCESS) {
 		std::wstring hs_path=QuoteArgument(GetExecutableFileName().c_str());
 		while (argc--) {
 			hs_path.push_back(L' ');
@@ -440,4 +442,14 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user, const wchar_t* params)
 	CoUninitialize();
 	
 	return ret;
+}
+
+int SuiteExtRel::AddToPath(bool current_user)
+{
+	return 0;
+}
+
+int SuiteExtRel::RemoveFromPath(bool current_user)
+{
+	return 0;
 }

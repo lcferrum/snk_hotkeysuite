@@ -615,13 +615,9 @@ bool SuiteSettingsReg::SaveSettings()
 {
 	HKEY reg_key;
 	
-	if (stored) {
-		if (RegOpenKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_SET_VALUE, &reg_key)!=ERROR_SUCCESS)
-			return false;
-	} else {
-		if (RegCreateKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
-			return false;
-	}
+	//Not checking if settings are already stored - RegCreateKeyEx will just open the key it already exists
+	if (RegCreateKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
+		return false;
 	
 	bool save_succeeded=true;
 	

@@ -1,7 +1,15 @@
+!define APPNAME "SnK HotkeySuite"
+!define UNINST_NAME "unins000.exe"
+!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !define MULTIUSER_MUI
-!define MULTIUSER_NOUNINSTALL
-!define MULTIUSER_INSTALLMODE_INSTDIR "SnK HotkeySuite"
+!define MULTIUSER_INSTALLMODE_COMMANDLINE
+!define MULTIUSER_INSTALLMODE_INSTDIR "${APPNAME}"
+!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "${UNINST_KEY}"
+!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME "InstallLocation"
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}"
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
+!define MULTIUSER_INSTALLMODE_FUNCTION patchInstdirNT4
 !include MultiUser.nsh
 !include MUI2.nsh
 !include Sections.nsh
@@ -9,7 +17,7 @@
 !include WinVer.nsh
 
 OutFile "HotkeySuiteSetup.exe"
-Name "SnK HotkeySuite"
+Name "${APPNAME}"
 BrandingText " "
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
@@ -42,10 +50,18 @@ SectionGroup /e "HotkeySuite" Grp_HS
 		File "CHANGELOG.TXT"
 		File "LICENSE.TXT"
 		File "README.TXT"
+		
+		WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+		WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME}"
+		WriteRegStr SHCTX "${UNINST_KEY}" "UninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode'
+		WriteRegStr SHCTX "${UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode /S'
+		WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "5"
+		
+		WriteUninstaller "$INSTDIR\${UNINST_NAME}"
 	SectionEnd
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
-		SetOutPath "$APPDATA\SnK HotkeySuite"
+		SetOutPath "$APPDATA\${APPNAME}"
 		File /oname=on_hotkey.txt "snk_default_script.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
@@ -79,6 +95,10 @@ Section /o "Add to PATH" Sec_PATH
 	MessageBox MB_OK "Sec_PATH"
 SectionEnd
 
+Section "Uninstall"
+	DeleteRegKey SHCTX "${UNINST_KEY}"
+SectionEnd
+
 LangString DESC_Grp_HS ${LANG_ENGLISH} "Install HotkeySuite with additional options."
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
 LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation."
@@ -97,4 +117,21 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 
 Function .onInit
 	!insertmacro MULTIUSER_INIT
+FunctionEnd
+
+Function un.onInit
+	!insertmacro MULTIUSER_UNINIT
+FunctionEnd
+
+Function patchInstdirNT4
+	${ifnot} ${AtLeastWin2000}
+	${andif} $MultiUser.InstallMode == CurrentUser
+	${andif} $MultiUser.InstDir == ""
+		${if} "$LOCALAPPDATA" != ""
+			StrCpy $INSTDIR "$LOCALAPPDATA\${APPNAME}"
+		${else}
+			ReadRegStr $INSTDIR HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Local AppData"
+			StrCpy $INSTDIR "$INSTDIR\${APPNAME}"
+		${endif}
+	${endif}
 FunctionEnd

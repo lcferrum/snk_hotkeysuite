@@ -1,4 +1,5 @@
 #include "TaskbarNotificationAreaIcon.h"
+#include "SuiteExterns.h"
 
 #define ICON_UID	0	//Only one icon per app allowed
 
@@ -7,6 +8,8 @@ UINT TskbrNtfAreaIcon::WmTaskbarCreated=RegisterWindowMessage(L"TaskbarCreated")
 TskbrNtfAreaIcon::WmCommandFn TskbrNtfAreaIcon::OnWmCommand;
 TskbrNtfAreaIcon::WmCloseFn TskbrNtfAreaIcon::OnWmClose;
 TskbrNtfAreaIcon::WmEndsessionTrueFn TskbrNtfAreaIcon::OnWmEndsessionTrue;
+
+extern pChangeWindowMessageFilter fnChangeWindowMessageFilter;
 
 TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue)
 {
@@ -59,14 +62,26 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		UnregisterClass(MAKEINTATOM(icon_atom), hInstance);
 		return;
 	}
+	
+	//If process has higher privileges than Explorer, UIPI will block WM_TASKBARCREATED by default
+	//This happens when process is run with Administrator privileges under Vista and above
+	if (fnChangeWindowMessageFilter)
+		fnChangeWindowMessageFilter(WmTaskbarCreated, MSGFLT_ADD);
 		
 	wcsncpy(icon_ntfdata.szTip, icon_tooltip, 63);	//First version of NOTIFYICONDATA only allowes szTip no more than 64 characters in length (including NULL-terminator)
 	
-	if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata)) {
+	//We are not checking Shell_NotifyIcon result for a reason
+	//If Shell_NotifyIcon will be called before Explorer has been fully initialized - it will fail
+	//This may happen if app is launched with Autorun or Task Scheduler
+	//After explorer has been fully initialized - it will send WM_TASKBARCREATED to all top-level windows (added in shell32.dll v4.71)
+	//Oldschool way of keeping notification area icon visible in case of Explorer is not ready or crashed is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed
+	Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
+	
+	/*if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata)) {
 		DestroyWindow(icon_ntfdata.hWnd);			//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue (again, instance not ready - message will be ignored)
 		UnregisterClass(MAKEINTATOM(icon_atom), hInstance);
 		return;
-	}
+	}*/
 	
 	icon_menu=GetSubMenu(GetMenu(icon_ntfdata.hWnd), 0);
 	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);

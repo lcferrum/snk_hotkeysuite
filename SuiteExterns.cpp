@@ -5,11 +5,12 @@ pSHGetFolderPath fnSHGetFolderPathShfolder=NULL;
 pSHGetSpecialFolderPath fnSHGetSpecialFolderPath=NULL;
 pTaskDialog fnTaskDialog=NULL;
 pGetUserNameEx fnGetUserNameEx=NULL;
+pChangeWindowMessageFilter fnChangeWindowMessageFilter=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
 SuiteExterns::SuiteExterns(): 
-	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL)
+	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL), hUser32(NULL)
 {
 	LoadFunctions();
 }
@@ -35,6 +36,7 @@ void SuiteExterns::LoadFunctions()
 	hComctl32=LoadLibrary(L"comctl32.dll");
 	hSecur32=LoadLibrary(L"secur32.dll");
 	hShfolder=LoadLibrary(L"shfolder.dll");
+	hUser32=LoadLibrary(L"user32.dll");
 	
 	if (hShfolder) {
 		fnSHGetFolderPathShfolder=(pSHGetFolderPath)GetProcAddress(hShfolder, "SHGetFolderPathW");
@@ -55,11 +57,16 @@ void SuiteExterns::LoadFunctions()
 	if (hSecur32) {
 		fnGetUserNameEx=(pGetUserNameEx)GetProcAddress(hSecur32, "GetUserNameExW");
 	}
+	
+	if (hUser32) {
+		fnChangeWindowMessageFilter=(pChangeWindowMessageFilter)GetProcAddress(hUser32, "ChangeWindowMessageFilter");
+	}
 }
 
 //And here we are testing for NULLs because LoadLibrary can fail in method above
 void SuiteExterns::UnloadFunctions() 
 {
+	if (hUser32) FreeLibrary(hUser32);
 	if (hShfolder) FreeLibrary(hShfolder);
 	if (hSecur32) FreeLibrary(hSecur32);
 	if (hShell32) FreeLibrary(hShell32);

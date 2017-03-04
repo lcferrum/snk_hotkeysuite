@@ -31,8 +31,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	CmdRes cmd_res=CmdRes::DEFAULT;
 	int ext_res;
-	const wchar_t ARG_ALL[]=L"all";
-	const wchar_t ARG_CUR[]=L"current";
+	const wchar_t ARG_ALL[]=L"machine";
+	const wchar_t ARG_CUR[]=L"user";
 	if (wcslen(lpCmdLine)) {
 		wchar_t** cmd_argv;
 		int cmd_argc;	

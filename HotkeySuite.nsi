@@ -34,7 +34,7 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\HotkeySuite.exe"
-!define MUI_FINISHPAGE_RUN_PARAMETERS "/a current"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "/a user"
 !define MUI_FINISHPAGE_RUN_TEXT "Run HotkeySuite"
 !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.TXT"
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "Show HotkeySuite readme"
@@ -83,15 +83,15 @@ SectionGroup /e "HotkeySuite" Grp_HS
 	Section "Add to Autorun" Sec_AUTORUN
 		${if} ${AtLeastWinVista}
 			${if} $MultiUser.InstallMode == AllUsers
-				ExecWait '"$INSTDIR\HotkeySuite.exe" /S all /a current'
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /S machine /a user'
 			${else}
-				ExecWait '"$INSTDIR\HotkeySuite.exe" /S current /a current'
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /S user /a user'
 			${endif}
 		${else}
 			${if} $MultiUser.InstallMode == AllUsers
-				ExecWait '"$INSTDIR\HotkeySuite.exe" /A all /a current'
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /A machine /a user'
 			${else}
-				ExecWait '"$INSTDIR\HotkeySuite.exe" /A current /a current'
+				ExecWait '"$INSTDIR\HotkeySuite.exe" /A user /a user'
 			${endif}
 		${endif}
 	SectionEnd
@@ -137,15 +137,15 @@ Section "Uninstall"
 	
 	${if} ${AtLeastWinVista}
 		${if} $MultiUser.InstallMode == AllUsers
-			ExecWait '"$INSTDIR\HotkeySuite.exe" /U all'
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /U machine'
 		${else}
-			ExecWait '"$INSTDIR\HotkeySuite.exe" /U current'
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /U user'
 		${endif}
 	${else}
 		${if} $MultiUser.InstallMode == AllUsers
-			ExecWait '"$INSTDIR\HotkeySuite.exe" /R all'
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /R machine'
 		${else}
-			ExecWait '"$INSTDIR\HotkeySuite.exe" /R current'
+			ExecWait '"$INSTDIR\HotkeySuite.exe" /R user'
 		${endif}
 	${endif}
 		

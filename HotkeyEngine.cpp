@@ -101,7 +101,7 @@ DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 		return 1;
 	}
 	
-	//For hook to work thread should have message loop though it can be pretty castrated
+	//For hook to work thread should have message loop, though it can be pretty castrated
 	//Only GetMessage is needed because hook callback is actually called inside this one function
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0)); //GetMessage returns 0 if WM_QUIT, and we are ignoring -1 (error) so not have to check if hook thread has killed itself

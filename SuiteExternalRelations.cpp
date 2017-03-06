@@ -457,7 +457,7 @@ bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstr
 	key_value=L"";
 	
 	//If key not found - return empty string
-	//If other error - it's fail
+	//If other error - it's a fail
 	LONG res=RegQueryValueEx(reg_key, key_name, NULL, NULL, NULL, &buf_len);
 	if (res==ERROR_FILE_NOT_FOUND)
 		return true;
@@ -468,8 +468,8 @@ bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstr
 	//+1 is for possible missing NULL-terminator
 	wchar_t data_buf[(buf_len+1)/sizeof(wchar_t)];
 	
-	//If for some other reason we get read error or key of unsuitable type - return false
 	//If key not found - return empty string
+	//If for some other reason we get read error or key of unsuitable type - return false
 	res=RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)data_buf, &buf_len);
 	if (res==ERROR_FILE_NOT_FOUND)
 		return true;
@@ -477,7 +477,7 @@ bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstr
 		return false;
 	
 	//Make sure that buffer is terminated
-	if (data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0') data_buf[buf_len/sizeof(wchar_t)]=L'\0';
+	if (!buf_len||data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0') data_buf[buf_len/sizeof(wchar_t)]=L'\0';
 	
 	key_value=data_buf;
 	return true;
@@ -485,6 +485,8 @@ bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstr
 
 size_t SuiteExtRel::FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len)
 {
+	//Function correctly matches directories in environment Path variable including preceding (if last dir in Path) and trailing (if not last dir) semicolons
+	
 	size_t dir_len=wcslen(dir);
 	if (dir[dir_len-1]==L'\\') dir_len--;	//Omit trailing backslash
 	
@@ -492,25 +494,28 @@ size_t SuiteExtRel::FindInPath(const std::wstring &path, const wchar_t* dir, siz
 	while ((dir_pos=path.find(dir, dir_pos, dir_len))!=std::wstring::npos) {
 		std::wstring tail=path.substr(dir_pos+dir_len, 2);
 		
-		if (dir_pos&&path[dir_pos-1]!=L';')	//Not a vaild directory
+		if (dir_pos&&path[dir_pos-1]!=L';')	{	//Not a vaild directory (not at the biginning and doesn't have preceding semicolon)
+			dir_pos++;
 			continue;
-		else if (tail.empty()) {			//Directory found at the end of Path or spans whole variable
-			if (dir_pos) {
+		} else if (tail.empty()) {				//Directory found at the end of Path or spans whole variable
+			if (dir_pos) {						//If at the end - add preceding semicolon
 				dir_pos--;
 				dir_len++;
 			}
-		} else if (tail==L"\\")	{			//Directory w/ backslash found at the end of Path or spans whole variable
-			if (dir_pos) {
+		} else if (tail==L"\\")	{				//Directory w/ backslash found at the end of Path or spans whole variable
+			if (dir_pos) {						//If at the end - add preceding semicolon
 				dir_pos--;
 				dir_len+=2;
 			} else
-				dir_len++;
-		} else if (tail[0]==L';') {			//Directory found in the Path
-			dir_len++;
-		} else if (tail==L"\\;") {			//Directory w/ backslash found in the Path
-			dir_len+=2;
-		} else
+				dir_len++;						//Just add trailing backslash
+		} else if (tail[0]==L';') {				//Directory found somewhere in the Path
+			dir_len++;							//Add trailing semicolon
+		} else if (tail==L"\\;") {				//Directory w/ backslash found somewhere in the Path
+			dir_len+=2;							//Add trailing semicolon w/ backslash
+		} else {
+			dir_pos++;
 			continue;
+		}
 		
 		if (ret_len) *ret_len=dir_len;
 		return dir_pos;
@@ -524,13 +529,12 @@ int SuiteExtRel::AddToPath(bool current_user)
 	int ret=ERR_SUITEEXTREL+8;
 	
 	HKEY reg_key;
-	//There is a no way that Environment key doesn't exists but whatever - do like in AddToAutorun
+	//There is a no way that Environment key doesn't exists but, whatever, do like in AddToAutorun
 	//RegCreateKeyEx will just open the key if it already exists or create one otherwise
 	if (RegCreateKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, current_user?L"Environment":L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)==ERROR_SUCCESS) {
 		DWORD key_type;
 		std::wstring prev_path;
 		
-		//Get value from the registry
 		if (EnvQueryValue(reg_key, L"Path", prev_path, key_type)) {
 			std::wstring hs_dir=GetExecutableFileName(L"");
 			if (FindInPath(prev_path, hs_dir.c_str(), NULL)!=std::wstring::npos) {
@@ -542,8 +546,10 @@ int SuiteExtRel::AddToPath(bool current_user)
 					hs_dir.append(prev_path);
 				}
 				
-				//RegSetValueEx will create absent value or overwrite present value (even if present value have different type)
-				if (RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)hs_dir.c_str(), (hs_dir.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+				if (RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)hs_dir.c_str(), (hs_dir.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) {
+					SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, (WPARAM)NULL, (LPARAM)L"Environment", SMTO_NORMAL, 100, NULL);
+					ret=0;
+				}
 			}
 		}
 		
@@ -565,7 +571,6 @@ int SuiteExtRel::RemoveFromPath(bool current_user)
 		DWORD key_type;
 		std::wstring prev_path;
 		
-		//Get value from the registry
 		if (EnvQueryValue(reg_key, L"Path", prev_path, key_type)) {
 			std::wstring hs_dir=GetExecutableFileName(L"");
 			size_t len, pos;
@@ -573,8 +578,16 @@ int SuiteExtRel::RemoveFromPath(bool current_user)
 			while ((pos=FindInPath(prev_path, hs_dir.c_str(), &len))!=std::wstring::npos)
 				prev_path.erase(pos, len);
 						
-			//RegSetValueEx will create absent value or overwrite present value (even if present value have different type)
-			if (RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)prev_path.c_str(), (prev_path.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+			if (prev_path.empty())	//If variable is empty now - just delete it
+				res=RegDeleteValue(reg_key, L"SnK HotkeySuite");
+			else
+				res=RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)prev_path.c_str(), (prev_path.length()+1)*sizeof(wchar_t));
+			
+			//If value doesn't exists - ignore it, but don't ignore other errors
+			if (res==ERROR_SUCCESS||res==ERROR_FILE_NOT_FOUND) {
+				SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, (WPARAM)NULL, (LPARAM)L"Environment", SMTO_NORMAL, 100, NULL);
+				ret=0;
+			}
 		}
 		
 		RegCloseKey(reg_key);

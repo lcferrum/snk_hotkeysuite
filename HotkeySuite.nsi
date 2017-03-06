@@ -108,7 +108,11 @@ Section "SnK" Sec_SNK
 SectionEnd
 
 Section /o "Add to PATH" Sec_PATH
-	MessageBox MB_OK "Sec_PATH"
+	${if} $MultiUser.InstallMode == AllUsers
+		ExecWait '"$INSTDIR\HotkeySuite.exe" /P machine'
+	${else}
+		ExecWait '"$INSTDIR\HotkeySuite.exe" /P user'
+	${endif}
 SectionEnd
 
 Section "-Postinstall"
@@ -147,6 +151,12 @@ Section "Uninstall"
 		${else}
 			ExecWait '"$INSTDIR\HotkeySuite.exe" /R user'
 		${endif}
+	${endif}
+	
+	${if} $MultiUser.InstallMode == AllUsers
+		ExecWait '"$INSTDIR\HotkeySuite.exe" /C machine'
+	${else}
+		ExecWait '"$INSTDIR\HotkeySuite.exe" /C user'
 	${endif}
 		
 	Delete "$INSTDIR\HotkeySuite.exe"

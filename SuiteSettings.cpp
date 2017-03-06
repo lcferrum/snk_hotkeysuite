@@ -563,10 +563,6 @@ bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, st
 	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, NULL, &buf_len)!=ERROR_SUCCESS)
 		return false;
 	
-	//If key is not of REG_EXPAND_SZ type - return to keep default var value 
-	if (key_type!=REG_EXPAND_SZ)
-		return false;
-	
 	//Returned buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
 	wchar_t data_buf[buf_len/sizeof(wchar_t)];
 	

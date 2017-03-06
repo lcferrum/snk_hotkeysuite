@@ -22,6 +22,8 @@ namespace SuiteExtRel {
 	int Unschedule20(bool &na, bool current_user);
 	bool GetUserNameWrapper(std::wstring &sname, std::wstring &fname);
 	std::wstring QuoteArgument(const wchar_t* arg);
+	bool EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &key_value, DWORD &key_type);
+	size_t FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len);
 }
 
 //Based on "Everyone quotes command line arguments the wrong way": 
@@ -88,11 +90,15 @@ int SuiteExtRel::RemoveFromAutorun(bool current_user)
 	int ret=ERR_SUITEEXTREL+5;
 	
 	HKEY reg_key;
-	if (RegOpenKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &reg_key)==ERROR_SUCCESS) {
-		LONG res=RegDeleteValue(reg_key, L"SnK HotkeySuite");
+	LONG res=RegOpenKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &reg_key);
+	if (res==ERROR_SUCCESS) {
+		res=RegDeleteValue(reg_key, L"SnK HotkeySuite");
 		//If value doesn't exists - ignore it, but don't ignore other errors
 		if (res==ERROR_SUCCESS||res==ERROR_FILE_NOT_FOUND) ret=0;
 		RegCloseKey(reg_key);
+	} else if (res==ERROR_FILE_NOT_FOUND) {
+		//No Run key is ok too - nothing to delete
+		ret=0;
 	}
 	
 	if (ret) ErrorMessage(L"Error removing SnK HotkeySuite from Autorun! Make sure that you have enough rights to access registry.");
@@ -444,12 +450,140 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user, const wchar_t* params)
 	return ret;
 }
 
+bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &key_value, DWORD &key_type)
+{
+	DWORD buf_len;
+	key_type=REG_EXPAND_SZ;
+	key_value=L"";
+	
+	//If key not found - return empty string
+	//If other error - it's fail
+	LONG res=RegQueryValueEx(reg_key, key_name, NULL, NULL, NULL, &buf_len);
+	if (res==ERROR_FILE_NOT_FOUND)
+		return true;
+	else if (res!=ERROR_SUCCESS)
+		return false;
+	
+	//Returned buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
+	//+1 is for possible missing NULL-terminator
+	wchar_t data_buf[(buf_len+1)/sizeof(wchar_t)];
+	
+	//If for some other reason we get read error or key of unsuitable type - return false
+	//If key not found - return empty string
+	res=RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)data_buf, &buf_len);
+	if (res==ERROR_FILE_NOT_FOUND)
+		return true;
+	else if (res!=ERROR_SUCCESS||(key_type!=REG_EXPAND_SZ&&key_type!=REG_SZ))
+		return false;
+	
+	//Make sure that buffer is terminated
+	if (data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0') data_buf[buf_len/sizeof(wchar_t)]=L'\0';
+	
+	key_value=data_buf;
+	return true;
+}
+
+size_t SuiteExtRel::FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len)
+{
+	size_t dir_len=wcslen(dir);
+	if (dir[dir_len-1]==L'\\') dir_len--;	//Omit trailing backslash
+	
+	size_t dir_pos=0;
+	while ((dir_pos=path.find(dir, dir_pos, dir_len))!=std::wstring::npos) {
+		std::wstring tail=path.substr(dir_pos+dir_len, 2);
+		
+		if (dir_pos&&path[dir_pos-1]!=L';')	//Not a vaild directory
+			continue;
+		else if (tail.empty()) {			//Directory found at the end of Path or spans whole variable
+			if (dir_pos) {
+				dir_pos--;
+				dir_len++;
+			}
+		} else if (tail==L"\\")	{			//Directory w/ backslash found at the end of Path or spans whole variable
+			if (dir_pos) {
+				dir_pos--;
+				dir_len+=2;
+			} else
+				dir_len++;
+		} else if (tail[0]==L';') {			//Directory found in the Path
+			dir_len++;
+		} else if (tail==L"\\;") {			//Directory w/ backslash found in the Path
+			dir_len+=2;
+		} else
+			continue;
+		
+		if (ret_len) *ret_len=dir_len;
+		return dir_pos;
+	}
+	
+	return std::wstring::npos;
+}
+
 int SuiteExtRel::AddToPath(bool current_user)
 {
-	return 0;
+	int ret=ERR_SUITEEXTREL+8;
+	
+	HKEY reg_key;
+	//There is a no way that Environment key doesn't exists but whatever - do like in AddToAutorun
+	//RegCreateKeyEx will just open the key if it already exists or create one otherwise
+	if (RegCreateKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, current_user?L"Environment":L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)==ERROR_SUCCESS) {
+		DWORD key_type;
+		std::wstring prev_path;
+		
+		//Get value from the registry
+		if (EnvQueryValue(reg_key, L"Path", prev_path, key_type)) {
+			std::wstring hs_dir=GetExecutableFileName(L"");
+			if (FindInPath(prev_path, hs_dir.c_str(), NULL)!=std::wstring::npos) {
+				//Value already added to the path
+				ret=0;
+			} else {
+				if (prev_path.length()) {
+					hs_dir.append({L';'});
+					hs_dir.append(prev_path);
+				}
+				
+				//RegSetValueEx will create absent value or overwrite present value (even if present value have different type)
+				if (RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)hs_dir.c_str(), (hs_dir.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+			}
+		}
+		
+		RegCloseKey(reg_key);
+	}
+	
+	if (ret) ErrorMessage(L"Error adding SnK HotkeySuite directory to PATH! Make sure that you have enough rights to access registry.");
+
+	return ret;
 }
 
 int SuiteExtRel::RemoveFromPath(bool current_user)
 {
-	return 0;
+	int ret=ERR_SUITEEXTREL+7;
+	
+	HKEY reg_key;
+	LONG res=RegOpenKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, current_user?L"Environment":L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", 0, KEY_SET_VALUE|KEY_QUERY_VALUE, &reg_key);
+	if (res==ERROR_SUCCESS) {
+		DWORD key_type;
+		std::wstring prev_path;
+		
+		//Get value from the registry
+		if (EnvQueryValue(reg_key, L"Path", prev_path, key_type)) {
+			std::wstring hs_dir=GetExecutableFileName(L"");
+			size_t len, pos;
+
+			while ((pos=FindInPath(prev_path, hs_dir.c_str(), &len))!=std::wstring::npos)
+				prev_path.erase(pos, len);
+						
+			//RegSetValueEx will create absent value or overwrite present value (even if present value have different type)
+			if (RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)prev_path.c_str(), (prev_path.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+		}
+		
+		RegCloseKey(reg_key);
+	} else if (res==ERROR_FILE_NOT_FOUND) {
+		//No Environment key is ok too - nothing to delete
+		ret=0;
+	}
+	
+	if (ret) ErrorMessage(L"Error clearing SnK HotkeySuite directory from PATH! Make sure that you have enough rights to access registry.");
+
+	return ret;
 }

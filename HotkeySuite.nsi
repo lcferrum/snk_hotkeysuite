@@ -20,12 +20,14 @@
 OutFile "HotkeySuiteSetup.exe"
 Name "${APPNAME}"
 BrandingText " "
+Var USER_APPDATA
+Var StartMenuLocation
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
 ;Installer requires admin rights - because of the need to register HotkeySuite with Task Scheduler
 RequestExecutionLevel admin
-;Hack to get SetShellVarContext-independent APPDATA
-Var USER_APPDATA
+;Though MultiUser sets INSTDIR variable by itself, InstallDir call is required for after-browse default directory name auto-append to work
+InstallDir "\${APPNAME}"
 
 !define MUI_ICON "hs.ico"
 
@@ -34,6 +36,10 @@ Var USER_APPDATA
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINST_KEY}" 
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuLocation"
+!insertmacro MUI_PAGE_STARTMENU Page_SMenu $StartMenuLocation
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\HotkeySuite.exe"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "/a user"
@@ -118,6 +124,9 @@ Section /o "Add to PATH" Sec_PATH
 SectionEnd
 
 Section "-Postinstall"
+	SetOverwrite on
+	SetOutPath $INSTDIR
+	
 	WriteUninstaller "$INSTDIR\${UNINST_NAME}"
 
 	WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -136,9 +145,20 @@ Section "-Postinstall"
 	${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
 	IntFmt $0 "0x%08X" $0
 	WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "$0"
+	
+	!insertmacro MUI_STARTMENU_WRITE_BEGIN Page_SMenu
+		CreateDirectory "$SMPROGRAMS\$StartMenuLocation"
+		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk" "$INSTDIR\${UNINST_NAME}" "/$MultiUser.InstallMode"
+		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk" "$INSTDIR\HotkeySuite.exe" "/a user"
+	!insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
-Section "Uninstall"	
+Section "Uninstall"
+	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenuLocation
+	Delete "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk"
+	Delete "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk"
+	RMDir "$SMPROGRAMS\$StartMenuLocation"
+  
 	DeleteRegKey SHCTX "${UNINST_KEY}"
 	
 	${if} ${AtLeastWinVista}
@@ -176,7 +196,7 @@ SectionEnd
 
 LangString DESC_Grp_HS ${LANG_ENGLISH} "Install HotkeySuite with additional options."
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
-LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation."
+LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation. Script will be installed only for current user."
 LangString DESC_Sec_AUTORUN ${LANG_ENGLISH} "Add HotkeySuite to Autorun (pre-Vista) or schedule it using Task Scheduler (Vista and above)."
 LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable. So HotkeySuite and bundeled SnK will be available from command prompt."
@@ -191,12 +211,16 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function .onInit
-	StrCpy $USER_APPDATA "$APPDATA"
+	${ifnot} ${IsNT}
+		MessageBox MB_OK|MB_ICONEXCLAMATION "Windows NT family OS required!$\nInstallation will be aborted."
+		Quit
+	${endif}
+	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	!insertmacro MULTIUSER_INIT
 FunctionEnd
 
 Function un.onInit
-	StrCpy $USER_APPDATA "$APPDATA"
+	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 

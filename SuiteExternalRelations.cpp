@@ -67,7 +67,7 @@ int SuiteExtRel::AddToAutorun(bool current_user, wchar_t** argv, int argc)
 	int ret=ERR_SUITEEXTREL+6;
 	
 	HKEY reg_key;
-	//There is a chance that Run key doesn't exists (e.g. on freshly installed OS)
+	//There is a chance that Run key doesn't exist (e.g. on freshly installed OS)
 	//So we are using RegCreateKeyEx here - it will just open the key if it already exists or create one otherwise
 	if (RegCreateKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)==ERROR_SUCCESS) {
 		std::wstring hs_path=QuoteArgument(GetExecutableFileName().c_str());
@@ -529,7 +529,7 @@ int SuiteExtRel::AddToPath(bool current_user)
 	int ret=ERR_SUITEEXTREL+8;
 	
 	HKEY reg_key;
-	//There is a no way that Environment key doesn't exists but, whatever, do like in AddToAutorun
+	//There is a no way that Environment key doesn't exist but, whatever, do like in AddToAutorun
 	//RegCreateKeyEx will just open the key if it already exists or create one otherwise
 	if (RegCreateKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, current_user?L"Environment":L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)==ERROR_SUCCESS) {
 		DWORD key_type;
@@ -583,7 +583,7 @@ int SuiteExtRel::RemoveFromPath(bool current_user)
 			else
 				res=RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)prev_path.c_str(), (prev_path.length()+1)*sizeof(wchar_t));
 			
-			//If value doesn't exists - ignore it, but don't ignore other errors
+			//If value doesn't exist - ignore it, but don't ignore other errors
 			if (res==ERROR_SUCCESS||res==ERROR_FILE_NOT_FOUND) {
 				SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, (WPARAM)NULL, (LPARAM)L"Environment", SMTO_NORMAL, 100, NULL);
 				ret=0;

@@ -574,12 +574,12 @@ int SuiteExtRel::RemoveFromPath(bool current_user)
 		if (EnvQueryValue(reg_key, L"Path", prev_path, key_type)) {
 			std::wstring hs_dir=GetExecutableFileName(L"");
 			size_t len, pos;
-
+			
 			while ((pos=FindInPath(prev_path, hs_dir.c_str(), &len))!=std::wstring::npos)
 				prev_path.erase(pos, len);
-						
+			
 			if (prev_path.empty())	//If variable is empty now - just delete it
-				res=RegDeleteValue(reg_key, L"SnK HotkeySuite");
+				res=RegDeleteValue(reg_key, L"Path");
 			else
 				res=RegSetValueEx(reg_key, L"Path", 0, key_type, (BYTE*)prev_path.c_str(), (prev_path.length()+1)*sizeof(wchar_t));
 			

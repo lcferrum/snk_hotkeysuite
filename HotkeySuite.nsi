@@ -24,6 +24,8 @@ BrandingText " "
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
 ;Installer requires admin rights - because of the need to register HotkeySuite with Task Scheduler
 RequestExecutionLevel admin
+;Hack to get SetShellVarContext-independent APPDATA
+Var USER_APPDATA
 
 !define MUI_ICON "hs.ico"
 
@@ -77,7 +79,7 @@ SectionGroup /e "HotkeySuite" Grp_HS
 	SectionEnd
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
-		SetOutPath "$APPDATA\${APPNAME}"
+		SetOutPath "$USER_APPDATA\${APPNAME}"
 		File /oname=on_hotkey.txt "snk_default_script.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
@@ -189,10 +191,12 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function .onInit
+	StrCpy $USER_APPDATA "$APPDATA"
 	!insertmacro MULTIUSER_INIT
 FunctionEnd
 
 Function un.onInit
+	StrCpy $USER_APPDATA "$APPDATA"
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 
@@ -220,5 +224,5 @@ Function patchInstdirNT4
 FunctionEnd
 
 Function un.deleteStoredSettings
-	RMDir /r "$APPDATA\${APPNAME}"
+	RMDir /r "$USER_APPDATA\${APPNAME}"
 FunctionEnd

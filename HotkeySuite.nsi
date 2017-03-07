@@ -212,6 +212,7 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 
 Function .onInit
 	${ifnot} ${IsNT}
+		IfSilent +2	;If IfSilent=TRUE jumps over MessageBox
 		MessageBox MB_OK|MB_ICONEXCLAMATION "Windows NT family OS required!$\nInstallation will be aborted."
 		Quit
 	${endif}

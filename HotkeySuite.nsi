@@ -229,9 +229,9 @@ Function patchInstdirNT4
 	;There is a bug (or rather oversight) in MultiUser.nsh
 	;If it detects that Windows version is less than Win2k it assumes that NSIS is unable to get $LOCALAPPDATA path and replaces it with $PROGRAMFILES
 	;This misconception probably stems from MSDN docs that say that CSIDL_LOCAL_APPDATA is available since v5.0 of shell32.dll, which is available only from Win2k onwards
-	;What they don't say is that there is shfolder.dll that emulates CSIDL_LOCAL_APPDATA for older versions of shell32.dll
-	;This shfolder.dll is bundeled with IE5 (or as part of Platform SDK Redistributable) that can be installed on NT4 and NSIS (at least since v3.01) will use it instead of shell32.dll if it is available
-	;And even when shfolder.dll is unavailable on NT4 (and so $LOCALAPPDATA returns nothing), local AppData path still can be queried here using registry
+	;What they don't say is that there is a shfolder.dll that emulates CSIDL_LOCAL_APPDATA for older versions of shell32.dll
+	;This shfolder.dll is bundled with IE5 (or as part of Platform SDK Redistributable) that can be installed on NT4 and NSIS (at least since v3.01) will use it instead of shell32.dll if it is available
+	;And even when shfolder.dll is unavailable on NT4 (and so $LOCALAPPDATA returns nothing), local AppData path can still be queried here using registry
 	${ifnot} ${AtLeastWin2000}
 	${andif} $MultiUser.InstallMode == CurrentUser
 	${andif} $MultiUser.InstDir == ""

@@ -15,12 +15,14 @@
 !include Sections.nsh
 !include LogicLib.nsh
 !include FileFunc.nsh
+!include WinMessages.nsh
 !include WinVer.nsh
 
 OutFile "HotkeySuiteSetup.exe"
 Name "${APPNAME}"
 BrandingText " "
 Var USER_APPDATA
+Var D_INSTDIR
 Var StartMenuLocation
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
@@ -34,6 +36,7 @@ InstallDir "\${APPNAME}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "LICENSE.TXT"
 !insertmacro MUI_PAGE_COMPONENTS
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
@@ -151,9 +154,46 @@ Section "-Postinstall"
 		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk" "$INSTDIR\${UNINST_NAME}" "/$MultiUser.InstallMode"
 		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk" "$INSTDIR\HotkeySuite.exe" "/a user"
 	!insertmacro MUI_STARTMENU_WRITE_END
+	
+	${if} ${Silent}
+		Exec '"$INSTDIR\HotkeySuite.exe" /a user'
+	${endif}
 SectionEnd
 
 Section "Uninstall"
+	${if} ${Silent}
+		;Try to kill HotkeySuite using it's own SnK
+		;CONS:
+		;	Can fail if HotkeySuite was never run for current user or non-default INI path is used and SnK was installed at non-default location
+		;	Changed settings will be lost, taskbar notification area won't be updated - ghost icon will remain
+		;PROS:
+		;	Will kill only HotkeySuite belonging to current uninstaller
+		StrCpy $R0 "$INSTDIR\SnKh.exe"
+		${ifnot} ${FileExists} "$R0"
+			ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
+			${if} "$R0" != ""
+				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
+				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
+				ExpandEnvStrings $R0 "$R0"
+				${ifnot} ${FileExists} "$R0"
+					StrCpy $R0 ""
+				${endif}
+			${endif}
+		${endif}
+		${if} "$R0" != ""
+			ExecWait '"$R0" +l /pth:full="$INSTDIR\HotkeySuite.exe"'
+		${endif}
+	${else}
+		;Try to kill HotkeySuite using window class
+		;CONS:
+		;	Will kill all HotkeySuite instances on current session, including those that doesn't belong to current uninstaller
+		;	Won't kill HotkeySuite outside of current session - can't kill per-machine installed HotkeySuite run by other user
+		;PROS:
+		;	HotkeySuite will be killed gracefully, settings will be updated, taskbar notification area will be updated
+		Push "SnK_HotkeySuite_IconClass"
+		Call un.CloseProgram
+	${endif}
+
 	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenuLocation
 	Delete "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk"
 	Delete "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk"
@@ -192,6 +232,10 @@ Section "Uninstall"
 	Delete "$INSTDIR\DetectMatrix.html"
 	Delete "$INSTDIR\${UNINST_NAME}"
 	RMDir "$INSTDIR"
+	
+	${if} ${FileExists} "$INSTDIR\HotkeySuite.exe"
+		MessageBox MB_OK|MB_ICONINFORMATION 'Unable to delete "$INSTDIR\HotkeySuite.exe"$\nMaybe an instance of the program is still running. Please close it and delete file manually.' /SD IDOK
+	${endif}
 SectionEnd
 
 LangString DESC_Grp_HS ${LANG_ENGLISH} "Install HotkeySuite with additional options."
@@ -212,17 +256,30 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 
 Function .onInit
 	${ifnot} ${IsNT}
-		IfSilent +2	;If IfSilent=TRUE jumps over MessageBox
-		MessageBox MB_OK|MB_ICONEXCLAMATION "Windows NT family OS required!$\nInstallation will be aborted."
+		MessageBox MB_OK|MB_ICONEXCLAMATION "Windows NT family OS required!$\nInstallation will be aborted." /SD IDOK
 		Quit
 	${endif}
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
+	${if} "$INSTDIR" != "\${APPNAME}"	;Don't loose $INSTDIR set with /D
+		StrCpy $D_INSTDIR "$INSTDIR"
+	${endif}
 	!insertmacro MULTIUSER_INIT
+	${if} "$D_INSTDIR" != ""		;If $INSTDIR was set with /D - reapply it after initializing MultiUser.nsh (for Silent mode)
+		StrCpy $INSTDIR "$D_INSTDIR"
+	${endif}
 FunctionEnd
 
 Function un.onInit
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	!insertmacro MULTIUSER_UNINIT
+FunctionEnd
+
+Function checkIfD
+	;If $INSTDIR was set with /D - reapply it after MULTIUSER_PAGE_INSTALLMODE
+	;Works only with GUI mode
+	${if} "$D_INSTDIR" != ""
+		StrCpy $INSTDIR "$D_INSTDIR"
+	${endif}
 FunctionEnd
 
 Function patchInstdirNT4
@@ -246,6 +303,20 @@ Function patchInstdirNT4
 			${endif}
 		${endif}
 	${endif}
+FunctionEnd
+
+Function un.CloseProgram 
+	Exch $1
+	Push $0
+loop:
+	FindWindow $0 $1
+	IntCmp $0 0 done
+	SendMessage $0 ${WM_CLOSE} 0 0
+	Sleep 100 
+	Goto loop 
+done: 
+	Pop $0 
+	Pop $1
 FunctionEnd
 
 Function un.deleteStoredSettings

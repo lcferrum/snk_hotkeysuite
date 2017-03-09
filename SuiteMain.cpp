@@ -95,12 +95,29 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 }
 
 void HotkeyEventHandler(SuiteSettings *settings, bool long_press) {
-	std::wstring snk_cmdline=L"\""+settings->GetSnkPath()+L"\" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=\"";
+	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		std::wstring msg_text=L"File \""+settings->GetSnkPath()+L"\" doesn't exist!\n\nPlease set correct SnK executable path in HotkeySuite.ini.\nDo you want to edit it now?\n\n(HotkeySuite restart will be required for changes to take affect)";
+		bool edit_ini=false;
+		if (fnTaskDialog) {
+			int btn_clicked;
+			fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, msg_text.c_str(), TDCBF_YES_BUTTON|TDCBF_NO_BUTTON, TD_INFORMATION_ICON, &btn_clicked);
+			edit_ini=btn_clicked==IDYES;
+		} else {
+			edit_ini=MessageBox(NULL, msg_text.c_str(), SNK_HS_TITLE, MB_ICONASTERISK|MB_YESNO|MB_DEFBUTTON1)==IDYES;
+		}
+		
+		if (edit_ini)
+			ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		
+		return;
+	}
+	
+	std::wstring snk_cmdline=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
 	if (long_press)
-		snk_cmdline+=settings->GetLhkCfgPath();
+		snk_cmdline+=QuoteArgument(settings->GetLhkCfgPath().c_str());
 	else
-		snk_cmdline+=settings->GetShkCfgPath();
-	snk_cmdline+=L"\"";
+		snk_cmdline+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	wchar_t cmdline_buf[snk_cmdline.length()+1];
 	wcscpy(cmdline_buf, snk_cmdline.c_str());
 	STARTUPINFO si={sizeof(STARTUPINFO)};

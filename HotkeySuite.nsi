@@ -161,37 +161,22 @@ Section "-Postinstall"
 SectionEnd
 
 Section "Uninstall"
-	${if} ${Silent}
-		;Try to kill HotkeySuite using it's own SnK
-		;CONS:
-		;	Can fail if HotkeySuite was never run for current user or non-default INI path is used and SnK was installed at non-default location
-		;	Changed settings will be lost, taskbar notification area won't be updated - ghost icon will remain
-		;PROS:
-		;	Will kill only HotkeySuite belonging to current uninstaller
-		StrCpy $R0 "$INSTDIR\SnKh.exe"
-		${ifnot} ${FileExists} "$R0"
-			ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
-			${if} "$R0" != ""
-				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
-				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
-				ExpandEnvStrings $R0 "$R0"
-				${ifnot} ${FileExists} "$R0"
-					StrCpy $R0 ""
-				${endif}
+	;Try to kill HotkeySuite using it's own SnK
+	;Can fail if HotkeySuite was never run for current user or non-default INI path is used and SnK was installed at non-default location
+	StrCpy $R0 "$INSTDIR\SnKh.exe"
+	${ifnot} ${FileExists} "$R0"
+		ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
+		${if} "$R0" != ""
+			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
+			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
+			ExpandEnvStrings $R0 "$R0"
+			${ifnot} ${FileExists} "$R0"
+				StrCpy $R0 ""
 			${endif}
 		${endif}
-		${if} "$R0" != ""
-			ExecWait '"$R0" +l /pth:full="$INSTDIR\HotkeySuite.exe"'
-		${endif}
-	${else}
-		;Try to kill HotkeySuite using window class
-		;CONS:
-		;	Will kill all HotkeySuite instances on current session, including those that doesn't belong to current uninstaller
-		;	Won't kill HotkeySuite outside of current session - can't kill per-machine installed HotkeySuite run by other user
-		;PROS:
-		;	HotkeySuite will be killed gracefully, settings will be updated, taskbar notification area will be updated
-		Push "SnK_HotkeySuite_IconClass"
-		Call un.CloseProgram
+	${endif}
+	${if} "$R0" != ""
+		ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
 	${endif}
 
 	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenuLocation
@@ -303,20 +288,6 @@ Function patchInstdirNT4
 			${endif}
 		${endif}
 	${endif}
-FunctionEnd
-
-Function un.CloseProgram 
-	Exch $1
-	Push $0
-loop:
-	FindWindow $0 $1
-	IntCmp $0 0 done
-	SendMessage $0 ${WM_CLOSE} 0 0
-	Sleep 100 
-	Goto loop 
-done: 
-	Pop $0 
-	Pop $1
 FunctionEnd
 
 Function un.deleteStoredSettings

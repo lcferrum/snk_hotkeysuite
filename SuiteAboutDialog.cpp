@@ -150,7 +150,7 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 			InvalidateRect(hwndCtl, NULL, FALSE);
 			break;
 		case WM_LBUTTONUP:
-			ShellExecute(NULL, L"open", L"https://github.com/lcferrum", NULL, NULL, SW_SHOWNORMAL);
+			ShellExecute(NULL, L"open", L"https://github.com/lcferrum/snk_hotkeysuite", NULL, NULL, SW_SHOWNORMAL);
 			break;
 		case WM_SETCURSOR:
 			//Since IDC_HAND is not available on all operating systems, we will load the arrow cursor if IDC_HAND is not present

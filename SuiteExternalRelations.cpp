@@ -21,45 +21,8 @@ namespace SuiteExtRel {
 	int Unschedule10(bool &na);
 	int Unschedule20(bool &na, bool current_user);
 	bool GetUserNameWrapper(std::wstring &sname, std::wstring &fname);
-	std::wstring QuoteArgument(const wchar_t* arg);
 	bool EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &key_value, DWORD &key_type);
 	size_t FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len);
-}
-
-//Based on "Everyone quotes command line arguments the wrong way": 
-// Written by Daniel Colascione <dancol@dancol.org>
-// https://blogs.msdn.microsoft.com/twistylittlepassagesallalike/2011/04/23/everyone-quotes-command-line-arguments-the-wrong-way/
-std::wstring SuiteExtRel::QuoteArgument(const wchar_t* arg)
-{
-	if (!arg||!wcslen(arg)) {
-		return L"\"\"";
-	} else if (!wcspbrk(arg, L" \t\n\v\"")) {
-		return arg;
-	} else {
-		std::wstring qarg=L"\"";
-		for (;;) {
-			size_t backslash_num=0;
-
-			while (*arg!=L'\0'&&*arg==L'\\') {
-				arg++;
-				backslash_num++;
-			}
-
-			if (*arg==L'\0') {
-				qarg.append(backslash_num*2, L'\\');
-				break;
-			} else if (*arg==L'"') {
-				qarg.append(backslash_num*2+1, L'\\');
-				qarg.push_back(*arg);
-			} else {
-				qarg.append(backslash_num, L'\\');
-				qarg.push_back(*arg);
-			}
-			arg++;
-		}
-		qarg.push_back(L'"');
-		return qarg;
-	}
 }
 
 int SuiteExtRel::AddToAutorun(bool current_user, wchar_t** argv, int argc)

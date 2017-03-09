@@ -34,6 +34,7 @@ std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t*
 std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL);
 std::wstring GetExecutableFileName(const wchar_t* replace_fname=NULL);	//If replace_fname is not NULL - replaces file name (including preceding backslash) in returned path with replace_fname
 std::wstring StringToLower(std::wstring str);
+std::wstring QuoteArgument(const wchar_t* arg);
 bool CreateDirTree(const std::wstring trg_pth);
 void ErrorMessage(const wchar_t* err_msg);
 

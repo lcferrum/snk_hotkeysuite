@@ -23,7 +23,11 @@ BEGIN
 	BEGIN
 		BLOCK "040904B0"
 		BEGIN
+#ifdef _WIN64
+			VALUE "FileDescription", "SnK HotkeySuite (x64)"
+#else
 			VALUE "FileDescription", "SnK HotkeySuite"
+#endif
 			VALUE "FileVersion", HS_STR_VERSION
 			VALUE "CompanyName", "Lcferrum"
 			VALUE "LegalCopyright", "Copyright (c) " HS_CRIGHT_YEARS " Lcferrum"

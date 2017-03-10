@@ -9,16 +9,24 @@
 !define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME "InstallLocation"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
-!define MULTIUSER_INSTALLMODE_FUNCTION patchInstdirNT4
+!define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
 !include MultiUser.nsh
 !include MUI2.nsh
 !include Sections.nsh
 !include LogicLib.nsh
 !include FileFunc.nsh
-!include WinMessages.nsh
 !include WinVer.nsh
+!include x64.nsh
 
-OutFile "HotkeySuiteSetup.exe"
+!ifdef INST64
+	OutFile "HotkeySuiteSetup64.exe"
+	Caption "${APPNAME} Setup (x64)"
+	UninstallCaption "${APPNAME} Uninstall (x64)"
+!else
+	OutFile "HotkeySuiteSetup32.exe"
+	Caption "${APPNAME} Setup"
+	UninstallCaption "${APPNAME} Uninstall"
+!endif
 Name "${APPNAME}"
 BrandingText " "
 Var USER_APPDATA
@@ -36,7 +44,7 @@ InstallDir "\${APPNAME}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "LICENSE.TXT"
 !insertmacro MUI_PAGE_COMPONENTS
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE afterModeSel
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
@@ -67,13 +75,20 @@ InstallDir "\${APPNAME}"
 !searchparse /file "SuiteVersion.h" '#define HS_CRIGHT_YEARS	"' CRIGHT_YEARS '"'
 VIProductVersion "${APPVER_1}.${APPVER_2}.0.0"
 VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "SnK HotkeySuite Setup"
+!ifdef INST64
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "${APPNAME} Setup (x64)"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APPNAME} (x64)"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "InternalName" "HotkeySuiteSetup64"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "HotkeySuiteSetup64.exe"
+!else
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "${APPNAME} Setup"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APPNAME}"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "InternalName" "HotkeySuiteSetup32"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "HotkeySuiteSetup32.exe"
+!endif
 VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Lcferrum"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (c) ${CRIGHT_YEARS} Lcferrum"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "InternalName" "HotkeySuiteSetup"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "HotkeySuiteSetup.exe"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APPNAME}"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}"
 
 SectionGroup /e "HotkeySuite" Grp_HS
@@ -115,7 +130,8 @@ Section "SnK" Sec_SNK
 	File "..\snk\SnKh.exe"
 	File /oname=SNK.CHANGELOG.TXT "..\snk\CHANGELOG.TXT"
 	File /oname=SNK.README.TXT "..\snk\README.TXT"
-	File "..\snk\DetectMatrix.html"
+	File /oname=SNK.LICENSE.TXT "..\snk\LICENSE.TXT"
+	File /oname=SNK.DetectMatrix.html "..\snk\DetectMatrix.html"
 SectionEnd
 
 Section /o "Add to PATH" Sec_PATH
@@ -132,12 +148,12 @@ Section "-Postinstall"
 	
 	WriteUninstaller "$INSTDIR\${UNINST_NAME}"
 
-	WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME}"
+	WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayVersion" "${APPVER_1}.${APPVER_2}"
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\HotkeySuite.exe,0"
 	WriteRegStr SHCTX "${UNINST_KEY}" "Publisher" "Lcferrum"
-	WriteRegStr SHCTX "${UNINST_KEY}" "URLInfoAbout" "https://github.com/lcferrum"
+	WriteRegStr SHCTX "${UNINST_KEY}" "URLInfoAbout" "https://github.com/lcferrum/snk_hotkeysuite"
 	WriteRegStr SHCTX "${UNINST_KEY}" "UninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode'
 	WriteRegStr SHCTX "${UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\${UNINST_NAME}" /$MultiUser.InstallMode /S'
 	WriteRegDWORD SHCTX "${UNINST_KEY}" "NoModify" "1"
@@ -214,7 +230,8 @@ Section "Uninstall"
 	Delete "$INSTDIR\SnKh.exe"
 	Delete "$INSTDIR\SNK.CHANGELOG.TXT"
 	Delete "$INSTDIR\SNK.README.TXT"
-	Delete "$INSTDIR\DetectMatrix.html"
+	Delete "$INSTDIR\SNK.LICENSE.TXT"
+	Delete "$INSTDIR\SNK.DetectMatrix.html"
 	Delete "$INSTDIR\${UNINST_NAME}"
 	RMDir "$INSTDIR"
 	
@@ -223,11 +240,16 @@ Section "Uninstall"
 	${endif}
 SectionEnd
 
-LangString DESC_Grp_HS ${LANG_ENGLISH} "Install HotkeySuite with additional options."
+!ifdef INST64
+	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 64-bit version of HotkeySuite with additional options."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2} x64). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+!else
+	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 32-bit version of HotkeySuite with additional options."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+!endif
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
 LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation. Script will be installed only for current user."
 LangString DESC_Sec_AUTORUN ${LANG_ENGLISH} "Add HotkeySuite to Autorun (pre-Vista) or schedule it using Task Scheduler (Vista and above)."
-LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable. So HotkeySuite and bundeled SnK will be available from command prompt."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -244,6 +266,13 @@ Function .onInit
 		MessageBox MB_OK|MB_ICONEXCLAMATION "Windows NT family OS required!$\nInstallation will be aborted." /SD IDOK
 		Quit
 	${endif}
+	!ifdef INST64
+		${ifnot} ${RunningX64}
+			MessageBox MB_OK|MB_ICONEXCLAMATION "64-bit Windows OS required!$\nInstallation will be aborted." /SD IDOK
+			Quit
+		${endif}
+		SetRegView 64	;Affects all registry functions except InstallDirRegKey (not used by MultiUser.nsh nor MUI2.nsh anyway)
+	!endif
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	${if} "$INSTDIR" != "\${APPNAME}"	;Don't loose $INSTDIR set with /D
 		StrCpy $D_INSTDIR "$INSTDIR"
@@ -255,11 +284,44 @@ Function .onInit
 FunctionEnd
 
 Function un.onInit
+	!ifdef INST64
+		SetRegView 64	;Affects all registry functions except InstallDirRegKey (not used by MultiUser.nsh nor MUI2.nsh anyway)
+	!endif
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 
-Function checkIfD
+Function afterModeSel
+	;Check if HotkeySuite of another bitness was already installed
+	${if} ${RunningX64}
+		!ifdef INST64
+			SetRegView 32
+		!else
+			SetRegView 64
+		!endif
+		ClearErrors
+		EnumRegKey $R0 SHCTX "${UNINST_KEY}" 0
+		${ifnot} ${Errors}
+			!ifdef INST64
+				StrCpy $R0 "32"
+			!else
+				StrCpy $R0 "64"
+			!endif
+			${if} $MultiUser.InstallMode == CurrentUser
+				StrCpy $R1 "for current user"
+			${else}
+				StrCpy $R1 "on this machine"
+			${endif}
+			MessageBox MB_OK|MB_ICONEXCLAMATION "$R0-bit version of HotkeySuite was already installed $R1!$\nPlease uninstall it first before continuing with installation." /SD IDOK
+			Abort
+		${endIf}
+		!ifdef INST64
+			SetRegView 64
+		!else
+			SetRegView 32
+		!endif
+	${endif}
+
 	;If $INSTDIR was set with /D - reapply it after MULTIUSER_PAGE_INSTALLMODE
 	;Works only with GUI mode
 	${if} "$D_INSTDIR" != ""
@@ -267,8 +329,17 @@ Function checkIfD
 	${endif}
 FunctionEnd
 
-Function patchInstdirNT4
-	;There is a bug (or rather oversight) in MultiUser.nsh
+Function patchInstdir
+	;Though documentation for MultiUser.nsh states that MULTIUSER_USE_PROGRAMFILES64 define is supported, version of the plugin included with NSIS v3.01 doesn't support it
+	!ifdef INST64
+		${if} ${RunningX64}
+		${andif} $MultiUser.InstallMode == AllUsers
+		${andif} $MultiUser.InstDir == ""
+			StrCpy $INSTDIR "$PROGRAMFILES64\${APPNAME}"
+		${endif}
+	!endif
+
+	;There is a bug (or rather oversight) in MultiUser.nsh included with NSIS v3.01
 	;If it detects that Windows version is less than Win2k it assumes that NSIS is unable to get $LOCALAPPDATA path and replaces it with $PROGRAMFILES
 	;This misconception probably stems from MSDN docs that say that CSIDL_LOCAL_APPDATA is available since v5.0 of shell32.dll, which is available only from Win2k onwards
 	;What they don't say is that there is a shfolder.dll that emulates CSIDL_LOCAL_APPDATA for older versions of shell32.dll

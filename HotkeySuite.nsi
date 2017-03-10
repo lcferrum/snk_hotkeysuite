@@ -73,10 +73,12 @@ InstallDir "\${APPNAME}"
 !getdllversion "HotkeySuite.exe" APPVER_
 !getdllversion "..\snk\SnK.exe" SNKVER_
 !searchparse /file "SuiteVersion.h" '#define HS_CRIGHT_YEARS	"' CRIGHT_YEARS '"'
-!searchparse /file "SuiteVersion.h" '#define _HS_DEV_BUILD	' DEV_BUILD ''
-!macro DEV_BUILD_${DEV_BUILD}
-;Dummy macro that is needed to emulate compile time variable compare
-!macroend
+!searchparse /file "SuiteVersion.h" '#define _HS_DEV_BUILD	' DEV_BUILD '	'
+!if ${DEV_BUILD} == "0"
+	!define /redef DEV_BUILD
+!else
+	!define /redef DEV_BUILD "-dev"
+!endif
 VIProductVersion "${APPVER_1}.${APPVER_2}.0.0"
 VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 !ifdef INST64
@@ -92,13 +94,8 @@ VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 !endif
 VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Lcferrum"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (c) ${CRIGHT_YEARS} Lcferrum"
-!ifmacrodef DEV_BUILD_1
-	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}-dev"
-	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}-dev"
-!else
-	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
-	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}"
-!endif
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}${DEV_BUILD}"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}${DEV_BUILD}"
 
 SectionGroup /e "HotkeySuite" Grp_HS
 	Section "Executable" Sec_HS

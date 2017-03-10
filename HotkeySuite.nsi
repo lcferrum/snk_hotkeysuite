@@ -73,6 +73,10 @@ InstallDir "\${APPNAME}"
 !getdllversion "HotkeySuite.exe" APPVER_
 !getdllversion "..\snk\SnK.exe" SNKVER_
 !searchparse /file "SuiteVersion.h" '#define HS_CRIGHT_YEARS	"' CRIGHT_YEARS '"'
+!searchparse /file "SuiteVersion.h" '#define _HS_DEV_BUILD	' DEV_BUILD ''
+!macro DEV_BUILD_${DEV_BUILD}
+;Dummy macro that is needed to emulate compile time variable compare
+!macroend
 VIProductVersion "${APPVER_1}.${APPVER_2}.0.0"
 VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 !ifdef INST64
@@ -86,10 +90,15 @@ VIFileVersion "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 	VIAddVersionKey /LANG=${LANG_ENGLISH} "InternalName" "HotkeySuiteSetup32"
 	VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "HotkeySuiteSetup32.exe"
 !endif
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Lcferrum"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (c) ${CRIGHT_YEARS} Lcferrum"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}"
+!ifmacrodef DEV_BUILD_1
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}-dev"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}-dev"
+!else
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVER_1}.${APPVER_2}.${SNKVER_1}.${SNKVER_2}"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${APPVER_1}.${APPVER_2}"
+!endif
 
 SectionGroup /e "HotkeySuite" Grp_HS
 	Section "Executable" Sec_HS
@@ -241,11 +250,11 @@ Section "Uninstall"
 SectionEnd
 
 !ifdef INST64
-	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 64-bit version of HotkeySuite with additional options."
-	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2} x64). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 64-bit version of HotkeySuite."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2} x64). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 !else
-	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 32-bit version of HotkeySuite with additional options."
-	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundeled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 32-bit version of HotkeySuite."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 !endif
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
 LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation. Script will be installed only for current user."

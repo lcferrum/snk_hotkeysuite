@@ -16,9 +16,9 @@
 !include LogicLib.nsh
 !include FileFunc.nsh
 !include WinVer.nsh
-!include x64.nsh
 
 !ifdef INST64
+	!include x64.nsh
 	OutFile "HotkeySuiteSetup64.exe"
 	Caption "${APPNAME} Setup (x64)"
 	UninstallCaption "${APPNAME} Uninstall (x64)"
@@ -44,7 +44,7 @@ InstallDir "\${APPNAME}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "LICENSE.TXT"
 !insertmacro MUI_PAGE_COMPONENTS
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE afterModeSel
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
@@ -271,7 +271,6 @@ Function .onInit
 			MessageBox MB_OK|MB_ICONEXCLAMATION "64-bit Windows OS required!$\nInstallation will be aborted." /SD IDOK
 			Quit
 		${endif}
-		SetRegView 64	;Affects all registry functions except InstallDirRegKey (not used by MultiUser.nsh nor MUI2.nsh anyway)
 	!endif
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	${if} "$INSTDIR" != "\${APPNAME}"	;Don't loose $INSTDIR set with /D
@@ -284,44 +283,11 @@ Function .onInit
 FunctionEnd
 
 Function un.onInit
-	!ifdef INST64
-		SetRegView 64	;Affects all registry functions except InstallDirRegKey (not used by MultiUser.nsh nor MUI2.nsh anyway)
-	!endif
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 
-Function afterModeSel
-	;Check if HotkeySuite of another bitness was already installed
-	${if} ${RunningX64}
-		!ifdef INST64
-			SetRegView 32
-		!else
-			SetRegView 64
-		!endif
-		ClearErrors
-		EnumRegKey $R0 SHCTX "${UNINST_KEY}" 0
-		${ifnot} ${Errors}
-			!ifdef INST64
-				StrCpy $R0 "32"
-			!else
-				StrCpy $R0 "64"
-			!endif
-			${if} $MultiUser.InstallMode == CurrentUser
-				StrCpy $R1 "for current user"
-			${else}
-				StrCpy $R1 "on this machine"
-			${endif}
-			MessageBox MB_OK|MB_ICONEXCLAMATION "$R0-bit version of HotkeySuite was already installed $R1!$\nPlease uninstall it first before continuing with installation." /SD IDOK
-			Abort
-		${endIf}
-		!ifdef INST64
-			SetRegView 64
-		!else
-			SetRegView 32
-		!endif
-	${endif}
-
+Function checkIfD
 	;If $INSTDIR was set with /D - reapply it after MULTIUSER_PAGE_INSTALLMODE
 	;Works only with GUI mode
 	${if} "$D_INSTDIR" != ""

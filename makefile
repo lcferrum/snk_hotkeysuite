@@ -11,7 +11,7 @@
 #	Makes debug build
 
 # Conditionals
-ifeq (,$(if $(filter-out upx inst clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))
+ifeq (,$(if $(filter-out upx install clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))
 ifeq (,$(and $(filter $(BUILD),MinGW-w64 MinGW-w64_pthreads MinGW_472 Clang_362),$(filter $(HOST),x86-64 x86)))
 $(info Compiler and/or OS type is invalid! Please correctly set BUILD and HOST variables.)
 $(info Possible BUILD values: MinGW-w64, MinGW-w64_pthreads, MinGW_472, Clang_362)
@@ -32,7 +32,7 @@ TARGET=HotkeySuite.exe
 
 MAKENSIS=makensis.exe /V2
 NSISSRC=HotkeySuite.nsi
-NSISTARGET=HotkeySuiteSetup32.exe HotkeySuiteSetup64.exe
+NSISTARGET=HotkeySuiteSetup32.exe
 
 # Debug specific common section
 ifdef DEBUG
@@ -73,6 +73,7 @@ ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
+	NSISTARGET=HotkeySuiteSetup64.exe
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
@@ -89,6 +90,7 @@ ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
+	NSISTARGET=HotkeySuiteSetup64.exe
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
@@ -114,10 +116,17 @@ ifeq ($(HOST),x86)
 endif
 endif
 
-.PHONY: all clean upx
+.PHONY: all exe clean upx install
 .INTERMEDIATE: $(OBJ)
 
-all: $(TARGET)
+all: exe upx install
+
+exe: $(SRC) $(TARGET)
+
+install: $(NSISSRC) $(NSISTARGET)
+
+$(NSISTARGET): $(NSISSRC)
+	$(MAKENSIS) $(MAKENSISFLAGS) $<
 
 $(TARGET): $(OBJ) 
 	$(CC) -o $@ $(OBJ) $(LDFLAGS)
@@ -130,9 +139,6 @@ $(TARGET): $(OBJ)
 	
 %.o: %.rc
 	$(WINDRES) $< $@ $(filter -D% -U% -I%,$(CFLAGS)) $(INC)
-	
-install:
-	$(MAKENSIS) $(MAKENSISFLAGS) $(NSISSRC)
 	
 upx:
 	$(UPX) $(TARGET) ||:

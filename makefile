@@ -11,7 +11,7 @@
 #	Makes debug build
 
 # Conditionals
-ifeq (,$(if $(filter-out upx clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))
+ifeq (,$(if $(filter-out upx inst clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))
 ifeq (,$(and $(filter $(BUILD),MinGW-w64 MinGW-w64_pthreads MinGW_472 Clang_362),$(filter $(HOST),x86-64 x86)))
 $(info Compiler and/or OS type is invalid! Please correctly set BUILD and HOST variables.)
 $(info Possible BUILD values: MinGW-w64, MinGW-w64_pthreads, MinGW_472, Clang_362)
@@ -29,6 +29,10 @@ UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
 SRC=Suite.cpp SuiteCommon.cpp SuiteExterns.cpp SuiteExternalRelations.cpp SuiteMain.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp SuiteSettings.cpp SuiteAboutDialog.cpp SuiteBindingDialog.cpp Res.rc
 OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
+
+MAKENSIS=makensis.exe /V2
+NSISSRC=HotkeySuite.nsi
+NSISTARGET=HotkeySuiteSetup32.exe HotkeySuiteSetup64.exe
 
 # Debug specific common section
 ifdef DEBUG
@@ -68,6 +72,7 @@ ifeq ($(BUILD),MinGW-w64)
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
+	MAKENSISFLAGS=/DINST64
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
@@ -83,6 +88,7 @@ ifeq ($(BUILD),MinGW-w64_pthreads)
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
+	MAKENSISFLAGS=/DINST64
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
@@ -125,8 +131,11 @@ $(TARGET): $(OBJ)
 %.o: %.rc
 	$(WINDRES) $< $@ $(filter -D% -U% -I%,$(CFLAGS)) $(INC)
 	
+install:
+	$(MAKENSIS) $(MAKENSISFLAGS) $(NSISSRC)
+	
 upx:
 	$(UPX) $(TARGET) ||:
 
 clean:
-	$(RM) $(TARGET) $(OBJ) ||:
+	$(RM) $(TARGET) $(NSISTARGET) $(OBJ) ||:

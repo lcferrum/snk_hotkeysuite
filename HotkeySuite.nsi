@@ -12,9 +12,7 @@
 !define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
 !include MultiUser.nsh
 !include MUI2.nsh
-!include Sections.nsh
 !include LogicLib.nsh
-!include FileFunc.nsh
 !include WinVer.nsh
 
 !ifdef INST64

@@ -17,7 +17,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical);
-void HotkeyEventHandler(SuiteSettings *settings, bool long_press);
+void HotkeyEventHandler(wchar_t* snk_cmdline_buf);
 
 int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 {
@@ -36,6 +36,16 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 		ErrorMessage(L"Failed to create icon!");
 		return ERR_SUITEMAIN+1;
 	}
+
+	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		ErrorMessage(L"Path to SnK is not valid! Correct it in HotkeySuite INI file!");
+		return ERR_SUITEMAIN+2;
+	}	
+	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
+	std::wstring snk_cmdline_l=snk_cmdline_s;
+	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
+	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
 	//So it's ok to customize menu here and initialize everything else
@@ -67,12 +77,22 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
 	OnKeyTriplet.SetBindedKey(settings->GetBindedKey());
-	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, settings, false));
-	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, settings, true));
+	//CreateProcessW requires lpCommandLine to be non-const string because it may edit it
+	//MSDN doesn't provide details on why it may happen, but actually it will occur when lpApplicationName is not provided
+	//In this case CreateProcessW will try to tokenize lpCommandLine with NULLs to try to find lpApplicationName in it
+	//Interesting thing is that it will revert all changes to lpCommandLine when finished
+	//So it just have to be writable and we can assume that contents will stay the same
+	//CreateProcessA doesn't have such remark because it's actually a wrapper to CreateProcessW and passes unicode copy of lpCommandLine to CreateProcessW and not the original string
+	//wstring::c_str() since C++11 returns pointer to continous NULL-terminated array
+	//While it's not advised to edit it (though it won't lead to memory violations as long as string length is considered, which is the case with CreateProcessW) it won't do any harm here
+	//Because CreateProcessW preserves it's contents and we won't do string manipulations with this buffer afterwards anyway
+	//So it's safe to drop const qualifier
+	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(snk_cmdline_s.c_str())));
+	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(snk_cmdline_l.c_str())));
 	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
 	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
-		return ERR_SUITEMAIN+2;
+		return ERR_SUITEMAIN+3;
 	}
 	
 	//Main thread's message loop
@@ -94,35 +114,10 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	return msg.wParam;
 }
 
-void HotkeyEventHandler(SuiteSettings *settings, bool long_press) {
-	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		std::wstring msg_text=L"File \""+settings->GetSnkPath()+L"\" doesn't exist!\n\nPlease set correct SnK executable path in HotkeySuite.ini.\nDo you want to edit it now?\n\n(HotkeySuite restart will be required for changes to take affect)";
-		bool edit_ini=false;
-		if (fnTaskDialog) {
-			int btn_clicked;
-			fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, msg_text.c_str(), TDCBF_YES_BUTTON|TDCBF_NO_BUTTON, TD_INFORMATION_ICON, &btn_clicked);
-			edit_ini=btn_clicked==IDYES;
-		} else {
-			edit_ini=MessageBox(NULL, msg_text.c_str(), SNK_HS_TITLE, MB_ICONASTERISK|MB_YESNO|MB_DEFBUTTON1)==IDYES;
-		}
-		
-		if (edit_ini)
-			ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
-		
-		return;
-	}
-	
-	std::wstring snk_cmdline=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
-	if (long_press)
-		snk_cmdline+=QuoteArgument(settings->GetLhkCfgPath().c_str());
-	else
-		snk_cmdline+=QuoteArgument(settings->GetShkCfgPath().c_str());
-	wchar_t cmdline_buf[snk_cmdline.length()+1];
-	wcscpy(cmdline_buf, snk_cmdline.c_str());
+void HotkeyEventHandler(wchar_t* snk_cmdline_buf) {
 	STARTUPINFO si={sizeof(STARTUPINFO)};
 	PROCESS_INFORMATION pi={};
-	if (CreateProcess(NULL, cmdline_buf, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
+	if (CreateProcess(NULL, snk_cmdline_buf, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 	}

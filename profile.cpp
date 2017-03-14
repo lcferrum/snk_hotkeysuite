@@ -86,6 +86,21 @@ void Test1(int i)
 	cycles+=res2-res1;
 }
 
+void Test2()
+{
+	KBDLLHOOKSTRUCT kb_eventBS={0x08, 0x0E};
+	KBDLLHOOKSTRUCT kb_eventCTRL={0xFFFFFFFF, 0x1D};
+	KBDLLHOOKSTRUCT kb_eventALT={0xFFFFFFFF, 0x38};
+	
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventCTRL);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventALT);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventBS);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventALT);
+	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventCTRL);
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc<=1) {
@@ -103,6 +118,8 @@ int main(int argc, char* argv[])
 		std::wcout<<L"TEST D"<<std::endl;
 		kb_event=&kb_eventBS;
 		lng=true;
+	} else if (!strcmp(argv[1], "e")) {
+		std::wcout<<L"TEST E"<<std::endl;
 	} else {
 		std::wcout<<L"TEST A"<<std::endl;
 	}
@@ -116,11 +133,14 @@ int main(int argc, char* argv[])
 	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(none.c_str())));
 	OnKeyTriplet.SetLongPress(true);
 	
-	for (int i=1; i<=1000; i++)
-		Test1(i);
-	
-	std::wcout<<L"RESULT = "<<cycles/1000<<std::endl;
-	std::cerr<<cycles/1000<<";";
+	if (strcmp(argv[1], "e")) {
+		for (int i=1; i<=1000; i++)
+			Test1(i);
+		
+		std::wcout<<L"RESULT = "<<cycles/1000<<std::endl;
+		std::cerr<<cycles/1000<<";";
+	} else
+		Test2();
 	
 	return 0;
 }

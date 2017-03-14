@@ -89,7 +89,7 @@ test_ext:                             /* KBDLLHOOKSTRUCT.scanCode was matched wi
 	jne exit
 	movl $2, %ecx                     /* ECX=010b (HK_FLAG) */
 flag1:                                /* KBDLLHOOKSTRUCT.scanCode was matched with second key */
-	shll $1, %ecx                     /* Shift ECX (HK_FLAG) left by 1 */ 
+	addl %ecx, %ecx                   /* Double ECX (HK_FLAG) - same as shifting left by 1, but may be faster on P4 */ 
 flag0:                                /* KBDLLHOOKSTRUCT.scanCode was matched with first key */
 	cmpl $0x0101, 0x0C(%esp)          /* If wParam==WM_KEYUP JMP key_up */
 	je key_up

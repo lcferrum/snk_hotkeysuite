@@ -25,6 +25,17 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	HotkeyEngine* SnkHotkey=NULL;
 	KeyTriplet OnKeyTriplet;
 	
+	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		ErrorMessage(L"Path to SnK is not valid! Correct it in HotkeySuite INI file!");
+		ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		return ERR_SUITEMAIN+1;
+	}	
+	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
+	std::wstring snk_cmdline_l=snk_cmdline_s;
+	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
+	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
+	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
@@ -34,18 +45,8 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
 	if (!SnkIcon->IsValid()) {
 		ErrorMessage(L"Failed to create icon!");
-		return ERR_SUITEMAIN+1;
-	}
-
-	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		ErrorMessage(L"Path to SnK is not valid! Correct it in HotkeySuite INI file!");
 		return ERR_SUITEMAIN+2;
-	}	
-	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
-	std::wstring snk_cmdline_l=snk_cmdline_s;
-	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
-	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
+	}
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
 	//So it's ok to customize menu here and initialize everything else

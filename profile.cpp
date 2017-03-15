@@ -1,8 +1,10 @@
 #include <iostream>
+#include <cstddef>
 #include <cstdio>
 #include <windows.h>
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
+#include "SuiteSettings.h"
 #include "SuiteHotkeyFunctions.h"
 
 pTaskDialog fnTaskDialog=NULL;
@@ -16,25 +18,46 @@ KBDLLHOOKSTRUCT kb_eventBS={0x08, 0x0E};
 KBDLLHOOKSTRUCT *kb_event=&kb_eventW;
 
 class KeyTriplet2 {
+	typedef bool __cdecl (KeyTriplet2::*EventHandlerFn)(WPARAM, KBDLLHOOKSTRUCT*);
 private:
 	DWORD hk_sc;
 	DWORD hk_ext;
 	DWORD hk_state;
 	DWORD hk_engaged;
 	DWORD hk_down_tick;
+	wchar_t* hk_cmdline_s;
+	wchar_t* hk_cmdline_l;
+	//Creating reusable structs needed for CreateProcess here to save few cycles in event handler
+	PROCESS_INFORMATION hk_pi;
+	STARTUPINFO hk_si;
+	//Above is a struct that assembler part depends on
+	//If it is modified, assembler code should be modified accordingly
+	EventHandlerFn hk_event_handler;
 public:
-	KeyTriplet2(): hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0) {}
-	void SetBindedKey(BINDED_KEY new_key_binding) { hk_sc=new_key_binding.sc; hk_ext=new_key_binding.ext; }
+	KeyTriplet2(wchar_t* cmdline_s, wchar_t* cmdline_l): 
+		hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(hk_cmdline_l), hk_si{sizeof(STARTUPINFO)}, hk_event_handler(SinglePressCtrlAltEventHandler) {}
 	void ResetEventHandler() { hk_state=0; hk_engaged=0; hk_down_tick=0; }
-
+	EventHandlerFn LastEventHandler() { 
+		ResetEventHandler();
+		return hk_event_handler; 
+	}
+	EventHandlerFn CreateEventHandler(SuiteSettings *settings) {
+		ResetEventHandler();
+		hk_sc=settings->GetBindedKey().sc;
+		hk_ext=settings->GetBindedKey().ext;	//By C++ standard it is guaranteed that true will be converted to 1 and false to 0
+		return SinglePressCtrlAltEventHandler; 
+	}
+	
 #ifndef _WIN64
-	bool __stdcall SinglePressCtrlAltEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressCtrlAltEventHandler@12");
-	bool __stdcall SinglePressShiftAltEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressShiftAltEventHandler@12");
-	bool __stdcall SinglePressCtrlShiftEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressCtrlShiftEventHandler@12");
+	bool __cdecl SinglePressCtrlAltEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressCtrlAltEventHandler");
+	bool __cdecl SinglePressShiftAltEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressShiftAltEventHandler");
+	bool __cdecl SinglePressCtrlShiftEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event) asm("_SinglePressCtrlShiftEventHandler");
 #endif
 };
 
-KeyTriplet2 OnKeyTriplet2;
+wchar_t np[]=L"notepad.exe"; 
+
+KeyTriplet2 OnKeyTriplet2(np, NULL);
 
 void HotkeyEventHandler(wchar_t* snk_cmdline_buf) {
 	STARTUPINFO si={sizeof(STARTUPINFO)};

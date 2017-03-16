@@ -45,7 +45,18 @@ public:
 		ResetEventHandler();
 		hk_sc=settings->GetBindedKey().sc;
 		hk_ext=settings->GetBindedKey().ext;	//By C++ standard it is guaranteed that true will be converted to 1 and false to 0
-		return SinglePressCtrlAltEventHandler; 
+		switch (settings->GetModKey()) {
+			case ModKeyType::CTRL_ALT:
+				hk_event_handler=settings->GetLongPress()?&LongPressCtrlAltEventHandler:&SinglePressCtrlAltEventHandler;
+				break;
+			case ModKeyType::SHIFT_ALT:
+				hk_event_handler=settings->GetLongPress()?&LongPressShiftAltEventHandler:&SinglePressShiftAltEventHandler;
+				break;
+			case ModKeyType::CTRL_SHIFT:
+				hk_event_handler=settings->GetLongPress()?&LongPressCtrlShiftEventHandler:&SinglePressCtrlShiftEventHandler;
+				break;
+		}
+		return hk_event_handler; 
 	}
 	
 #ifndef _WIN64
@@ -62,6 +73,7 @@ wchar_t np[]=L"notepad.exe";
 wchar_t cl[]=L"calc.exe"; 
 
 KeyTriplet2 OnKeyTriplet2(np, cl);
+bool __cdecl (KeyTriplet2::*OnEventHandler)(WPARAM, KBDLLHOOKSTRUCT*);
 
 void HotkeyEventHandler(wchar_t* snk_cmdline_buf) {
 	STARTUPINFO si={sizeof(STARTUPINFO)};
@@ -88,8 +100,28 @@ void Test1(int i)
 	//D cycles = ~473
 	//Maximum: 0.254us per iteration (@2GHz)
 	
-	//Estimated LongPress disabled x86 with ASM = ~39
-	//13 times faster!
+	//6.84 KB
+	
+	//ASM version:
+	
+	//LongPress disabled x86
+	//A cycles = ~26
+	//B cycles = ~35
+	//C cycles = ~28
+	//D cycles = ~34
+	//Maximum: 0.017us per iteration (@2GHz)
+	//15 times faster!
+	
+	//LongPress enabled x86
+	//A cycles = ~26
+	//B cycles = ~36
+	//C cycles = ~28
+	//D cycles = ~35
+	//Maximum: 0.018us per iteration (@2GHz)
+	//14 times faster!
+	
+	//2.99 KB
+	//43% smaller!
 	
 	if (lng) {
 		if (i%100) wParam=WM_KEYDOWN;
@@ -104,7 +136,9 @@ void Test1(int i)
 	asm volatile("xor %%eax, %%eax; rdtsc; movl %%eax, %%ebx; xor %%eax, %%eax":"=b"(a1), "=d"(d1)); 
 	
 	//OnKeyTriplet.KeyPressEventHandler(wParam, kb_event);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(wParam, kb_event);
+	//OnKeyTriplet2.SinglePressCtrlAltEventHandler(wParam, kb_event);
+	//OnKeyTriplet2.LongPressCtrlAltEventHandler(wParam, kb_event);
+	(OnKeyTriplet2.*OnEventHandler)(wParam, kb_event);
 
 	asm volatile("xor %%eax, %%eax; rdtsc; movl %%eax, %%ebx; xor %%eax, %%eax":"=b"(a2), "=d"(d2)); 
 	
@@ -201,6 +235,7 @@ int main(int argc, char* argv[])
 	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(none.c_str())));
 	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(none.c_str())));
 	OnKeyTriplet.SetLongPress(true);
+	OnEventHandler=OnKeyTriplet2.LastEventHandler();
 	
 	for (int i=1; i<=1000; i++)
 		Test1(i);

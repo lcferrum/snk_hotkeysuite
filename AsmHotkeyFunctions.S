@@ -1,5 +1,6 @@
 .file "SuiteHotkeyFunctions.S"
 .text                                 /* Code section */
+#define LONG_PRESS_DURATION 2500      /* 2.5 sec (keep in mind that this define is compared with derivative of GetTickCount() that can have resolution up to 55ms) */
 #ifndef _WIN64
 /* Make functions visible to linker, CDECL name mangling */
 .globl _SinglePressCtrlAltEventHandler
@@ -136,7 +137,7 @@ lp_release:
 	movl 0x0C(%edx), %ecx             /* ECX=KBDLLHOOKSTRUCT.time */  
 	subl 0x10(%ebx), %ecx             /* If KBDLLHOOKSTRUCT.time<KeyTriplet.hk_down_tick JMP lp_exit_default - excludes moment of system timer wrap around after 49.7 days of uptime */
 	jl lp_exit_default
-	cmpl $2500, %ecx                  /* If KBDLLHOOKSTRUCT.time-KeyTriplet.hk_down_tick>2500 ECX=KeyTriplet.hk_cmdline_l else ECX=KeyTriplet.hk_cmdline_s */
+	cmpl $LONG_PRESS_DURATION, %ecx   /* If KBDLLHOOKSTRUCT.time-KeyTriplet.hk_down_tick>LONG_PRESS_DURATION ECX=KeyTriplet.hk_cmdline_l else ECX=KeyTriplet.hk_cmdline_s */
 	cmovg 0x18(%ebx), %ecx
 	cmovle 0x14(%ebx), %ecx
 	/* Push CreateProcess parameters to stack */

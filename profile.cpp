@@ -5,12 +5,10 @@
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
 #include "SuiteSettings.h"
-#include "SuiteHotkeyFunctions.h"
 
 pTaskDialog fnTaskDialog=NULL;
 
 unsigned long long cycles=0;
-KeyTriplet OnKeyTriplet;
 WPARAM wParam=WM_KEYUP;
 bool lng=false;
 KBDLLHOOKSTRUCT kb_eventW={0x57, 0x11};
@@ -18,7 +16,7 @@ KBDLLHOOKSTRUCT kb_eventBS={0x08, 0x0E};
 KBDLLHOOKSTRUCT *kb_event=&kb_eventW;
 
 class KeyTriplet2 {
-	typedef bool __cdecl (KeyTriplet2::*EventHandlerFn)(WPARAM, KBDLLHOOKSTRUCT*);
+	typedef bool (KeyTriplet2::*EventHandlerFn)(WPARAM, KBDLLHOOKSTRUCT*);
 private:
 	DWORD hk_sc;
 	DWORD hk_ext;
@@ -73,7 +71,7 @@ wchar_t np[]=L"notepad.exe";
 wchar_t cl[]=L"calc.exe"; 
 
 KeyTriplet2 OnKeyTriplet2(np, cl);
-bool __cdecl (KeyTriplet2::*OnEventHandler)(WPARAM, KBDLLHOOKSTRUCT*);
+bool (KeyTriplet2::*OnEventHandler)(WPARAM, KBDLLHOOKSTRUCT*);
 
 void HotkeyEventHandler(wchar_t* snk_cmdline_buf) {
 	STARTUPINFO si={sizeof(STARTUPINFO)};
@@ -101,6 +99,7 @@ void Test1(int i)
 	//Maximum: 0.254us per iteration (@2GHz)
 	
 	//6.84 KB
+	//Complete exe packed w/ UPX 3.93w: ?
 	
 	//ASM version:
 	
@@ -122,6 +121,7 @@ void Test1(int i)
 	
 	//2.99 KB
 	//43% smaller!
+	//Complete exe packed w/ UPX 3.93w: 253952 bytes
 	
 	if (lng) {
 		if (i%100) wParam=WM_KEYDOWN;
@@ -232,9 +232,6 @@ int main(int argc, char* argv[])
 	
 	std::wstring none;
 	
-	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(none.c_str())));
-	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(none.c_str())));
-	OnKeyTriplet.SetLongPress(true);
 	OnEventHandler=OnKeyTriplet2.LastEventHandler();
 	
 	for (int i=1; i<=1000; i++)

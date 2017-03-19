@@ -99,7 +99,7 @@ void Test1(int i)
 	//Maximum: 0.254us per iteration (@2GHz)
 	
 	//6.84 KB
-	//Complete exe packed w/ UPX 3.93w: ?
+	//Complete exe packed w/ UPX 3.93w: 254464 bytes
 	
 	//ASM version:
 	
@@ -120,8 +120,9 @@ void Test1(int i)
 	//14 times faster!
 	
 	//2.99 KB
-	//43% smaller!
+	//57% smaller!
 	//Complete exe packed w/ UPX 3.93w: 253952 bytes
+	//0.01% smaller...
 	
 	if (lng) {
 		if (i%100) wParam=WM_KEYDOWN;

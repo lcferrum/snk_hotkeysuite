@@ -67,6 +67,9 @@ BEGIN
 		MENUITEM "On single press...", IDM_EDIT_SHK
 		MENUITEM "On long press...", IDM_EDIT_LHK
 		MENUITEM SEPARATOR
+#ifdef DEBUG
+		MENUITEM "Set DEBUG output", IDM_DEBUG
+#endif
 		MENUITEM "About...", IDM_ABOUT
 		MENUITEM "Exit", IDM_EXIT
 	END

@@ -27,7 +27,7 @@ KeyTriplet::KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l):
 	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_si{sizeof(STARTUPINFO)}
 {}
 
-void KeyTriplet::ResetEventHandler()
+inline void KeyTriplet::ResetEventHandler()
 { 
 	hk_state=0; 
 	hk_engaged=0; 
@@ -83,8 +83,20 @@ bool DebugEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 	//So while Right Shift events have LLKHF_EXTENDED set it doesn't mean that they are fake
 	//But nevertheless this cause GetKeyNameText() to go awry and produce wrong results
 
-	//0x00000002 is LLKHF_LOWER_IL_INJECTED not found in MinGW-w64 4.9.2 winuser.h
-	std::wcerr<<std::hex<<((wParam==WM_KEYUP||wParam==WM_SYSKEYUP)?L"KEYUP":L"KEYDOWN")<<L" VK: "<<kb_event->vkCode<<L" SC: "<<kb_event->scanCode<<(kb_event->scanCode?L"":L" NULL")<<(kb_event->scanCode&FAKE_SC?L" FAKE":L"")<<((wParam==WM_SYSKEYDOWN||wParam==WM_SYSKEYUP)?L" SYS":L"")<<(kb_event->flags&(0x00000002|LLKHF_INJECTED)?L" INJ":L"")<<(kb_event->flags&LLKHF_EXTENDED?L" EXT":L"")<<(kb_event->flags&LLKHF_ALTDOWN?L" ALT":L"")<<std::endl;
+	wchar_t key_buf[MAX_PATH];
+	std::wcerr<<std::hex<<
+				((wParam==WM_KEYUP||wParam==WM_SYSKEYUP)?L"KEYUP":L"KEYDOWN")<<
+				L" VK: "<<kb_event->vkCode<<
+				L" SC: "<<kb_event->scanCode<<
+				L" KEY: \""<<(GetKeyNameText((kb_event->scanCode&0xFF)<<16|(kb_event->flags&LLKHF_EXTENDED)<<24, key_buf, MAX_PATH)?key_buf:L"UNKNOWN")<<L"\""<<
+				(kb_event->scanCode&FAKE_SC?L" FAKE":L"")<<
+				(kb_event->scanCode?L"":L" NULL")<<
+				((wParam==WM_SYSKEYDOWN||wParam==WM_SYSKEYUP)?L" SYS":L"")<<
+				//0x00000002 is LLKHF_LOWER_IL_INJECTED not found in MinGW-w64 4.9.2 winuser.h
+				(kb_event->flags&(0x00000002|LLKHF_INJECTED)?L" INJ":L"")<<
+				(kb_event->flags&LLKHF_EXTENDED?L" EXT":L"")<<
+				(kb_event->flags&LLKHF_ALTDOWN?L" ALT":L"")<<
+				std::dec<<std::endl;
 }
 #endif
 

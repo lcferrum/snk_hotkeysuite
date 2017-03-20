@@ -27,6 +27,7 @@ public:
 	bool IsRunning();
 	bool Stop();
 	bool Start();
+	bool Set(KeyPressFn OnKeyPress);
 	bool StartNew(KeyPressFn OnKeyPress);
 	
 	~HotkeyEngine();

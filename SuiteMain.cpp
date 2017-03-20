@@ -179,7 +179,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_ENABLED);
 				settings->SetLongPress(true);
 			}
-			if (hk_was_running&&!hk_engine->StartNew(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_ALT:
 			hk_was_running=hk_engine->Stop();
@@ -187,7 +188,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::CTRL_ALT);
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
-			if (hk_was_running&&!hk_engine->StartNew(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_SHIFT_ALT:
 			hk_was_running=hk_engine->Stop();
@@ -195,7 +197,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::SHIFT_ALT);
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
-			if (hk_was_running&&!hk_engine->StartNew(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_SHIFT:
 			hk_was_running=hk_engine->Stop();
@@ -203,7 +206,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			settings->SetModKey(ModKeyType::CTRL_SHIFT);
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
-			if (hk_was_running&&!hk_engine->StartNew(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CUSTOM:
 			{
@@ -240,12 +244,20 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
 					case BD_DLGPRC_CANCEL:
-						if (hk_was_running&&!hk_engine->StartNew(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+						hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+						if (hk_was_running&&!hk_engine->Start()) break;
 						sender->Enable();
 						return true;
 				}
 				break;
 			}
+#ifdef DEBUG
+		case IDM_DEBUG:
+			hk_was_running=hk_engine->Stop();
+			hk_engine->Set(DebugEventHandler);
+			if (hk_was_running&&!hk_engine->Start()) break;
+			return true;
+#endif
 		case IDM_ABOUT:
 			{
 				//Blah blah blah... see comments on IDM_SET_CUSTOM

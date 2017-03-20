@@ -80,6 +80,14 @@ bool HotkeyEngine::Start()
 	return false;
 }
 
+bool HotkeyEngine::Set(KeyPressFn OnKeyPress)
+{
+	if (!running) {
+		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+	} else
+		return false;
+}
+
 bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress)
 {
 	if (!running) {

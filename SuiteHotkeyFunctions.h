@@ -5,7 +5,11 @@
 #include <windows.h>
 
 class KeyTriplet {
+#ifndef _WIN64
 	typedef bool (__cdecl *EventHandlerFn)(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*);
+#else
+	typedef bool (*EventHandlerFn)(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*);
+#endif
 private:
 	DWORD hk_sc;
 	DWORD hk_ext;

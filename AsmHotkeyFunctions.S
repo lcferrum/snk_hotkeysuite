@@ -21,12 +21,12 @@
     
 _LongPressCtrlAltEventHandler:
 	/* 
-	Function prototype is bool __cdecl KeyPressEventHandler(this, WPARAM, KBDLLHOOKSTRUCT*)
+	Function prototype is bool __cdecl KeyPressEventHandler(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*)
 	4 DWORDs are passed on the stack (ESP offsets w/ pushed EBX): 
 	 0x04 Return address
-	 0x08 "this" pointer to KeyTriplet (N.B.: only GNU/Borland passes "this" on the stack, MS passes "this" in ECX)
+	 0x08 Pointer to KeyTriplet
 	 0x0C wParam
-	 0x10 pointer to KBDLLHOOKSTRUCT
+	 0x10 Pointer to KBDLLHOOKSTRUCT
 	KeyTriplet:
 	 0x00 hk_sc
 	 0x04 hk_ext
@@ -38,11 +38,11 @@ _LongPressCtrlAltEventHandler:
 	 0x1C hk_pi
 	 0x2C hk_si
 	KBDLLHOOKSTRUCT:
-	 0x00 vkCode;
-	 0x04 scanCode;
-	 0x08 flags;
-	 0x0C time;
-	 0x10 dwExtraInfo;
+	 0x00 vkCode
+	 0x04 scanCode
+	 0x08 flags
+	 0x0C time
+	 0x10 dwExtraInfo
 	*/
 	pushl %ebx                        /* Saving EBX to stack */
 	xorl %eax, %eax                   /* EAX=0 (used as bool return value) */
@@ -138,8 +138,10 @@ lp_release:
 	subl 0x10(%ebx), %ecx             /* If KBDLLHOOKSTRUCT.time<KeyTriplet.hk_down_tick JMP lp_exit_default - excludes moment of system timer wrap around after 49.7 days of uptime */
 	jl lp_exit_default
 	cmpl $LONG_PRESS_DURATION, %ecx   /* If KBDLLHOOKSTRUCT.time-KeyTriplet.hk_down_tick>LONG_PRESS_DURATION ECX=KeyTriplet.hk_cmdline_l else ECX=KeyTriplet.hk_cmdline_s */
-	cmovg 0x18(%ebx), %ecx
-	cmovle 0x14(%ebx), %ecx
+	movl 0x18(%ebx), %ecx
+	jg lp_longpress
+	movl 0x14(%ebx), %ecx
+lp_longpress:
 	/* Push CreateProcess parameters to stack */
 	leal 0x1C(%ebx), %eax
 	pushl %eax                        /* lpProcessInformation=KeyTriplet.hk_pi */
@@ -153,9 +155,9 @@ lp_release:
 	pushl $0                          /* lpProcessAttributes=NULL */
 	pushl %ecx                        /* lpCommandLine=ECX (cmdline pointer) */
 	pushl $0                          /* lpApplicationName=NULL */
-	call *__imp__CreateProcessW       /* Call CreateProcess - it's STDCALL function and clears stack by itself */
+	call *__imp__CreateProcessW       /* Call CreateProcess - it's STDCALL function and callee clears the stack */
 	cmpl $0, %eax
-	je lp_exit_default                /* If CreateProcess returned 0 JMP lp_exit_default */
+	je lp_exit_default                /* If CreateProcess returned 0 JMP lp_exit_default (function will return false in this case) */
 	pushl 0x1C(%ebx)
 	call *__imp__CloseHandle          /* Call CloseHandle(KeyTriplet.hk_pi.hProcess) - STDCALL */
 	pushl 0x20(%ebx)
@@ -167,12 +169,12 @@ lp_exit_default:
 
 _SinglePressCtrlAltEventHandler:
 	/* 
-	Function prototype is bool __cdecl KeyPressEventHandler(this, WPARAM, KBDLLHOOKSTRUCT*)
+	Function prototype is bool __cdecl KeyPressEventHandler(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*)
 	4 DWORDs are passed on the stack (ESP offsets w/ pushed EBX): 
 	 0x04 Return address
-	 0x08 "this" pointer to KeyTriplet (N.B.: only GNU/Borland passes "this" on the stack, MS passes "this" in ECX)
+	 0x08 Pointer to KeyTriplet
 	 0x0C wParam
-	 0x10 pointer to KBDLLHOOKSTRUCT
+	 0x10 Pointer to KBDLLHOOKSTRUCT
 	KeyTriplet:
 	 0x00 hk_sc
 	 0x04 hk_ext
@@ -184,11 +186,11 @@ _SinglePressCtrlAltEventHandler:
 	 0x1C hk_pi
 	 0x2C hk_si
 	KBDLLHOOKSTRUCT:
-	 0x00 vkCode;
-	 0x04 scanCode;
-	 0x08 flags;
-	 0x0C time;
-	 0x10 dwExtraInfo;
+	 0x00 vkCode
+	 0x04 scanCode
+	 0x08 flags
+	 0x0C time
+	 0x10 dwExtraInfo
 	*/
 	pushl %ebx                        /* Saving EBX to stack */
 	xorl %eax, %eax                   /* EAX=0 (used as bool return value) */
@@ -277,7 +279,7 @@ sp_engaged:                           /* Single hotkey press occured */
 	pushl $0                          /* lpProcessAttributes=NULL */
 	pushl %ecx                        /* lpCommandLine=ECX (cmdline pointer) */
 	pushl $0                          /* lpApplicationName=NULL */
-	call *__imp__CreateProcessW       /* Call CreateProcess - it's STDCALL function and clears stack by itself */
+	call *__imp__CreateProcessW       /* Call CreateProcess - it's STDCALL function and callee clears the stack */
 	cmpl $0, %eax
 	je sp_exit_true                   /* If CreateProcess returned 0 JMP sp_exit_true */
 	pushl 0x1C(%ebx)
@@ -295,4 +297,58 @@ sp_key_up:                            /* WM_KEYUP/WM_SYSKEYUP event */
 sp_exit_default:
 	popl %ebx
 	ret
+#else
+/* Make functions visible to linker, no mangling for x64 */
+.globl SinglePressCtrlAltEventHandler
+.globl SinglePressShiftAltEventHandler
+.globl SinglePressCtrlShiftEventHandler
+.globl LongPressCtrlAltEventHandler
+.globl LongPressShiftAltEventHandler
+.globl LongPressCtrlShiftEventHandler
+/* Defining symbols, COFF format, storage-class 2 (external), attribute 32 (function) */
+.def SinglePressCtrlAltEventHandler;   .scl 2; .type 32; .endef
+.def SinglePressShiftAltEventHandler;  .scl 2; .type 32; .endef
+.def SinglePressCtrlShiftEventHandler; .scl 2; .type 32; .endef
+.def LongPressCtrlAltEventHandler;     .scl 2; .type 32; .endef
+.def LongPressShiftAltEventHandler;    .scl 2; .type 32; .endef
+.def LongPressCtrlShiftEventHandler;   .scl 2; .type 32; .endef
+.def __imp_CreateProcessW;             .scl 2; .type 32; .endef
+.def __imp_CloseHandle;                .scl 2; .type 32; .endef
+    
+LongPressCtrlAltEventHandler:
+	/* 
+	Function prototype is bool KeyPressEventHandler(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*)
+	Stack is misaligned by 8 bytes
+	1 QWORD + 32-byte shadow space is passed on the stack (RSP offsets): 
+	 0x00 Return address
+	 0x08 Shadow space
+	 0x10 Shadow space
+	 0x18 Shadow space
+	 0x20 Shadow space
+	Arguments are passed in registers:
+	 RCX Pointer to KeyTriplet
+	 RDX wParam
+	 R8  Pointer to KBDLLHOOKSTRUCT
+	KeyTriplet:
+	 0x00 hk_sc
+	 0x04 hk_ext
+	 0x08 hk_state
+	 0x0C hk_engaged
+	 0x10 hk_down_tick
+	 0x18 hk_cmdline_s
+	 0x20 hk_cmdline_l
+	 0x28 hk_pi
+	 0x40 hk_si
+	KBDLLHOOKSTRUCT:
+	 0x00 vkCode
+	 0x04 scanCode
+	 0x08 flags
+	 0x0C time
+	 0x10 dwExtraInfo
+	*/
+LongPressShiftAltEventHandler:
+LongPressCtrlShiftEventHandler:
+SinglePressCtrlAltEventHandler:
+SinglePressShiftAltEventHandler:
+SinglePressCtrlShiftEventHandler:
 #endif

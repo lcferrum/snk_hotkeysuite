@@ -14,6 +14,13 @@ extern "C" bool __cdecl SinglePressCtrlShiftEventHandler(KeyTriplet* this_ptr, W
 extern "C" bool __cdecl LongPressCtrlAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
 extern "C" bool __cdecl LongPressShiftAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
 extern "C" bool __cdecl LongPressCtrlShiftEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+#else
+extern "C" bool SinglePressCtrlAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+extern "C" bool SinglePressShiftAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+extern "C" bool SinglePressCtrlShiftEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+extern "C" bool LongPressCtrlAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+extern "C" bool LongPressShiftAltEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+extern "C" bool LongPressCtrlShiftEventHandler(KeyTriplet* this_ptr, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
 #endif
 
 //This version of KeyTriplet utilizes assembler-otimized callbacks for lowlevel keyboard hook HOOKPROC

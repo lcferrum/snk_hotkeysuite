@@ -386,14 +386,35 @@ sp_engaged:                           /* Single hotkey press occured */
 	cmpl $1, 0x0C(%rcx)               /* If KeyTriplet.hk_engaged==1 JMP exit w/ RAX=true */
 	je sp_exit_true
 	movl $1, 0x0C(%rcx)               /* KeyTriplet.hk_engaged=1 */ 
-	subq $40, %rsp
-	movl $0, %r9d
-	movl $0, %r8d
-	movl $0, %edx
-	movl $0, %ecx
-	movq __imp_MessageBoxA(%rip), %rax
+	/* Push CreateProcess parameters to stack */
+	subq $88, %rsp                    /* Prepairing 88 bytes on stack: 8-byte padding (for 16-byte alignment), 48-bytes for parameters, 32-bytes for shadow space */
+	leaq 0x28(%rcx), %rax
+	movq %rax, 0x48(%rsp)             /* lpProcessInformation=KeyTriplet.hk_pi */
+	movq %rax, 0x50(%rsp)             /* 8-byte padding=KeyTriplet.hk_pi */
+	leaq 0x40(%rcx), %rax
+	movq %rax, 0x40(%rsp)             /* lpStartupInfo=KeyTriplet.hk_si */
+	movq $0, 0x38(%rsp)               /* lpCurrentDirectory=NULL */
+	movq $0, 0x30(%rsp)               /* lpEnvironment=NULL */
+	movl $0x80, 0x28(%rsp)            /* dwCreationFlags=HIGH_PRIORITY_CLASS */
+	movl $0, 0x20(%rsp)               /* bInheritHandles=FALSE */
+	movq $0, %r9                      /* lpThreadAttributes=NULL */
+	movq $0, %r8                      /* lpProcessAttributes=NULL */
+	movq 0x18(%rcx), %rdx             /* lpCommandLine=KeyTriplet.hk_cmdline_s */
+	movq $0, %rcx                     /* lpApplicationName=NULL */
+	/* Call CreateProcess - it's x64 function and caller clears the stack */
+	movq __imp_CreateProcessW(%rip), %rax
 	call *%rax
-	addq $40, %rsp 
+	cmpl $0, %eax
+	je sp_skip_closehandle            /* If CreateProcess returned 0 JMP sp_skip_closehandle */
+	movq 0x50(%rsp), %rcx
+	movq __imp_CloseHandle(%rip), %rax
+	call *%rax                        /* Call CloseHandle(KeyTriplet.hk_pi.hProcess) - STDCALL */
+	movq 0x50(%rsp), %rcx
+	addq $8, %rcx
+	movq __imp_CloseHandle(%rip), %rax
+	call *%rax                        /* Call CloseHandle(KeyTriplet.hk_pi.hThread) - STDCALL */
+sp_skip_closehandle:
+	addq $88, %rsp                    /* Free allocated space on the stack */  
 sp_exit_true:
 	movq $1, %rax                     /* RAX=1 (used as bool return value) */
 	ret	

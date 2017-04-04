@@ -265,7 +265,6 @@ sp_engaged:                           /* Single hotkey press occured */
 	cmpl $1, 0x0C(%ebx)               /* If KeyTriplet.hk_engaged==1 JMP exit w/ EAX=true */
 	je sp_exit_true
 	movl $1, 0x0C(%ebx)               /* KeyTriplet.hk_engaged=1 */ 
-	movl 0x14(%ebx), %ecx             /* ECX=KeyTriplet.hk_cmdline_s */ 
 	/* Push CreateProcess parameters to stack */
 	leal 0x1C(%ebx), %eax
 	pushl %eax                        /* lpProcessInformation=KeyTriplet.hk_pi */
@@ -277,7 +276,7 @@ sp_engaged:                           /* Single hotkey press occured */
 	pushl $0                          /* bInheritHandles=FALSE */
 	pushl $0                          /* lpThreadAttributes=NULL */
 	pushl $0                          /* lpProcessAttributes=NULL */
-	pushl %ecx                        /* lpCommandLine=ECX (cmdline pointer) */
+	pushl 0x14(%ebx)                  /* lpCommandLine=KeyTriplet.hk_cmdline_s */
 	pushl $0                          /* lpApplicationName=NULL */
 	call *__imp__CreateProcessW       /* Call CreateProcess - it's STDCALL function and callee clears the stack */
 	cmpl $0, %eax
@@ -314,7 +313,6 @@ sp_exit_default:
 .def LongPressCtrlShiftEventHandler;   .scl 2; .type 32; .endef
 .def __imp_CreateProcessW;             .scl 2; .type 32; .endef
 .def __imp_CloseHandle;                .scl 2; .type 32; .endef
-.def __imp_MessageBoxA;                .scl 2; .type 32; .endef
     
 LongPressCtrlAltEventHandler:
 	/* 
@@ -351,13 +349,13 @@ LongPressShiftAltEventHandler:
 LongPressCtrlShiftEventHandler:
 SinglePressCtrlAltEventHandler:
 SinglePressShiftAltEventHandler:
-SinglePressCtrlShiftEventHandler:     /* RAX, RCX (this-ebx), RDX (wparam), R8 (KB-edx), R9-R11 */
+SinglePressCtrlShiftEventHandler:     /* RAX, RCX (this), RDX (wparam), R8 (KB), R9, R10, R11 */
 	xorq %rax, %rax                   /* RAX=0 (used as bool return value) */
 	/* Sequentially check if KBDLLHOOKSTRUCT.scanCode matches KeyTriplet.hk_sc, SHIFTL, CTRL or SHIFTR (ordered based on assumed use freqency) */
 	movl 0x04(%r8), %r9d              /* R9D=KBDLLHOOKSTRUCT.scanCode */
 	cmpl 0x00(%rcx), %r9d             /* If KBDLLHOOKSTRUCT.scanCode==KeyTriplet.hk_sc JMP test_ext */
 	je sp_test_ext
-	movq $1, %r10                     /* R10=001b (used as HK_FLAG for KeyTriplet.hk_state) */
+	movl $1, %r10d                    /* R10D=001b (used as HK_FLAG for KeyTriplet.hk_state) */
 	cmpl $0x2A, %r9d                  /* If KBDLLHOOKSTRUCT.scanCode==SHIFTL JMP flag0 */
 	je sp_flag0
 	cmpl $0x1D, %r9d                  /* If KBDLLHOOKSTRUCT.scanCode==CTRL JMP flag1 */
@@ -370,9 +368,9 @@ sp_test_ext:                          /* KBDLLHOOKSTRUCT.scanCode was matched wi
 	andl $0x01, %r9d                  /* R9D=KBDLLHOOKSTRUCT.flags&LLKHF_EXTENDED */
 	cmpl 0x04(%rcx), %r9d             /* If KBDLLHOOKSTRUCT.flags&LLKHF_EXTENDED!=KeyTriplet.hk_ext JMP exit */
 	jne sp_exit_default
-	movq $2, %r10                     /* R10=010b (HK_FLAG) */
+	movl $2, %r10d                    /* R10D=010b (HK_FLAG) */
 sp_flag1:                             /* KBDLLHOOKSTRUCT.scanCode was matched with second key */
-	addq %r10, %r10                   /* Double R10 (HK_FLAG) - same as shifting left by 1, but may be faster on P4 */ 
+	addl %r10d, %r10d                 /* Double R10D (HK_FLAG) - same as shifting left by 1, but may be faster on P4 */ 
 sp_flag0:                             /* KBDLLHOOKSTRUCT.scanCode was matched with first key */
 	cmpq $0x0101, %rdx                /* If wParam==WM_KEYUP JMP sp_key_up */
 	je sp_key_up
@@ -386,19 +384,40 @@ sp_engaged:                           /* Single hotkey press occured */
 	cmpl $1, 0x0C(%rcx)               /* If KeyTriplet.hk_engaged==1 JMP exit w/ RAX=true */
 	je sp_exit_true
 	movl $1, 0x0C(%rcx)               /* KeyTriplet.hk_engaged=1 */ 
-	subq $40, %rsp
-	movl $0, %r9d
-	movl $0, %r8d
-	movl $0, %edx
-	movl $0, %ecx
-	movq __imp_MessageBoxA(%rip), %rax
+	/* Push CreateProcess parameters to stack */
+	pushq %rbx                        /* Saving RBX to stack, now stack is 16-byte aligned */
+	subq $80, %rsp                    /* Prepairing 80 bytes on stack: 48-bytes for parameters, 32-bytes for shadow space */
+	leaq 0x28(%rcx), %rbx             /* Saving KeyTriplet.hk_pi to RBX because RCX is volatile and will be trashed */
+	movq %rbx, 0x48(%rsp)             /* lpProcessInformation=KeyTriplet.hk_pi */
+	leaq 0x40(%rcx), %rax
+	movq %rax, 0x40(%rsp)             /* lpStartupInfo=KeyTriplet.hk_si */
+	movq $0, 0x38(%rsp)               /* lpCurrentDirectory=NULL */
+	movq $0, 0x30(%rsp)               /* lpEnvironment=NULL */
+	movl $0x80, 0x28(%rsp)            /* dwCreationFlags=HIGH_PRIORITY_CLASS */
+	movl $0, 0x20(%rsp)               /* bInheritHandles=FALSE */
+	movq $0, %r9                      /* lpThreadAttributes=NULL */
+	movq $0, %r8                      /* lpProcessAttributes=NULL */
+	movq 0x18(%rcx), %rdx             /* lpCommandLine=KeyTriplet.hk_cmdline_s */
+	movq $0, %rcx                     /* lpApplicationName=NULL */
+	/* Call CreateProcess - it's x64 function and caller clears the stack */
+	movq __imp_CreateProcessW(%rip), %rax
 	call *%rax
-	addq $40, %rsp 
+	cmpl $0, %eax
+	je sp_skip_closehandle            /* If CreateProcess returned 0 JMP sp_skip_closehandle */
+	movq 0x00(%rbx), %rcx
+	movq __imp_CloseHandle(%rip), %rax
+	call *%rax                        /* Call CloseHandle(KeyTriplet.hk_pi.hProcess) */
+	movq 0x08(%rbx), %rcx
+	movq __imp_CloseHandle(%rip), %rax
+	call *%rax                        /* Call CloseHandle(KeyTriplet.hk_pi.hThread) */
+sp_skip_closehandle:
+	addq $80, %rsp                    /* Free allocated space on the stack */  
+	popq %rbx                         /* Restore RBX */
 sp_exit_true:
 	movq $1, %rax                     /* RAX=1 (used as bool return value) */
 	ret	
 sp_key_up:                            /* WM_KEYUP/WM_SYSKEYUP event */
-	notq %r10
+	notl %r10d
 	andl %r10d, 0x08(%rcx)            /* KeyTriplet.hk_state&=~HK_FLAG */
 	movl $0, 0x0C(%rcx)               /* KeyTriplet.hk_engaged=0 */
 sp_exit_default:

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstddef>
 #include <cstdio>
+#include <conio.h>
 #include <windows.h>
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
@@ -96,13 +97,16 @@ void Test2()
 	KBDLLHOOKSTRUCT kb_eventCTRL={0xFFFFFFFF, 0x1D};
 	KBDLLHOOKSTRUCT kb_eventALT={0xFFFFFFFF, 0x38};
 	
-	/*OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventCTRL);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventALT);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventBS);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventALT);
-	OnKeyTriplet2.SinglePressCtrlAltEventHandler(WM_KEYUP, &kb_eventCTRL);*/
+	OnEventHandler=OnKeyTriplet.CreateEventHandler(&settings);
+	
+	std::wcout<<L"SHEIZE"<<std::endl;
+	
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventCTRL);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventALT);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventBS);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventBS);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventALT);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventCTRL);
 }
 
 void Test3()

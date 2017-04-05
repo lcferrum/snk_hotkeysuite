@@ -83,21 +83,22 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			//Handler for dialog controls
 			if (HIWORD(wParam)==BN_CLICKED) {
 				switch (LOWORD(wParam)) {
-					case IDC_CLOSE_ABOUT:
-						EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
-						return TRUE;
 					case IDC_EXE_OPEN:
 						ShellExecute(NULL, L"open", GetExecutableFileName(L"").c_str(), NULL, NULL, SW_SHOWNORMAL);
 						return TRUE;
+					case IDC_CFG_OPEN:
 					case IDC_SNK_OPEN:
 						{
+							std::wstring (SuiteSettings::*fnGetSettingsInfo)()=LOWORD(wParam)==IDC_SNK_OPEN?&settings->GetSnkPath:&settings->GetStoredLocation;
+
 							size_t last_backslash;
-							if ((last_backslash=settings->GetSnkPath().find_last_of(L'\\'))!=std::wstring::npos)
-								ShellExecute(NULL, L"open", settings->GetSnkPath().substr(0, last_backslash).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							if ((last_backslash=(settings->*fnGetSettingsInfo)().find_last_of(L'\\'))!=std::wstring::npos)
+								ShellExecute(NULL, L"open", (settings->*fnGetSettingsInfo)().substr(0, last_backslash).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							
 							return TRUE;
 						}
-					case IDC_CFG_OPEN:
-						ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
+					case IDC_CLOSE_ABOUT:
+						EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 						return TRUE;
 				}
 			}

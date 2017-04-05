@@ -11,7 +11,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 	switch (uMsg) {
 		case WM_INITDIALOG:
 			{
-				//It's assumed that bd_dlgprc_param->binded_vk is 0 at the init and hk_engine is non-NULL valid pointer
+				//It's assumed that bd_dlgprc_param->binded_key.sc is 0 at the init and hk_engine is non-NULL valid pointer
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
 				bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)lParam;
 				

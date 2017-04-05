@@ -31,7 +31,7 @@ extern "C" bool LongPressCtrlShiftEventHandler(KeyTriplet* this_ptr, WPARAM wPar
 //Resulting exe packed w/ UPX is also smaller but not considerably (around half-Kb)
 
 KeyTriplet::KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l):
-	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_si{sizeof(STARTUPINFO)}
+	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_pi{}, hk_si{sizeof(STARTUPINFO)}
 {}
 
 inline void KeyTriplet::ResetEventHandler()
@@ -131,7 +131,7 @@ bool BindKeyEventHandler(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKST
 				BINDED_KEY binded_key={LOBYTE(kb_event->vkCode) /* vk */, LOBYTE(kb_event->scanCode) /* sc */, kb_event->flags&LLKHF_EXTENDED /* ext */};
 				//We are passing BINDED_KEY as WPARAM because, even taking align into account, it spans 3 byte which is less than WPARAM size on both x86 and x86_64
 				static_assert(sizeof(BINDED_KEY)<=sizeof(WPARAM), L"sizeof(BINDED_KEY) should be less or equal sizeof(WPARAM)");
-				PostMessage(dlg_hwnd, bind_wm, (WPARAM)binded_key.tuple, (LPARAM)kb_event->time);
+				PostMessage(dlg_hwnd, bind_wm, (WPARAM)binded_key.tuple, 0);
 				return true;
 		}
 	}

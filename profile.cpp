@@ -99,7 +99,7 @@ void Test2()
 	
 	OnEventHandler=OnKeyTriplet.CreateEventHandler(&settings);
 	
-	std::wcout<<L"SHEIZE"<<std::endl;
+	std::wcout<<L"SHORT_TEST"<<std::endl;
 	
 	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventCTRL);
 	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventALT);
@@ -116,13 +116,18 @@ void Test3()
 	KBDLLHOOKSTRUCT kb_eventCTRL={0xFFFFFFFF, 0x1D};
 	KBDLLHOOKSTRUCT kb_eventALT={0xFFFFFFFF, 0x38};
 	
-	/*OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventCTRL);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventALT);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYDOWN, &kb_eventBS);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYUP, &kb_eventBS2);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYUP, &kb_eventALT);
-	OnKeyTriplet2.LongPressCtrlAltEventHandler(WM_KEYUP, &kb_eventCTRL);*/
+	settings.SetLongPress(true);
+	OnEventHandler=OnKeyTriplet.CreateEventHandler(&settings);
+	
+	std::wcout<<L"LONG_TEST"<<std::endl;
+	
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventCTRL);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventALT);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventBS);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYDOWN, &kb_eventBS);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventBS2);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventALT);
+	OnEventHandler(ptOnKeyTriplet, WM_KEYUP, &kb_eventCTRL);
 }
 
 void Test4()

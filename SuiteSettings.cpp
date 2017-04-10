@@ -132,8 +132,8 @@ bool SuiteSettings::MapScToVk(DWORD src_sc, BINDED_KEY &dst_key) const
 	//First try to get left/right-handed VK from whatever SC passed
 	if ((dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK_EX, initial_hkl))) {
 	//Previous attempt failed because of invalid SC or MAPVK_VSC_TO_VK_EX not being available or function not being able to understand multi-byte SCs
-	//Check if latter was the case and try with single-byte SC
-	} else if (((src_sc&~(DWORD)0xFF)==0xE000||(src_sc&~(DWORD)0xFF)==0xE100)&&(src_sc=src_sc&0xFF, dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK_EX, initial_hkl))) { 
+	//Check if latter was the case and try with single-byte SC (not using HIBYTE because we should check that it was really multi-byte SC and not some rubbish)
+	} else if (((src_sc&0xFFFFFF00)==0xE000||(src_sc&0xFFFFFF00)==0xE100)&&(src_sc&=0xFF, dst_vk=MapVirtualKeyEx(src_sc, MAPVK_VSC_TO_VK_EX, initial_hkl))) { 
 	//Previous attempt failed because of invalid SC or MAPVK_VSC_TO_VK_EX not being available
 	//Assuming latter and try to get ambidextrous VK with single-byte SC 
 	//N.B.: src_sc is now single-byte or invalid after previous if-statement and if MAPVK_VSC_TO_VK_EX is not supported function won't understand multi-byte SCs anyway
@@ -602,7 +602,7 @@ bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name,
 	return true;
 }
 
-std::wstring SuiteSettingsReg::GetStoredLocation()
+std::wstring SuiteSettingsReg::GetStoredLocation() const
 {
 	return std::wstring(hive!=Hive::LOCAL_MACHINE?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
 }

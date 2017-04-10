@@ -12,8 +12,9 @@
 
 typedef struct {
 	HotkeyEngine* hk_engine;
-	SuiteSettings* settings;	//Though SuiteSettings is passed to BindingDialogProc it should be used only to query values, not set them
-	BINDED_KEY binded_key;		//While only scancodes are compared in hotkey handler because of their layout independence, vks are used to display key name in UI; non-zero BINDED_KEY.sc indicates that there was binding attempt (key was pressed))
+	const SuiteSettings* settings;	//Though SuiteSettings is passed to BindingDialogProc it should be used only to query values, not set them
+	BINDED_KEY binded_key;			//While only scancodes are compared in hotkey handler because of their layout independence, vks are used to display key name in UI; non-zero BINDED_KEY.sc indicates that there was binding attempt (key was pressed)
+	HFONT bold_font;				//Stores created bold font so as not to use window properties
 } BINDING_DLGPRC_PARAM;
 
 namespace BindingDialog {

@@ -33,18 +33,18 @@ protected:
 	//Special constructor for use in derived classes - directly sets shk_cfg_path, lhk_cfg_path and snk_path without any modifications and checks
 	SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path);
 public:
-	bool GetLongPress() { return long_press; }
+	bool GetLongPress() const { return long_press; }
 	void SetLongPress(bool enabled);
-	ModKeyType GetModKey() { return mod_key; }
+	ModKeyType GetModKey() const { return mod_key; }
 	void SetModKey(ModKeyType new_key);
-	BINDED_KEY GetBindedKey() { return binded_key; }
+	BINDED_KEY GetBindedKey() const { return binded_key; }
 	void SetBindedKey(BINDED_KEY new_key_binding);
-	std::wstring GetShkCfgPath() { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
-	std::wstring GetLhkCfgPath() { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
-	std::wstring GetSnkPath() { return ExpandEnvironmentStringsWrapper(snk_path); }
-	bool IsStored() { return stored; }
+	std::wstring GetShkCfgPath() const { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
+	std::wstring GetLhkCfgPath() const { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
+	std::wstring GetSnkPath() const { return ExpandEnvironmentStringsWrapper(snk_path); }
+	bool IsStored() const { return stored; }
 	
-	virtual std::wstring GetStoredLocation() { return L""; }
+	virtual std::wstring GetStoredLocation() const { return snk_path; }
 	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors
 	
 	SuiteSettings();
@@ -59,7 +59,7 @@ private:
 protected:
 	Hive hive;
 public:
-	virtual std::wstring GetStoredLocation();
+	virtual std::wstring GetStoredLocation() const;
 	virtual bool SaveSettings();
 	
 	SuiteSettingsReg();						//Auto chooses hive - depending on what registry path is available (defaults to CURRENT_USER)
@@ -81,7 +81,7 @@ protected:
 	//Warning: ini_path passed as third parameter to this constructor should be absolute file path or empty string
 	SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section);
 public:
-	virtual std::wstring GetStoredLocation() { return ini_path; }
+	virtual std::wstring GetStoredLocation() const { return ini_path; }
 	virtual bool SaveSettings();
 
 	SuiteSettingsIni(const std::wstring &rel_ini_path);

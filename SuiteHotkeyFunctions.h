@@ -26,7 +26,7 @@ private:
 public:
 	KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l);
 	void ResetEventHandler();
-	EventHandlerFn CreateEventHandler(SuiteSettings *settings);
+	EventHandlerFn CreateEventHandler(const SuiteSettings *settings);
 };
 
 bool BindKeyEventHandler(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);

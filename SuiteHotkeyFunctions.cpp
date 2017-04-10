@@ -41,7 +41,7 @@ inline void KeyTriplet::ResetEventHandler()
 	hk_down_tick=0; 
 }
 
-KeyTriplet::EventHandlerFn KeyTriplet::CreateEventHandler(SuiteSettings *settings) 
+KeyTriplet::EventHandlerFn KeyTriplet::CreateEventHandler(const SuiteSettings *settings) 
 {
 	ResetEventHandler();
 	hk_sc=settings->GetBindedKey().sc;

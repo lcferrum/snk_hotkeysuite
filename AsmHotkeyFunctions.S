@@ -162,7 +162,7 @@ lp_longpress:
 	call *__imp__CloseHandle          /* Call CloseHandle(KeyTriplet.hk_pi.hProcess) - STDCALL */
 	pushl 0x20(%ebx)
 	call *__imp__CloseHandle          /* Call CloseHandle(KeyTriplet.hk_pi.hThread) - STDCALL */
-	movl $0, %eax                     /* EAX=false (used as return value) */
+	xorl %eax, %eax                   /* EAX=false (used as return value) */
 lp_exit_default:
 	popl %ebx
 	ret	
@@ -472,7 +472,7 @@ lp_longpress:
 	movq 0x08(%rbx), %rcx
 	movq __imp_CloseHandle(%rip), %rax
 	call *%rax                        /* Call CloseHandle(KeyTriplet.hk_pi.hThread) */
-	movl $0, %eax                     /* EAX=false (used as return value) */
+	xorl %eax, %eax                   /* EAX=false (used as return value) */
 lp_skip_closehandle:
 	addq $80, %rsp                    /* Free allocated space on the stack */  
 	popq %rbx                         /* Restore RBX */

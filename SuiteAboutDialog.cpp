@@ -3,6 +3,8 @@
 #include "Res.h"
 #include <typeinfo> 
 
+#include <iostream>
+
 namespace AboutDialog {
 	INT_PTR CALLBACK StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
 }
@@ -89,7 +91,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_CFG_OPEN:
 					case IDC_SNK_OPEN:
 						{
-							std::wstring (SuiteSettings::*fnGetSettingsInfo)()=LOWORD(wParam)==IDC_SNK_OPEN?&settings->GetSnkPath:&settings->GetStoredLocation;
+							std::wstring (SuiteSettings::*fnGetSettingsInfo)() const=LOWORD(wParam)==IDC_SNK_OPEN?&settings->GetSnkPath:&settings->GetStoredLocation;
 
 							size_t last_backslash;
 							if ((last_backslash=(settings->*fnGetSettingsInfo)().find_last_of(L'\\'))!=std::wstring::npos)
@@ -124,8 +126,10 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 			SendMessage(hwndCtl, WM_SETFONT, (WPARAM)GetProp(hwndCtl, L"PROP_DEF_FONT"), FALSE);
 			RemoveProp(hwndCtl, L"PROP_DEF_FONT");
 
-			DeleteObject((HFONT)GetProp(hwndCtl, L"PROP_ULINE_FONT"));
-			RemoveProp(hwndCtl, L"PROP_ULINE_FONT");
+			if (HANDLE hFont=GetProp(hwndCtl, L"PROP_ULINE_FONT")) {
+				DeleteObject(hFont);
+				RemoveProp(hwndCtl, L"PROP_ULINE_FONT");
+			}
 			
 			break;
 		case WM_MOUSEMOVE:
@@ -140,13 +144,18 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 					ReleaseCapture();
 				}
 			} else {
+				std::wcout<<L"PROP_ULINE_FONT: "<<std::hex<<GetCapture()<<L' '<<LOWORD(lParam)<<L' '<<HIWORD(lParam)<<std::dec<<std::endl;
 				if (HANDLE hFont=GetProp(hwndCtl, L"PROP_ULINE_FONT"))
 					SendMessage(hwndCtl, WM_SETFONT, (WPARAM)hFont, FALSE);
 				InvalidateRect(hwndCtl, NULL, FALSE);
 				SetCapture(hwndCtl);
 			}
 			break;
+		case WM_CANCELMODE:
+			std::wcout<<L"WM_CANCELMODE"<<std::endl;
+			return TRUE;
 		case WM_CAPTURECHANGED:
+			std::wcout<<L"WM_CAPTURECHANGED"<<std::endl;
 			SendMessage(hwndCtl, WM_SETFONT, (WPARAM)GetProp(hwndCtl, L"PROP_DEF_FONT"), FALSE);
 			InvalidateRect(hwndCtl, NULL, FALSE);
 			break;

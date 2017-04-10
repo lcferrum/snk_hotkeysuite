@@ -145,7 +145,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 		case IDM_EDIT_SHK:
 		case IDM_EDIT_LHK:
 			{
-				std::wstring (SuiteSettings::*fnGetCfgPath)()=LOWORD(wParam)==IDM_EDIT_SHK?&settings->GetShkCfgPath:&settings->GetLhkCfgPath;
+				std::wstring (SuiteSettings::*fnGetCfgPath)() const=LOWORD(wParam)==IDM_EDIT_SHK?&settings->GetShkCfgPath:&settings->GetLhkCfgPath;
 				
 				DWORD dwAttrib=GetFileAttributes((settings->*fnGetCfgPath)().c_str());
 				if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
@@ -225,7 +225,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//All in all, it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
 				sender->Enable(false);
 				hk_was_running=hk_engine->Stop();
-				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, {0, 0, false}};
+				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, {0, 0, false}, NULL};
 				//Several words on InitCommonControls() and InitCommonControlsEx()
 				//"Common" name is somewhat misleading
 				//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls

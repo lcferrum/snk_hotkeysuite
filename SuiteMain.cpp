@@ -23,60 +23,18 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 {
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
-	KeyTriplet OnKeyTriplet;
 	
-	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
-	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
-	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
-		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-		std::bind(CloseEventHandler, settings, std::placeholders::_1),
-		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
-	if (!SnkIcon->IsValid()) {
-		ErrorMessage(L"Failed to create icon!");
-		return ERR_SUITEMAIN+1;
-	}
-
 	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
 	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
 		ErrorMessage(L"Path to SnK is not valid! Correct it in HotkeySuite INI file!");
-		return ERR_SUITEMAIN+2;
+		ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		return ERR_SUITEMAIN+1;
 	}	
 	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
 	std::wstring snk_cmdline_l=snk_cmdline_s;
 	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
 	
-	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
-	//So it's ok to customize menu here and initialize everything else
-	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
-	//By default IDM_EDIT_LHK menu item is enabled and IDM_SET_EN_LHK is unchecked (see Res.rc)
-	if (settings->GetLongPress()) {
-		SnkIcon->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED); 
-		OnKeyTriplet.SetLongPress(true);
-	} else {
-		SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
-		OnKeyTriplet.SetLongPress(false);
-	}
-	//By default none of IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT and IDM_SET_SHIFT_ALT is checked (see Res.rc)
-	switch (settings->GetModKey()) {
-		case ModKeyType::CTRL_ALT:
-			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
-			OnKeyTriplet.SetCtrlAlt();
-			break;
-		case ModKeyType::SHIFT_ALT:
-			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_SHIFT_ALT, MF_BYCOMMAND);
-			OnKeyTriplet.SetShiftAlt();
-			break;
-		case ModKeyType::CTRL_SHIFT:
-			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
-			OnKeyTriplet.SetCtrlShift();
-			break;
-	}
-	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
-	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
-	OnKeyTriplet.SetBindedKey(settings->GetBindedKey());
 	//CreateProcessW requires lpCommandLine to be non-const string because it may edit it
 	//MSDN doesn't provide details on why it may happen, but actually it will occur when lpApplicationName is not provided
 	//In this case CreateProcessW will try to tokenize lpCommandLine with NULLs to try to find lpApplicationName in it
@@ -87,10 +45,46 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//While it's not advised to edit it (though it won't lead to memory violations as long as string length is considered, which is the case with CreateProcessW) it won't do any harm here
 	//Because CreateProcessW preserves it's contents and we won't do string manipulations with this buffer afterwards anyway
 	//So it's safe to drop const qualifier
-	OnKeyTriplet.SetOnShortHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(snk_cmdline_s.c_str())));
-	OnKeyTriplet.SetOnLongHotkey(std::bind(&HotkeyEventHandler, const_cast<wchar_t*>(snk_cmdline_l.c_str())));
-	//OnKeyTriplet can be passed as reference (wrapped in std::ref) or as pointer
-	if (!SnkHotkey->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, std::ref(OnKeyTriplet), std::placeholders::_1, std::placeholders::_2))) {
+	KeyTriplet OnKeyTriplet(const_cast<wchar_t*>(snk_cmdline_s.c_str()), const_cast<wchar_t*>(snk_cmdline_l.c_str()));
+	
+	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
+	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
+	//To pass a reference you should wrap referenced object in std::ref
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
+		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+		std::bind(CloseEventHandler, settings, std::placeholders::_1),
+		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
+	if (!SnkIcon->IsValid()) {
+		ErrorMessage(L"Failed to create icon!");
+		return ERR_SUITEMAIN+2;
+	}
+	
+	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
+	//So it's ok to customize menu here and initialize everything else
+	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
+	//By default IDM_EDIT_LHK menu item is enabled and IDM_SET_EN_LHK is unchecked (see Res.rc)
+	if (settings->GetLongPress()) {
+		SnkIcon->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED); 
+	} else {
+		SnkIcon->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
+	}
+	//By default none of IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT and IDM_SET_SHIFT_ALT is checked (see Res.rc)
+	switch (settings->GetModKey()) {
+		case ModKeyType::CTRL_ALT:
+			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
+			break;
+		case ModKeyType::SHIFT_ALT:
+			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_SHIFT_ALT, MF_BYCOMMAND);
+			break;
+		case ModKeyType::CTRL_SHIFT:
+			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
+			break;
+	}
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
+	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
+	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+
+	if (!SnkHotkey->StartNew(std::bind(OnKeyTriplet.CreateEventHandler(settings), &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+3;
 	}
@@ -180,40 +174,39 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				sender->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_UNCHECKED);
 				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_GRAYED);
 				settings->SetLongPress(false);
-				hk_triplet->SetLongPress(false);
 			} else {
 				sender->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED);
 				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_ENABLED);
 				settings->SetLongPress(true);
-				hk_triplet->SetLongPress(true);
 			}
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_ALT:
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_ALT);
-			hk_triplet->SetCtrlAlt();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_SHIFT_ALT:
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_SHIFT_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::SHIFT_ALT);
-			hk_triplet->SetShiftAlt();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_SHIFT:
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_SHIFT);
-			hk_triplet->SetCtrlShift();
 			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CUSTOM:
@@ -246,18 +239,25 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 					case DLGBX_FN_FAILED:
 						break;
 					case BD_DLGPRC_OK:
-						hk_triplet->SetBindedKey(bd_dlgprc_param.binded_key);
 						settings->SetBindedKey(bd_dlgprc_param.binded_key);
 						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param.binded_key, HkStrType::VK, L"Rebind ", L"...").c_str());
 						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
 						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
 					case BD_DLGPRC_CANCEL:
-						if (hk_was_running&&!hk_engine->StartNew(std::bind(&KeyTriplet::KeyPressEventHandler, hk_triplet, std::placeholders::_1, std::placeholders::_2))) break;
+						hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+						if (hk_was_running&&!hk_engine->Start()) break;
 						sender->Enable();
 						return true;
 				}
 				break;
 			}
+#ifdef DEBUG
+		case IDM_DEBUG:
+			hk_was_running=hk_engine->Stop();
+			hk_engine->Set(DebugEventHandler);
+			if (hk_was_running&&!hk_engine->Start()) break;
+			return true;
+#endif
 		case IDM_ABOUT:
 			{
 				//Blah blah blah... see comments on IDM_SET_CUSTOM

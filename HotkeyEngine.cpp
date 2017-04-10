@@ -48,7 +48,7 @@ bool HotkeyEngine::Stop()
 
 bool HotkeyEngine::Start()
 {
-	if (!running) {
+	if (!running&&OnKeyPress) {
 		HANDLE success_fail[2];	//Array for two manual-reset unsignalled events
 												
 		if ((success_fail[0]=CreateEvent(NULL, TRUE, FALSE, NULL))) {		//Success event
@@ -78,6 +78,14 @@ bool HotkeyEngine::Start()
 	}
 	
 	return false;
+}
+
+bool HotkeyEngine::Set(KeyPressFn OnKeyPress)
+{
+	if (!running) {
+		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+	} else
+		return false;
 }
 
 bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress)
@@ -117,9 +125,10 @@ LRESULT CALLBACK HotkeyEngine::LowLevelKeyboardProc(int nCode, WPARAM wParam, LP
 	if (nCode<0)
 		return CallNextHookEx(NULL, nCode, wParam, lParam);
 
+	//We should return non-zero value if event shouldn't be passed further down the keyboard handlers chain (OnKeyPress returned TRUE)
+	if (OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))	
+		return 1;	
+	
 	//And let CallNextHookEx handle the keyboard event if OnKeyPress returned FALSE
-	if (OnKeyPress&&OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))	
-		return 1;	//We should return non-zero value if event shouldn't be passed further down the keyboard handlers chain
-	else
-		return CallNextHookEx(NULL, nCode, wParam, lParam);
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }

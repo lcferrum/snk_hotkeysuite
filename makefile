@@ -24,15 +24,15 @@ endif
 RM=rm -f
 UPX=upx
 CFLAGS=-std=c++11 -Wno-write-strings -D_WIN32_WINNT=0x0600 -DNOMINMAX -DUNICODE -D_UNICODE
-LDFLAGS=-static-libgcc -static-libstdc++ -lole32 -loleaut32
+LDFLAGS=-static-libgcc -static-libstdc++ -lole32 -loleaut32 -Wl,--enable-stdcall-fixup
 UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
-SRC=Suite.cpp SuiteCommon.cpp SuiteExterns.cpp SuiteExternalRelations.cpp SuiteMain.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp SuiteSettings.cpp SuiteAboutDialog.cpp SuiteBindingDialog.cpp Res.rc
+SRC=Suite.cpp SuiteCommon.cpp SuiteExterns.cpp SuiteExternalRelations.cpp SuiteMain.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp AsmHotkeyFunctions.S SuiteSettings.cpp SuiteAboutDialog.cpp SuiteBindingDialog.cpp Res.rc
 OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
 
 MAKENSIS=makensis.exe /V2
 NSISSRC=HotkeySuite.nsi
-NSISTARGET=HotkeySuiteSetup32.exe
+NSISTARGET=HotkeySuiteSetup*.exe
 
 # Debug specific common section
 ifdef DEBUG
@@ -61,6 +61,7 @@ ifeq ($(HOST),x86-64)
 $(error not implemented)
 endif
 ifeq ($(HOST),x86)
+	NSISTARGET=HotkeySuiteSetup32.exe
 endif
 endif
 
@@ -71,6 +72,7 @@ ifeq ($(BUILD),MinGW-w64)
 	LDFLAGS+=-mwindows -municode
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
+#	CFLAGS+=-fno-asynchronous-unwind-tables
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
 	NSISTARGET=HotkeySuiteSetup64.exe
@@ -78,6 +80,7 @@ endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
 	WINDRES=i686-w64-mingw32-windres
+	NSISTARGET=HotkeySuiteSetup32.exe
 endif
 endif
 
@@ -88,13 +91,15 @@ ifeq ($(BUILD),MinGW-w64_pthreads)
 	LDFLAGS+=-static -lpthread -mwindows -municode
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
+#	CFLAGS+=-fno-asynchronous-unwind-tables
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
 	NSISTARGET=HotkeySuiteSetup64.exe
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
-	WINDRES=i686--w64-mingw32-windres
+	WINDRES=i686-w64-mingw32-windres
+	NSISTARGET=HotkeySuiteSetup32.exe
 endif
 endif
 
@@ -113,6 +118,7 @@ ifeq ($(HOST),x86-64)
 $(error not implemented)
 endif
 ifeq ($(HOST),x86)
+	NSISTARGET=HotkeySuiteSetup32.exe
 endif
 endif
 

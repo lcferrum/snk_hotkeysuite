@@ -1,6 +1,10 @@
 !define APPNAME "SnK HotkeySuite"
 !define UNINST_NAME "unins000.exe"
-!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
+!ifdef INST64
+	!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME} (x64)"
+!else
+	!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
+!endif
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !define MULTIUSER_MUI
 !define MULTIUSER_INSTALLMODE_COMMANDLINE
@@ -152,7 +156,11 @@ Section "-Postinstall"
 	
 	WriteUninstaller "$INSTDIR\${UNINST_NAME}"
 
+!ifdef INST64
+	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME} (x64)"
+!else
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayName" "${APPNAME}"
+!endif
 	WriteRegStr SHCTX "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayVersion" "${APPVER_1}.${APPVER_2}"
 	WriteRegStr SHCTX "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\HotkeySuite.exe,0"

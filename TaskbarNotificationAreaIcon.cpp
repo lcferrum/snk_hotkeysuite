@@ -72,19 +72,19 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	
 	//We are not checking Shell_NotifyIcon result for a reason
 	//If Shell_NotifyIcon will be called before Explorer has been fully initialized (actually, it's taskbar thread that handles notification area) - it will fail
-	//Internally Shell_NotifyIcon uses SendMessageTimeout w/ SMTO_ABORTIFHUNG flag and 4 sec (7 sec for Vista+) timeout to send Explorer's taskbar NOTIFYICONDATA message
+	//Internally Shell_NotifyIcon uses SendMessageTimeout w/ SMTO_ABORTIFHUNG flag and 4 sec (7 sec for Vista+) timeout to send to Explorer's taskbar NOTIFYICONDATA message
 	//On NT4 Shell_NotifyIcon uses plain SendMessage instead of SendMessageTimeout which is synchronous
 	//Like mentioned previously, taskbar of Explorer lives on a separate thread and has a window of "Shell_TrayWnd" class
 	//At the very beginning Explorer does some initializing, including setting up special folders and running HKLM\RunOnceEx and HKLM\RunOnce apps and then launches taskbar thread
-	//First thing that taskbar thread does is creates it's "Shell_TrayWnd" windows, then builds Start Menu and, before launching message loop, broadcasts WM_TASKBARCREATED (if on Win2k+/98+)
+	//First thing that taskbar thread does is creates it's "Shell_TrayWnd" window, then builds Start Menu and, before launching message loop, broadcasts WM_TASKBARCREATED (if on Win2k+/98+)
 	//Only after message loop is fired, it receives message (sent by taskbar itself) to run every other startup app: HKLM\Run, HKCU\Run, HKCU\RunOnce, subkeys of HKLM\RunOnce, HKCU\RunOnce, HKLM\Run and HKCU\Run
 	//All those startups are done in separate thread so as not to block message loop
 	//And ofcourse all the startups are done only if Explorer was launched as part of logon process and not restarted
 	//So Autorun apps are actually run after taskbar has been created and done most of it's initialization stuff and, more importantly, taskbar thread shoudn't be blocked during this time
 	//But apps from Task Scheduler are run at unspecified moment because services (including Task Scheduler itself) are launched before Explorer
-	//So apps launched by task may try to create notification area icon even before taskbar's "Shell_TrayWnd" window is created
-	//But if Shell_NotifyIcon fails for that reason, icon window (which should be created snyway before calling Shell_NotifyIcon) will still receive WM_TASKBARCREATED at some point in future indicating that taskbar has been finally created
-	//WM_TASKBARCREATED is absent on NT4, mush less Task Scheduler itself (we have AT here instead, that is not usable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
+	//So apps launched by task using logon event may try to create notification area icon even before taskbar's "Shell_TrayWnd" window is created
+	//But if Shell_NotifyIcon fails for that reason, icon window (which should be created anyway before calling Shell_NotifyIcon) will still receive WM_TASKBARCREATED at some point in future indicating that taskbar has been finally created
+	//WM_TASKBARCREATED is absent on NT4, mush less Task Scheduler itself (we have AT here instead, that is unusable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
 	//WM_TASKBARCREATED is also absent on 95 but Task Scheduler is present here, so the best way here is just not using it to launch apps that use notification area icon
 	//Oldschool way of keeping notification area icon visible, in case of Explorer is not ready or crashed, is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed
 	Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
@@ -210,11 +210,11 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 				if (wParam==SPI_SETWORKAREA)
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
-			case WM_CLOSE:			//Though icon window has no (X) button, WM_CLOSE is sent when opening menu and pressing Alt+F4 and by Task Scheduler to GUI apps in response to stopping task
+			case WM_CLOSE:			//Though icon window has no (X) button, WM_CLOSE is sent when opening menu and pressing Alt+F4, by Task Scheduler to GUI apps in response to stopping task and by OS to GUI apps when it is ending user session
 				if (instance->enabled&&OnWmCommand)
 					OnWmClose(instance.get());
 				return 0;
-			case WM_ENDSESSION:		//WM_ENDSESSION w/ wParam=TRUE is sent apps when user session is about to end - when this message is answered, app can be terminated at any moment (even before exiting message loop)
+			case WM_ENDSESSION:		//WM_ENDSESSION w/ wParam=TRUE is sent to apps when user session is about to end - after this message is answered, app can be terminated at any moment (even before exiting message loop)
 				if (wParam==TRUE&&instance->enabled&&OnWmEndsessionTrue)
 					OnWmEndsessionTrue(instance.get(), lParam&ENDSESSION_CRITICAL);
 				return 0;

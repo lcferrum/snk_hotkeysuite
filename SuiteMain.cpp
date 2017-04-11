@@ -145,11 +145,11 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 		case IDM_EDIT_SHK:
 		case IDM_EDIT_LHK:
 			{
-				std::wstring (SuiteSettings::*fnGetCfgPath)() const=LOWORD(wParam)==IDM_EDIT_SHK?&settings->GetShkCfgPath:&settings->GetLhkCfgPath;
+				std::wstring cfg_path=LOWORD(wParam)==IDM_EDIT_SHK?settings->GetShkCfgPath():settings->GetLhkCfgPath();
 				
-				DWORD dwAttrib=GetFileAttributes((settings->*fnGetCfgPath)().c_str());
+				DWORD dwAttrib=GetFileAttributes(cfg_path.c_str());
 				if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-					std::wstring msg_text=L"File \""+(settings->*fnGetCfgPath)()+L"\" doesn't exist.\n\nDo you want it to be created?";
+					std::wstring msg_text=L"File \""+cfg_path+L"\" doesn't exist.\n\nDo you want it to be created?";
 					bool create_file=false;
 					if (fnTaskDialog) {
 						int btn_clicked;
@@ -159,13 +159,13 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						create_file=MessageBox(NULL, msg_text.c_str(), SNK_HS_TITLE, MB_ICONASTERISK|MB_YESNO|MB_DEFBUTTON1)==IDYES;
 					}
 					
-					if (create_file&&CreateDirTree((settings->*fnGetCfgPath)())) {
-						CloseHandle(CreateFile((settings->*fnGetCfgPath)().c_str(), GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL));
+					if (create_file&&CreateDirTree(cfg_path)) {
+						CloseHandle(CreateFile(cfg_path.c_str(), GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL));
 					} else
 						return true;
 				}
 				
-				ShellExecute(NULL, NULL, (settings->*fnGetCfgPath)().c_str(), NULL, NULL, SW_SHOWNORMAL);
+				ShellExecute(NULL, NULL, cfg_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
 				return true;
 			}
 		case IDM_SET_EN_LHK:

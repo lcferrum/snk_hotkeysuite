@@ -89,11 +89,11 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_CFG_OPEN:
 					case IDC_SNK_OPEN:
 						{
-							std::wstring (SuiteSettings::*fnGetSettingsInfo)() const=LOWORD(wParam)==IDC_SNK_OPEN?&settings->GetSnkPath:&settings->GetStoredLocation;
+							std::wstring settings_path=LOWORD(wParam)==IDC_SNK_OPEN?settings->GetSnkPath():settings->GetStoredLocation();
 
 							size_t last_backslash;
-							if ((last_backslash=(settings->*fnGetSettingsInfo)().find_last_of(L'\\'))!=std::wstring::npos)
-								ShellExecute(NULL, L"open", (settings->*fnGetSettingsInfo)().substr(0, last_backslash).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							if ((last_backslash=settings_path.find_last_of(L'\\'))!=std::wstring::npos)
+								ShellExecute(NULL, L"open", settings_path.substr(0, last_backslash).c_str(), NULL, NULL, SW_SHOWNORMAL);
 							
 							return TRUE;
 						}

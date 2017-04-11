@@ -52,7 +52,7 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		0									//hIconSm
 	};
 
-	//Fail on all error including already registered class
+	//Fail on all errors including already registered class
 	//Registered class could have been registered elsewhere with totally unpredictable WNDCLASSEX
 	if (!(icon_atom=RegisterClassEx(&wcex)))
 		return;
@@ -86,14 +86,8 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	//But if Shell_NotifyIcon fails for that reason, icon window (which should be created anyway before calling Shell_NotifyIcon) will still receive WM_TASKBARCREATED at some point in future indicating that taskbar has been finally created
 	//WM_TASKBARCREATED is absent on NT4, mush less Task Scheduler itself (we have AT here instead, that is unusable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
 	//WM_TASKBARCREATED is also absent on 95 but Task Scheduler is present here, so the best way here is just not using it to launch apps that use notification area icon
-	//Oldschool way of keeping notification area icon visible, in case of Explorer is not ready or crashed, is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed
+	//Oldschool way of keeping notification area icon visible, in case of Explorer is not ready or crashed, is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed (see RefreshIcon method)
 	Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
-	
-	/*if (!Shell_NotifyIcon(NIM_ADD, &icon_ntfdata)) {
-		DestroyWindow(icon_ntfdata.hWnd);			//This thing internally calls WNDPROC with WM_DESTROY message without posting it to message queue (again, instance not ready - message will be ignored)
-		UnregisterClass(MAKEINTATOM(icon_atom), hInstance);
-		return;
-	}*/
 	
 	icon_menu=GetSubMenu(GetMenu(icon_ntfdata.hWnd), 0);
 	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);
@@ -123,6 +117,15 @@ void TskbrNtfAreaIcon::ChangeIconTooltip(const wchar_t* icon_tooltip)
 	
 	wcsncpy(icon_ntfdata.szTip, icon_tooltip, 63);	//First version of NOTIFYICONDATA only allowes szTip no more than 64 characters in length (including NULL-terminator)
 	Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata);
+}
+
+inline void TskbrNtfAreaIcon::RefreshIcon()	//Thing is inline because it can be potentially run as timed event to keep icon always visible
+{
+	if (!valid)
+		return;
+
+	if (!Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata))
+		Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
 }
 
 void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)

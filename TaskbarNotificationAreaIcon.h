@@ -37,10 +37,10 @@ public:
 	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue);	
 	bool IsValid();
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
+	void RefreshIcon();
 	void ChangeIcon(UINT icon_resid);
 	void Close();
-	void CloseAndQuit(int exit_code);
-	void CloseAndQuit() { return CloseAndQuit(0); }
+	void CloseAndQuit(int exit_code=0);
 	void Enable(bool state=true) { enabled=state; }
 	HMENU GetIconMenu();
 	HWND GetIconWindow();

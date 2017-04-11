@@ -1,9 +1,7 @@
 #include "SuiteAboutDialog.h"
 #include "SuiteSettings.h"
 #include "Res.h"
-#include <typeinfo> 
-
-#include <iostream>
+#include <typeinfo>
 
 namespace AboutDialog {
 	INT_PTR CALLBACK StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -60,7 +58,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				
 				//We should set focus to default button (because we are returning FALSE from WM_INITDIALOG) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
 				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CLOSE_ABOUT), TRUE);
-				return FALSE;	//Returning false so not set default focus on edit control
+				return FALSE;	//Returning false so not to set default focus on edit control
 			}
 		case WM_CTLCOLORSTATIC:
 			if (GetDlgItem(hwndDlg, IDC_PROJECT_HOME)==(HWND)lParam) {
@@ -116,6 +114,12 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 
 INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	//This is rather simple substitution for SysLink control from ComCtl32 v6+
+	//We are subclassing Static control to make it look and behave like some kind of hyperlink control
+	//This is mainly done with WM_CANCELMODE, WM_CAPTURECHANGED, WM_MOUSEMOVE and WM_LBUTTONDOWN messages to make underline on mouse hover
+	//We are using mouse capture to monitor when mouse leaves Static control
+	//Link is opened on WM_LBUTTONUP
+
 	WNDPROC orig_proc=(WNDPROC)GetProp(hwndCtl, L"PROP_ORIG_STATIC_PROC");
 
 	switch (uMsg) {
@@ -132,10 +136,12 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 			}
 			
 			break;
+		case WM_LBUTTONDOWN:
 		case WM_MOUSEMOVE:
 			if (GetCapture()==hwndCtl) {
 				RECT rect;
-				POINT pt={LOWORD(lParam), HIWORD(lParam)};
+				//Coordinates are signed shorts, while HIWORD/LOWORD returns them as unsigned
+				POINT pt={(short int)LOWORD(lParam), (short int)HIWORD(lParam)};
 				
 				GetWindowRect(hwndCtl, &rect);
 				ClientToScreen(hwndCtl, &pt);
@@ -144,7 +150,6 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 					ReleaseCapture();
 				}
 			} else {
-				std::wcout<<L"PROP_ULINE_FONT: "<<std::hex<<GetCapture()<<L' '<<LOWORD(lParam)<<L' '<<HIWORD(lParam)<<std::dec<<std::endl;
 				if (HANDLE hFont=GetProp(hwndCtl, L"PROP_ULINE_FONT"))
 					SendMessage(hwndCtl, WM_SETFONT, (WPARAM)hFont, FALSE);
 				InvalidateRect(hwndCtl, NULL, FALSE);
@@ -152,13 +157,12 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 			}
 			break;
 		case WM_CANCELMODE:
-			std::wcout<<L"WM_CANCELMODE"<<std::endl;
-			return TRUE;
 		case WM_CAPTURECHANGED:
-			std::wcout<<L"WM_CAPTURECHANGED"<<std::endl;
 			SendMessage(hwndCtl, WM_SETFONT, (WPARAM)GetProp(hwndCtl, L"PROP_DEF_FONT"), FALSE);
 			InvalidateRect(hwndCtl, NULL, FALSE);
-			break;
+			//Returning FALSE here for WM_CANCELMODE so not to trigger it's behaviour which is to call ReleaseCapture - we don't need it here
+			//No difference for WM_CAPTURECHANGED - no default behaviour for it
+			return FALSE;
 		case WM_LBUTTONUP:
 			ShellExecute(NULL, L"open", L"https://github.com/lcferrum/snk_hotkeysuite", NULL, NULL, SW_SHOWNORMAL);
 			break;
@@ -168,7 +172,7 @@ INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam,
 				SetCursor(hCursor);
 			else
 				SetCursor(LoadCursor(NULL, IDC_ARROW));
-			
+			//Don't need anyone else to change cursor here so returning TRUE
 			return TRUE;
 	}
 

@@ -86,6 +86,7 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	//But if Shell_NotifyIcon fails for that reason, icon window (which should be created anyway before calling Shell_NotifyIcon) will still receive WM_TASKBARCREATED at some point in future indicating that taskbar has been finally created
 	//WM_TASKBARCREATED is absent on NT4, mush less Task Scheduler itself (we have AT here instead, that is unusable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
 	//WM_TASKBARCREATED is also absent on 95 but Task Scheduler is present here, so the best way here is just not using it to launch apps that use notification area icon
+	//Kind of substitute for WM_TASKBARCREATED on 95/NT4 is WM_SETTINGCHANGE w/ wParam=SPI_SETWORKAREA - this message is sent to all top-level windows when size of the screen work area changes (e.g. when taskbar is created)
 	//Oldschool way of keeping notification area icon visible, in case of Explorer is not ready or crashed, is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed (see RefreshIcon method)
 	Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
 	
@@ -93,6 +94,12 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	SetMenuDefaultItem(icon_menu, default_menuid, FALSE);
 	
 	valid=true;
+}
+
+inline void TskbrNtfAreaIcon::ShellNotifyIconModifyOrAdd()
+{
+	if (!Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata))
+		Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
 }
 
 bool TskbrNtfAreaIcon::IsValid()
@@ -116,7 +123,7 @@ void TskbrNtfAreaIcon::ChangeIconTooltip(const wchar_t* icon_tooltip)
 		return;
 	
 	wcsncpy(icon_ntfdata.szTip, icon_tooltip, 63);	//First version of NOTIFYICONDATA only allowes szTip no more than 64 characters in length (including NULL-terminator)
-	Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata);
+	ShellNotifyIconModifyOrAdd();
 }
 
 inline void TskbrNtfAreaIcon::RefreshIcon()	//Thing is inline because it can be potentially run as timed event to keep icon always visible
@@ -124,8 +131,7 @@ inline void TskbrNtfAreaIcon::RefreshIcon()	//Thing is inline because it can be 
 	if (!valid)
 		return;
 
-	if (!Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata))
-		Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
+	ShellNotifyIconModifyOrAdd();
 }
 
 void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
@@ -134,7 +140,7 @@ void TskbrNtfAreaIcon::ChangeIcon(UINT icon_resid)
 		return;
 	
 	icon_ntfdata.hIcon=LoadIcon(app_instance, MAKEINTRESOURCE(icon_resid));	
-	Shell_NotifyIcon(NIM_MODIFY, &icon_ntfdata);
+	ShellNotifyIconModifyOrAdd();
 }
 
 //Calling this function won't exit message loop!

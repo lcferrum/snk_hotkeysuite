@@ -40,6 +40,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		std::wcerr<<L"CMDLINE = \""<<lpCmdLine<<L"\""<<std::endl;
 #endif
 		if ((cmd_argv=CommandLineToArgvW(lpCmdLine, &cmd_argc))) {
+			cmd_argc=0;	//FIXME
 #ifdef DEBUG
 			int tst_argc=cmd_argc;
 			while (tst_argc--)

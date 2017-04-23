@@ -1,4 +1,5 @@
 #include "HotkeyEngine.h"
+#include <ntstatus.h>
 
 #define OBJECT_WAIT_TIMEOUT	5000	//5 secs
 

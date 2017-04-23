@@ -19,6 +19,13 @@ void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical);
 void HotkeyEventHandler(wchar_t* snk_cmdline_buf);
 
+#ifdef __clang__
+//Obscure clang++ bug - it reports "multiple definition" of std::operator+() when statically linking with libstdc++
+//Observed on LLVM 3.6.2 with MinGW 4.7.2
+//This is a fix for the bug
+extern template std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > std::operator+<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >(wchar_t const*, std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > const&);
+#endif
+
 int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 {
 	TskbrNtfAreaIcon* SnkIcon=NULL;
@@ -30,7 +37,8 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 		ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
 		return ERR_SUITEMAIN+1;
 	}	
-	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
+	//std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+std::to_wstring(GetCurrentProcessId())+L" -mb /cmd=";
+	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp /cmd=";
 	std::wstring snk_cmdline_l=snk_cmdline_s;
 	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());

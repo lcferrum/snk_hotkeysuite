@@ -582,9 +582,9 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 					//Numpad 0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
 					hk_str+={L'N', L'u', L'm', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */};
-				} else if (key.vk>=0x70&&key.vk<=0x87) {
-					//Function F1-F24 keys
-					hk_str+=L"F"+std::to_wstring(key.vk-0x6F);
+				//} else if (key.vk>=0x70&&key.vk<=0x87) {
+				//	//Function F1-F24 keys
+				//	hk_str+=L"F"+std::to_wstring(key.vk-0x6F);
 				} else if (key.sc=0x5E&&key.ext) {
 					//Power management Power key
 					hk_str+=L"Power";

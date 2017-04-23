@@ -26,7 +26,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				if (GetObject((HFONT)SendDlgItemMessage(hwndDlg, IDC_BD_VIEWER, WM_GETFONT, 0, 0), sizeof(logfont), &logfont)) {
 					logfont.lfHeight-=2;
 					logfont.lfWeight=FW_BOLD;
-					if (bd_dlgprc_param->bold_font=CreateFontIndirect(&logfont))
+					if ((bd_dlgprc_param->bold_font=CreateFontIndirect(&logfont)))
 						SendDlgItemMessage(hwndDlg, IDC_BD_VIEWER, WM_SETFONT, (WPARAM)bd_dlgprc_param->bold_font, FALSE);
 				}
 				

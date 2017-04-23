@@ -29,6 +29,16 @@ typedef struct {
 enum class HkStrType:char {FULL, MOD_KEY, VK};
 enum class ModKeyType:unsigned char {CTRL_ALT=0, SHIFT_ALT, CTRL_SHIFT, DONT_CARE=CTRL_ALT};
 
+#ifdef _GLIBCXX_HAVE_BROKEN_VSWPRINTF
+//See cpp file for comments
+namespace hack {
+	std::wstring to_wstring(DWORD value);
+}
+#define to_wstring_wrapper(x)	hack::to_wstring(x)
+#else
+#define to_wstring_wrapper(x)	std::to_wstring(x)
+#endif
+
 std::wstring DwordToHexString(DWORD dw, int hex_width);	//hex_width is minimum width of hex string in characters not including '0x' prefix
 std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL, const wchar_t* defval=NULL);
 std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL);

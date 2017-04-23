@@ -85,6 +85,7 @@ bool HotkeyEngine::Set(KeyPressFn OnKeyPress)
 {
 	if (!running) {
 		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		return true;
 	} else
 		return false;
 }

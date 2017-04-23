@@ -10,6 +10,39 @@
 
 extern pTaskDialog fnTaskDialog;
 
+#ifdef __clang__
+//Obscure clang++ bug - it reports "multiple definition" of std::setfill() and std::wstring() when statically linking with libstdc++
+//Observed on LLVM 3.6.2 with MinGW 4.7.2
+//This is a fix for the bug
+extern template std::_Setfill<wchar_t> std::setfill(wchar_t);									//caused by use of std::setfill(wchar_t)
+extern template std::wstring::basic_string(wchar_t*, wchar_t*, std::allocator<wchar_t> const&);	//caused by use of std::wstring(wchar_t*, wchar_t*)
+#endif
+
+#ifdef _GLIBCXX_HAVE_BROKEN_VSWPRINTF
+//Internally libstdc++ to_wstring implementation uses vswprintf
+//Problem is that by C++ standard it should be defined as int(wchar_t*, size_t, const wchar_t*, va_list) but MSVCRT (which libstdc++ uses) exports it as int(wchar_t*, const wchar_t*, va_list)
+//That's why to_wstring is guarded by !defined(_GLIBCXX_HAVE_BROKEN_VSWPRINTF) and is not available in MinGW (the same goes to Clang that uses MinGW's libstdc++)
+//This is fixed in MinGW-w64 but needs patched headers or hack (i.e. reimplementation of to_wstring using _vsnwprintf) on MinGW/Clang
+namespace hack {
+	std::wstring __to_wstring(size_t count, const wchar_t *format, ...);
+}
+
+inline std::wstring hack::__to_wstring(size_t count, const wchar_t *format, ...)
+{
+	wchar_t buf[count];
+	va_list args;
+	va_start(args, format);
+	const int len=_vsnwprintf(buf, count, format, args);
+	va_end(args);
+	return std::wstring(buf, buf+len);
+}
+
+std::wstring hack::to_wstring(DWORD value)
+{
+	return __to_wstring(4*sizeof(DWORD), L"%u", value);
+}
+#endif
+
 void ErrorMessage(const wchar_t* err_msg)
 {
 #ifdef DEBUG
@@ -582,16 +615,16 @@ std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type,
 					//Numpad 0-9 keys
 					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
 					hk_str+={L'N', L'u', L'm', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */};
-				//} else if (key.vk>=0x70&&key.vk<=0x87) {
-				//	//Function F1-F24 keys
-				//	hk_str+=L"F"+std::to_wstring(key.vk-0x6F);
-				} else if (key.sc=0x5E&&key.ext) {
+				} else if (key.vk>=0x70&&key.vk<=0x87) {
+					//Function F1-F24 keys
+					hk_str+=L"F"+to_wstring_wrapper(key.vk-0x6F);
+				} else if (key.sc==0x5E&&key.ext) {
 					//Power management Power key
 					hk_str+=L"Power";
-				} else if (key.sc=0x5F&&key.ext) {
+				} else if (key.sc==0x5F&&key.ext) {
 					//Power management Sleep key
 					hk_str+=L"Sleep";
-				} else if (key.sc=0x63&&key.ext) {
+				} else if (key.sc==0x63&&key.ext) {
 					//Power management Wake key
 					hk_str+=L"Wake";
 				} else {

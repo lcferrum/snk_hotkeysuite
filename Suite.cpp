@@ -17,6 +17,17 @@ enum class CmdRes:char {DEFAULT, SETTINGS_SET, EXTERNAL_CALLED, ERR_MANY_ARGS, E
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmdShow)
 {
 	LPWSTR lpCmdLine=GetCommandLineW();
+	//We should drop first argument which is executable path
+	bool inside_quotes=false;
+    if (lpCmdLine) {
+		while (*lpCmdLine>L' '||(*lpCmdLine&&inside_quotes)) {
+			if (*lpCmdLine==L'\"')
+				inside_quotes=!inside_quotes;
+			lpCmdLine++;
+		}
+		while (*lpCmdLine&&(*lpCmdLine<=L' '))
+			lpCmdLine++;
+	}
 #else
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -40,7 +51,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		std::wcerr<<L"CMDLINE = \""<<lpCmdLine<<L"\""<<std::endl;
 #endif
 		if ((cmd_argv=CommandLineToArgvW(lpCmdLine, &cmd_argc))) {
-			cmd_argc=0;	//FIXME
 #ifdef DEBUG
 			int tst_argc=cmd_argc;
 			while (tst_argc--)

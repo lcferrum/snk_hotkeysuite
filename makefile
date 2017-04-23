@@ -109,10 +109,10 @@ ifeq ($(BUILD),Clang_362)
 	CC=clang++
 	WINDRES=windres
 	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
+	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -Wno-missing-declarations -Wno-unknown-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
 	LDFLAGS+=-Wl,--subsystem,windows
 	ifndef DEBUG
-		CFLAGS+=-Wno-unused-value
+		CFLAGS+=-Wno-unused-value -Wno-macro-redefined
 	endif
 ifeq ($(HOST),x86-64)
 $(error not implemented)

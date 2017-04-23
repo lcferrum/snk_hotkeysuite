@@ -52,7 +52,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				SetProp(hwndHlinkCtl, L"PROP_ULINE_FONT", NULL);
 				if (GetObject(hFont, sizeof(logfont), &logfont)) {
 					logfont.lfUnderline=TRUE;
-					if (hFont=CreateFontIndirect(&logfont))
+					if ((hFont=CreateFontIndirect(&logfont)))
 						SetProp(hwndHlinkCtl, L"PROP_ULINE_FONT", (HANDLE)hFont);
 				}
 				

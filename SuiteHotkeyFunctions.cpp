@@ -104,6 +104,8 @@ bool DebugEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event)
 				(kb_event->flags&LLKHF_EXTENDED?L" EXT":L"")<<
 				(kb_event->flags&LLKHF_ALTDOWN?L" ALT":L"")<<
 				std::dec<<std::endl;
+				
+	return false;
 }
 #endif
 

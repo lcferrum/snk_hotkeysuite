@@ -70,7 +70,6 @@ class SuiteSettingsIni: public SuiteSettings {
 private:
 	bool IniSzQueryValue(const wchar_t* key_name, std::wstring &var) const;
 	bool IniDwordQueryValue(const wchar_t* key_name, DWORD &var) const;
-	static std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
 protected:
 	std::wstring ini_path;
 	std::wstring ini_section;

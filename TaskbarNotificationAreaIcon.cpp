@@ -242,7 +242,7 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 								GetCursorPos(&cur_mouse_pt);
 								SetForegroundWindow(hWnd);
 								TrackPopupMenu(instance->icon_menu, TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
-								SendMessage(hWnd, WM_NULL, 0, 0);
+								PostMessage(hWnd, WM_NULL, 0, 0);
 								return 0;
 							case WM_LBUTTONDBLCLK:
 								if (OnWmCommand)

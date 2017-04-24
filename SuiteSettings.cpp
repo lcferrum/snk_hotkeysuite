@@ -284,22 +284,6 @@ bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wst
 	return true;
 }
 
-std::wstring SuiteSettingsIni::GetFullPathNameWrapper(const std::wstring &rel_path)
-{
-	wchar_t dummy_buf;
-	wchar_t* fname_pos;
-
-	//If returned length is 0 - it is error
-	if (DWORD buf_len=GetFullPathName(rel_path.c_str(), 0, &dummy_buf, &fname_pos)) {
-		wchar_t string_buf[buf_len];
-		//Ensuring that returned length is expected length and resulting string contains file name (i.e. it's not directory)
-		if (GetFullPathName(rel_path.c_str(), buf_len, string_buf, &fname_pos)+1==buf_len&&fname_pos!=NULL) 
-			return string_buf;
-	}
-	
-	return L"";
-}
-
 bool SuiteSettingsIni::SaveSettings()
 {
 	//Empty paths and sections are not allowed

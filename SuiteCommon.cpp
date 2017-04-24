@@ -18,28 +18,30 @@ extern template std::_Setfill<wchar_t> std::setfill(wchar_t);									//caused b
 extern template std::wstring::basic_string(wchar_t*, wchar_t*, std::allocator<wchar_t> const&);	//caused by use of std::wstring(wchar_t*, wchar_t*)
 #endif
 
-#ifdef _GLIBCXX_HAVE_BROKEN_VSWPRINTF
-//Internally libstdc++ to_wstring implementation uses vswprintf
-//Problem is that by C++ standard it should be defined as int(wchar_t*, size_t, const wchar_t*, va_list) but MSVCRT (which libstdc++ uses) exports it as int(wchar_t*, const wchar_t*, va_list)
-//That's why to_wstring is guarded by !defined(_GLIBCXX_HAVE_BROKEN_VSWPRINTF) and is not available in MinGW (the same goes to Clang that uses MinGW's libstdc++)
-//This is fixed in MinGW-w64 but needs patched headers or hack (i.e. reimplementation of to_wstring using _vsnwprintf) on MinGW/Clang
-namespace hack {
-	std::wstring __to_wstring(size_t count, const wchar_t *format, ...);
-}
-
-inline std::wstring hack::__to_wstring(size_t count, const wchar_t *format, ...)
+inline std::wstring ToWstringFormatted(size_t count, const wchar_t *format, ...)
 {
 	wchar_t buf[count];
 	va_list args;
 	va_start(args, format);
+	//_vsnwprintf differs from vswprintf:
+	// vswprintf guarantees that buffer will be NULL-terminated and returns error if string length >= count
+	// _vsnwprintf NULL-terminates only if there is room left for NULL terminator and returns error if string length > count
+	//Both functions return number of actually written characters not including NULL-terminator if no error occured
+	//Function uses _vsnwprintf to be independent of vswprintf availability
+	//std::wstring(first_iter, last_iter) constructor is used, which copies [first, last) characters, so we don't have to worry if string is not NULL-terminated
 	const int len=_vsnwprintf(buf, count, format, args);
 	va_end(args);
 	return std::wstring(buf, buf+len);
 }
 
+#ifdef _GLIBCXX_HAVE_BROKEN_VSWPRINTF
+//Internally libstdc++ to_wstring implementation uses vswprintf
+//Problem is that by C++ standard it should be defined as int(wchar_t*, size_t, const wchar_t*, va_list) but MSVCRT (which libstdc++ uses) exports it as int(wchar_t*, const wchar_t*, va_list)
+//That's why to_wstring is guarded by !defined(_GLIBCXX_HAVE_BROKEN_VSWPRINTF) and is not available in MinGW (the same goes to Clang that uses MinGW's libstdc++)
+//This is fixed in MinGW-w64 but needs patched headers or hack (i.e. reimplementation of to_wstring using _vsnwprintf) on MinGW/Clang
 std::wstring hack::to_wstring(DWORD value)
 {
-	return __to_wstring(4*sizeof(DWORD), L"%u", value);
+	return ToWstringFormatted(10, L"%u", value);	//Maximum DWORD is 4294967295 - that is 10 characters and we don't need space for NULL-terminator because of _vsnwprintf
 }
 #endif
 
@@ -57,6 +59,22 @@ void ErrorMessage(const wchar_t* err_msg)
 		full_msg+=L"\n\nPress 'OK' to close " SNK_HS_TITLE;
 		MessageBox(NULL, full_msg.c_str(), SNK_HS_TITLE, MB_ICONERROR|MB_OK);
 	}
+}
+
+std::wstring GetFullPathNameWrapper(const std::wstring &rel_path)
+{
+	wchar_t dummy_buf;
+	wchar_t* fname_pos;
+
+	//If returned length is 0 - it is error
+	if (DWORD buf_len=GetFullPathName(rel_path.c_str(), 0, &dummy_buf, &fname_pos)) {
+		wchar_t string_buf[buf_len];
+		//Ensuring that returned length is expected length and resulting string contains file name (i.e. it's not directory)
+		if (GetFullPathName(rel_path.c_str(), buf_len, string_buf, &fname_pos)+1<=buf_len&&fname_pos!=NULL) 
+			return string_buf;
+	}
+	
+	return L"";
 }
 
 std::wstring GetExecutableFileName(const wchar_t* replace_fname)
@@ -110,9 +128,7 @@ bool CreateDirTree(const std::wstring trg_pth)
 
 std::wstring DwordToHexString(DWORD dw, int hex_width)
 {
-	std::wstringstream hex_vk;
-	hex_vk<<L"0x"<<std::hex<<std::noshowbase<<std::uppercase<<std::setfill(L'0')<<std::setw(hex_width)<<dw;
-	return hex_vk.str();
+	return ToWstringFormatted(10, L"0x%0*X", hex_width, dw);	//Maximum DWORD is 0xFFFFFFFF - that is 10 characters and we don't need space for NULL-terminator because of _vsnwprintf
 }
 
 std::wstring StringToLower(std::wstring str)

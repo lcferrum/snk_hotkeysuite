@@ -44,7 +44,7 @@ InstallDir "\${APPNAME}"
 !define MUI_ICON "hs.ico"
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "INSTALLER.LICENSE.RTF"
+!insertmacro MUI_PAGE_LICENSE "SuiteInstaller.License.rtf"
 !insertmacro MUI_PAGE_COMPONENTS
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
@@ -136,10 +136,10 @@ Section "SnK" Sec_SNK
 	SetOutPath $INSTDIR
 	File "..\snk\SnK.exe"
 	File "..\snk\SnKh.exe"
-	File /oname=SNK.CHANGELOG.TXT "..\snk\CHANGELOG.TXT"
-	File /oname=SNK.README.TXT "..\snk\README.TXT"
-	File /oname=SNK.LICENSE.TXT "..\snk\LICENSE.TXT"
-	File /oname=SNK.DetectMatrix.html "..\snk\DetectMatrix.html"
+	File /oname=SnK.CHANGELOG.TXT "..\snk\CHANGELOG.TXT"
+	File /oname=SnK.README.TXT "..\snk\README.TXT"
+	File /oname=SnK.LICENSE.TXT "..\snk\LICENSE.TXT"
+	File /oname=SnK.DetectMatrix.html "..\snk\DetectMatrix.html"
 SectionEnd
 
 Section /o "Add to PATH" Sec_PATH
@@ -240,10 +240,10 @@ Section "Uninstall"
 	Delete "$INSTDIR\README.TXT"
 	Delete "$INSTDIR\SnK.exe"
 	Delete "$INSTDIR\SnKh.exe"
-	Delete "$INSTDIR\SNK.CHANGELOG.TXT"
-	Delete "$INSTDIR\SNK.README.TXT"
-	Delete "$INSTDIR\SNK.LICENSE.TXT"
-	Delete "$INSTDIR\SNK.DetectMatrix.html"
+	Delete "$INSTDIR\SnK.CHANGELOG.TXT"
+	Delete "$INSTDIR\SnK.README.TXT"
+	Delete "$INSTDIR\SnK.LICENSE.TXT"
+	Delete "$INSTDIR\SnK.DetectMatrix.html"
 	Delete "$INSTDIR\${UNINST_NAME}"
 	RMDir "$INSTDIR"
 	
@@ -254,15 +254,15 @@ SectionEnd
 
 !ifdef INST64
 	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 64-bit version of HotkeySuite."
-	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2} x64). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2} x64). If you don't want to install it, you should download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 !else
 	LangString DESC_Grp_HS ${LANG_ENGLISH} "Install 32-bit version of HotkeySuite."
-	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it - you can download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
+	LangString DESC_Sec_SNK ${LANG_ENGLISH} "Install bundled SnK distribution (v${SNKVER_1}.${SNKVER_2}). If you don't want to install it, you should download it separately and set SnkPath variable in HotkeySuite.ini accordingly."
 !endif
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
-LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on hotkey press. You can check what this script does by looking at it's source code (on_hotkey.txt) after installation. Script will be installed only for current user."
+LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on single hotkey press. You can check what this script does by launching HotkeySuite and editing single press event. Script will be installed only for the current user."
 LangString DESC_Sec_AUTORUN ${LANG_ENGLISH} "Add HotkeySuite to Autorun (pre-Vista) or schedule it using Task Scheduler (Vista and above)."
-LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable. So HotkeySuite and bundeled SnK will be available from command prompt."
+LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable to make HotkeySuite and bundeled SnK available from command prompt."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
 	!insertmacro MUI_DESCRIPTION_TEXT ${Grp_HS} $(DESC_Grp_HS)

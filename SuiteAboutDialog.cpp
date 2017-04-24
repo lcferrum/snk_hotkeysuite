@@ -89,7 +89,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_CFG_OPEN:
 					case IDC_SNK_OPEN:
 						{
-							std::wstring path=LOWORD(wParam)==IDC_SNK_OPEN?settings->GetSnkPath():settings->GetStoredLocation();
+							std::wstring path=LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(settings->GetSnkPath()):settings->GetStoredLocation();	//SnK path can be relative
 
 							size_t last_backslash;
 							if ((last_backslash=path.find_last_of(L'\\'))!=std::wstring::npos)

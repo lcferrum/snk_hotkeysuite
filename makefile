@@ -31,7 +31,7 @@ OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))
 TARGET=HotkeySuite.exe
 
 MAKENSIS=makensis.exe /V2
-NSISSRC=HotkeySuite.nsi
+NSISSRC=SuiteInstaller.nsi
 NSISTARGET=HotkeySuiteSetup*.exe
 
 # Debug specific common section

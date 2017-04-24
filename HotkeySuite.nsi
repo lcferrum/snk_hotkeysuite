@@ -44,7 +44,7 @@ InstallDir "\${APPNAME}"
 !define MUI_ICON "hs.ico"
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "LICENSE.TXT"
+!insertmacro MUI_PAGE_LICENSE "INSTALLER.LICENSE.RTF"
 !insertmacro MUI_PAGE_COMPONENTS
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE

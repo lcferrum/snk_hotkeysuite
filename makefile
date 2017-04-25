@@ -72,7 +72,6 @@ ifeq ($(BUILD),MinGW-w64)
 	LDFLAGS+=-mwindows -municode
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
-#	CFLAGS+=-fno-asynchronous-unwind-tables
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
 	NSISTARGET=HotkeySuiteSetup64.exe
@@ -91,7 +90,6 @@ ifeq ($(BUILD),MinGW-w64_pthreads)
 	LDFLAGS+=-static -lpthread -mwindows -municode
 ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
-#	CFLAGS+=-fno-asynchronous-unwind-tables
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
 	NSISTARGET=HotkeySuiteSetup64.exe

@@ -316,21 +316,19 @@ sp_exit_default:
 
 /*
 	MS changed the way SEH is handled with x64 ABI
-	On x86 SEH was handled by walking EXCEPTION_REGISTRATION chain, stored on stack, which head is pointed at by [FS:0]
+	On x86 SEH was handled by walking EXCEPTION_REGISTRATION chain, stored on the stack, which head is pointed at by [FS:0]
 	On x64 SEH is handled by walking call stack itself with the help of function table stored in .pdata section and unwind/exception handling data in .xdata section
-	Because exception information no longer stored on stack, but stored in PE header itself, it's not susceptible to buffer overflow and there is no extra code for maintaining EXCEPTION_REGISTRATION chain
+	Because exception information no longer stored on the stack, but stored in PE header itself, it's not susceptible to buffer overflow and there is no extra code for maintaining EXCEPTION_REGISTRATION chain
 	The downside is that every function should be now described (it's start, end offsets and prolog code) using special pseudo operations and epilog code must follow a strict set of rules for SEH to recognize it (there are only two allowed epilog forms)
 	Exception is leaf functions - functions that do not change any non-volatile registers (including RSP)
 	If this convention is abandoned, SEH won't work past the first function on call stack that abandoned it and unhandled exception code will be called instead (system default or set with SetUnhandledExceptionFilter)
-
+	On x64 platform SEH is also used for C++ exceptions, so the same thing applies here - exceptions won't go past the code that doesn't support SEH
+	
 	Functions below have multiple entries/exits and don't have traditional prolog/epilog
 	Such functions are impossible to describe using provided SEH-related pseudo operations
 	While it is possible to rewrite them to be SEH-compatible, perfomance and code size will suffer from such changes
 	So using SEH here actually contradicts the idea behind implementing hotkey functions in assembler - low level optimization
-	
 	That's why we are abandoning SEH compatibility for these functions
-	Moreover, all the SEH related data is stopped being generated for the binary altogether using -fno-asynchronous-unwind-tables compiler option
-	Anyway, SEH is not used in SnK HotkeySuite and being able to catch unhandled exceptions is more than enough here
 */
 
 LongPressCtrlAltEventHandler:

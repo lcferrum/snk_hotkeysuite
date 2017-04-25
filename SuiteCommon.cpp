@@ -128,7 +128,7 @@ bool CreateDirTree(const std::wstring trg_pth)
 
 std::wstring DwordToHexString(DWORD dw, int hex_width)
 {
-	return ToWstringFormatted(10, L"0x%0*X", hex_width, dw);	//Maximum DWORD is 0xFFFFFFFF - that is 10 characters and we don't need space for NULL-terminator because of _vsnwprintf
+	return ToWstringFormatted(10, L"0x%0*X", std::min(8, std::max(0, hex_width)), dw);	//Maximum DWORD is 0xFFFFFFFF - that is 10 characters and we don't need space for NULL-terminator because of _vsnwprintf
 }
 
 std::wstring StringToLower(std::wstring str)

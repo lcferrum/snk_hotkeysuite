@@ -50,31 +50,26 @@ bool HotkeyEngine::Stop()
 bool HotkeyEngine::Start()
 {
 	if (!running&&OnKeyPress) {
-		HANDLE success_fail[2];	//Array for two manual-reset unsignalled events
+		HANDLE success_or_exited[2];	//Array for two events
 												
-		if ((success_fail[0]=CreateEvent(NULL, TRUE, FALSE, NULL))) {		//Success event
-			if ((success_fail[1]=CreateEvent(NULL, TRUE, FALSE, NULL))) {	//Fail event
-				if ((hook_thread_handle=CreateThread(NULL, 0, ThreadProc, (LPVOID)&success_fail, 0, &hook_thread_id))) {
-					switch (WaitForMultipleObjects(2, success_fail, FALSE, OBJECT_WAIT_TIMEOUT)) {
-						case WAIT_OBJECT_0:		//Success event signalled
-							SetThreadPriority(hook_thread_handle, THREAD_PRIORITY_TIME_CRITICAL);	//Set higher priority for hook thread
-							CloseHandle(success_fail[0]);
-							CloseHandle(success_fail[1]);
-							running=true;
-							return true;
-						case WAIT_OBJECT_0+1:	//Fail event signalled
-							if (WaitForSingleObject(hook_thread_handle, OBJECT_WAIT_TIMEOUT)!=WAIT_OBJECT_0)	//Wait for thread to exit
-								TerminateThread(hook_thread_handle, 2);											//Or terminate it in case of error or timeout (exit code = 2)
-							break;
-						default:				//Error or timeout happened - terminate thread (exit code = 2)
-							TerminateThread(hook_thread_handle, 2);
-							break;
-					} 
-					CloseHandle(hook_thread_handle);
-				}
-				CloseHandle(success_fail[1]);
+		if ((success_or_exited[0]=CreateEvent(NULL, TRUE, FALSE, NULL))) {		//Success event
+			if ((success_or_exited[1]=hook_thread_handle=CreateThread(NULL, 0, ThreadProc, (LPVOID)success_or_exited[0], CREATE_SUSPENDED, &hook_thread_id))) {
+				SetThreadPriority(hook_thread_handle, THREAD_PRIORITY_TIME_CRITICAL);	//Set higher priority for hook thread
+				ResumeThread(hook_thread_handle);
+				switch (WaitForMultipleObjects(2, success_or_exited, FALSE, OBJECT_WAIT_TIMEOUT)) {
+					case WAIT_OBJECT_0:		//Success event signalled
+						CloseHandle(success_or_exited[0]);
+						running=true;
+						return true;
+					case WAIT_OBJECT_0+1:	//Thread exited
+						break;
+					default:				//Error or timeout happened - terminate thread (exit code = 2)
+						TerminateThread(hook_thread_handle, 2);
+						break;
+				} 
+				CloseHandle(hook_thread_handle);
 			}
-			CloseHandle(success_fail[0]);
+			CloseHandle(success_or_exited[0]);
 		}
 	}
 	
@@ -101,14 +96,12 @@ bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress)
 
 DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 {
-	HANDLE* success_fail=(HANDLE*)lpParameter;	//Success and fail events
 	HHOOK kb_hook;
-	
+
 	if ((kb_hook=SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, instance->app_instance, 0))) {
-		SetEvent(success_fail[0]);	//Signal success event
+		SetEvent((HANDLE)lpParameter);	//Signal success event and continue
 	} else {
-		SetEvent(success_fail[1]);	//Signal fail event and exit (exit code = 1)
-		return 1;
+		return 1;	//Exit (exit code = 1)
 	}
 	
 	//For hook to work thread should have message loop, though it can be pretty castrated
@@ -124,13 +117,10 @@ DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 LRESULT CALLBACK HotkeyEngine::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	//HOOKPROC requires that on less-than-zero nCode CallNextHookEx should be returned immediately
-	if (nCode<0)
-		return CallNextHookEx(NULL, nCode, wParam, lParam);
-
 	//We should return non-zero value if event shouldn't be passed further down the keyboard handlers chain (OnKeyPress returned TRUE)
-	if (OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))	
-		return 1;	
+	if (nCode>=0&&OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))
+		return 1;
 	
-	//And let CallNextHookEx handle the keyboard event if OnKeyPress returned FALSE
+	//Let CallNextHookEx handle everything else
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }

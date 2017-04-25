@@ -7,7 +7,11 @@
 INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	BINDING_DLGPRC_PARAM *bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)GetWindowLongPtr(hwndDlg, DWLP_USER);
-	
+
+	//If DialogProc returns FALSE then message is passed to dialog box default window procedure
+	//DialogProc return result is nor message return value - message return value should be set explicitly with SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR)
+	//By default if DialogProc returns TRUE and doesn't use SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR) then message return value is 0
+	//Exception is WM_INITDIALOG which return value is DialogProc's return result
 	switch (uMsg) {
 		case WM_INITDIALOG:
 			{

@@ -11,6 +11,10 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 {
 	SuiteSettings *settings=(SuiteSettings*)GetWindowLongPtr(hwndDlg, DWLP_USER);
 
+	//If DialogProc returns FALSE then message is passed to dialog box default window procedure
+	//DialogProc return result is nor message return value - message return value should be set explicitly with SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR)
+	//By default if DialogProc returns TRUE and doesn't use SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR) then message return value is 0
+	//Exceptions are WM_INITDIALOG and WM_CTLCOLORSTATIC which return value is DialogProc's return result
 	switch (uMsg) {
 		case WM_INITDIALOG:
 			{
@@ -71,13 +75,10 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
 			EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 			return TRUE;
-		case WM_SYSCOMMAND:
-			if (wParam!=SC_CONTEXTHELP)
-				return FALSE;
-			//If user pressed help button - fall down to WM_HELP
 		case WM_HELP:
-			//Because SC_CONTEXTHELP is trapped, the only way to receive WM_HELP is by pressing F1
+			//Received on F1
 			ShellExecute(NULL, L"open", GetExecutableFileName(L"\\README.TXT").c_str(), NULL, NULL, SW_SHOWNORMAL);
+			SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, TRUE);
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls

@@ -12,8 +12,8 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 	SuiteSettings *settings=(SuiteSettings*)GetWindowLongPtr(hwndDlg, DWLP_USER);
 
 	//If DialogProc returns FALSE then message is passed to dialog box default window procedure
-	//DialogProc return result is nor message return value - message return value should be set explicitly with SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR)
-	//By default if DialogProc returns TRUE and doesn't use SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, LONG_PTR) then message return value is 0
+	//DialogProc return result is nor message return value - message return value should be set explicitly with SetWindowLongPtr(hwndDlg, DWLP_MSGRESULT, LONG_PTR)
+	//By default if DialogProc returns TRUE and doesn't use SetWindowLongPtr(hwndDlg, DWLP_MSGRESULT, LONG_PTR) then message return value is 0
 	//Exceptions are WM_INITDIALOG and WM_CTLCOLORSTATIC which return value is DialogProc's return result
 	switch (uMsg) {
 		case WM_INITDIALOG:
@@ -78,7 +78,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 		case WM_HELP:
 			//Received on F1
 			ShellExecute(NULL, L"open", GetExecutableFileName(L"\\README.TXT").c_str(), NULL, NULL, SW_SHOWNORMAL);
-			SetWindowLongPtr(hwndDlg, DWL_MSGRESULT, TRUE);
+			SetWindowLongPtr(hwndDlg, DWLP_MSGRESULT, TRUE);
 			return TRUE;
 		case WM_COMMAND:
 			//Handler for dialog controls

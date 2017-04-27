@@ -12,9 +12,9 @@
 
 # Conditionals
 ifeq (,$(if $(filter-out upx install clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))
-ifeq (,$(and $(filter $(BUILD),MinGW-w64 MinGW-w64_pthreads MinGW_472 Clang_362),$(filter $(HOST),x86-64 x86)))
+ifeq (,$(and $(filter $(BUILD),MinGW-w64 MinGW-w64_pthreads Clang_362),$(filter $(HOST),x86-64 x86)))
 $(info Compiler and/or OS type is invalid! Please correctly set BUILD and HOST variables.)
-$(info Possible BUILD values: MinGW-w64, MinGW-w64_pthreads, MinGW_472, Clang_362)
+$(info Possible BUILD values: MinGW-w64, MinGW-w64_pthreads, Clang_362)
 $(info Possible HOST values: x86-64, x86)
 $(error BUILD/HOST is invalid)
 endif
@@ -48,22 +48,6 @@ endif
 # i386 is minimum system requirement for Windows 95, maximum arch for apps is pentium2 (OS doesn't handle SSE instructions without patch)
 # i486 is minimum system requirement for Windows NT4, maximum arch for apps is pentium2 (OS doesn't handle SSE instructions)
 # pentium is minimum system requirement for Windows 2000
-
-# MinGW 4.7.2 with includes from current MinGW-w64
-# i386 is MinGW 4.7.2 default arch
-ifeq ($(BUILD),MinGW_472)
-	CC=g++
-	WINDRES=windres
-	INC=-I$(UPSTREAM_INC)
-	CFLAGS+=-Wno-attributes -march=i486 -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
-	LDFLAGS+=-mwindows
-ifeq ($(HOST),x86-64)
-$(error not implemented)
-endif
-ifeq ($(HOST),x86)
-	NSISTARGET=HotkeySuiteSetup32.exe
-endif
-endif
 
 # Current MinGW-w64 with Win32 threads
 # MinGW-w64 minimum supported target 32-bit Windows version is Windows 2000

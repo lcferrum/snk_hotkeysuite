@@ -57,7 +57,7 @@ RequestExecutionLevel admin
 ;Though MultiUser sets INSTDIR variable by itself, InstallDir call is required for after-browse default directory name auto-append to work
 InstallDir "\${APPNAME}"
 
-!define MUI_ICON "hs.ico"
+!define MUI_ICON "SuiteInstaller.ico"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "SuiteInstaller.License.rtf"

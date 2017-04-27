@@ -111,17 +111,27 @@ SectionGroup /e "HotkeySuite" Grp_HS
 		SectionIn RO
 		SetOverwrite on
 		SetOutPath $INSTDIR
-		File "HotkeySuite.exe"
+		
+		;Check if HotkeySuite was previously installed and try to kill it using it's own SnK
+		Call killExistingSnK
+		
 		File "CHANGELOG.TXT"
 		File "LICENSE.TXT"
 		File "README.TXT"
+		File "HotkeySuite.exe"
 	SectionEnd
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
 		SetOutPath "$USER_APPDATA\${APPNAME}"
 		File /oname=on_hotkey.txt "snk_default_script.txt"
 	SectionEnd
+	Section /o "" Sec_DEF_SCRIPT2
+		SetOverwrite on
+		SetOutPath "$USER_APPDATA\${APPNAME}"
+		File /oname=on_hotkey.txt "snk_default_script.txt"
+	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
+		;/S and /A switches will silently update scheduled task and autorun entry if they already exist
 		${if} ${AtLeastWinVista}
 			${if} $MultiUser.InstallMode == AllUsers
 				ExecWait '"$INSTDIR\HotkeySuite.exe" /S machine /a user'
@@ -150,6 +160,7 @@ Section "SnK" Sec_SNK
 SectionEnd
 
 Section /o "Add to PATH" Sec_PATH
+	;/P switch won't add dublicated entries to PATH variable
 	${if} $MultiUser.InstallMode == AllUsers
 		ExecWait '"$INSTDIR\HotkeySuite.exe" /P machine'
 	${else}
@@ -197,22 +208,7 @@ SectionEnd
 
 Section "Uninstall"
 	;Try to kill HotkeySuite using it's own SnK
-	;Can fail if HotkeySuite was never run for current user or non-default INI path is used and SnK was installed at non-default location
-	StrCpy $R0 "$INSTDIR\SnKh.exe"
-	${ifnot} ${FileExists} "$R0"
-		ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
-		${if} "$R0" != ""
-			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
-			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
-			ExpandEnvStrings $R0 "$R0"
-			${ifnot} ${FileExists} "$R0"
-				StrCpy $R0 ""
-			${endif}
-		${endif}
-	${endif}
-	${if} "$R0" != ""
-		ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
-	${endif}
+	Call un.killInstalledSnK
 
 	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenuLocation
 	Delete "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk"
@@ -268,6 +264,7 @@ SectionEnd
 !endif
 LangString DESC_Sec_HS ${LANG_ENGLISH} "HotkeySuite main distribution - executable with docs."
 LangString DESC_Sec_DEF_SCRIPT ${LANG_ENGLISH} "Default SnK script to run on single hotkey press. You can check what this script does by launching HotkeySuite and editing single press event. Script will be installed only for the current user."
+LangString DESC_Sec_DEF_SCRIPT2 ${LANG_ENGLISH} "Default SnK script to run on single hotkey press. Warning: this will overwrite you current single press event script!"
 LangString DESC_Sec_AUTORUN ${LANG_ENGLISH} "Add HotkeySuite to Autorun (pre-Vista) or schedule it using Task Scheduler (Vista and above)."
 LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH variable to make HotkeySuite and bundeled SnK available from command prompt."
 
@@ -275,6 +272,7 @@ LangString DESC_Sec_PATH ${LANG_ENGLISH} "Add installation directory to PATH var
 	!insertmacro MUI_DESCRIPTION_TEXT ${Grp_HS} $(DESC_Grp_HS)
 	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_HS} $(DESC_Sec_HS)
 	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_DEF_SCRIPT} $(DESC_Sec_DEF_SCRIPT)
+	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_DEF_SCRIPT2} $(DESC_Sec_DEF_SCRIPT2)
 	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_AUTORUN} $(DESC_Sec_AUTORUN)
 	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_SNK} $(DESC_Sec_SNK)
 	!insertmacro MUI_DESCRIPTION_TEXT ${Sec_PATH} $(DESC_Sec_PATH)
@@ -291,11 +289,21 @@ Function .onInit
 			Quit
 		${endif}
 	!endif
+	
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
+	
+	${if} ${FileExists} "$USER_APPDATA\${APPNAME}\on_hotkey.txt"	;If on_hotkey.txt already exists - don't offer to install default SnK script
+		SectionSetText ${Sec_DEF_SCRIPT} ""
+		SectionSetFlags ${Sec_DEF_SCRIPT} 0x0
+		SectionSetText ${Sec_DEF_SCRIPT2} "Default SnK Script"
+	${endif}
+	
 	${if} "$INSTDIR" != "\${APPNAME}"	;Don't loose $INSTDIR set with /D
 		StrCpy $D_INSTDIR "$INSTDIR"
 	${endif}
+	
 	!insertmacro MULTIUSER_INIT
+	
 	${if} "$D_INSTDIR" != ""		;If $INSTDIR was set with /D - reapply it after initializing MultiUser.nsh (for Silent mode)
 		StrCpy $INSTDIR "$D_INSTDIR"
 	${endif}
@@ -311,6 +319,46 @@ Function checkIfD
 	;Works only with GUI mode
 	${if} "$D_INSTDIR" != ""
 		StrCpy $INSTDIR "$D_INSTDIR"
+	${endif}
+FunctionEnd
+
+Function killExistingSnK
+	;Can fail if SnK was installed at non-default location and HotkeySuite was never run for current user or non-default INI path is used
+	${if} ${FileExists} "$INSTDIR\HotkeySuite.exe"
+		StrCpy $R0 "$INSTDIR\SnKh.exe"
+		${ifnot} ${FileExists} "$R0"
+			ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
+			${if} "$R0" != ""
+				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
+				System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
+				ExpandEnvStrings $R0 "$R0"
+				${ifnot} ${FileExists} "$R0"
+					StrCpy $R0 ""
+				${endif}
+			${endif}
+		${endif}
+		${if} "$R0" != ""
+			ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
+		${endif}
+	${endif}
+FunctionEnd
+
+Function un.killInstalledSnK
+	;Can fail if SnK was installed at non-default location and HotkeySuite was never run for current user or non-default INI path is used
+	StrCpy $R0 "$INSTDIR\SnKh.exe"
+	${ifnot} ${FileExists} "$R0"
+		ReadINIStr $R0 "$USER_APPDATA\${APPNAME}\HotkeySuite.ini" "HotkeySuite" "SnkPath"
+		${if} "$R0" != ""
+			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_EXE_PATH", "$INSTDIR").r0'
+			System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("HS_INI_PATH", "$USER_APPDATA\${APPNAME}").r0'
+			ExpandEnvStrings $R0 "$R0"
+			${ifnot} ${FileExists} "$R0"
+				StrCpy $R0 ""
+			${endif}
+		${endif}
+	${endif}
+	${if} "$R0" != ""
+		ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
 	${endif}
 FunctionEnd
 

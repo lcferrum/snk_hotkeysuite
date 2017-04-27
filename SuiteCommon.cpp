@@ -217,7 +217,7 @@ std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t*
 {
 	//Function is designed to make a warning for user that this binding may not work if some of modifier keys are pressed
 	//This is because historically for some keys modifier keys affect not only vk but also sc
-	std::wstring wrn_str=L"";
+	std::wstring wrn_str;
 	
 	if ((mod_key==ModKeyType::SHIFT_ALT||mod_key==ModKeyType::CTRL_ALT)&&key.sc==0x37&&key.ext) {
 		//PrtScn (E037) with Alt pressed results in SysRq sc (84)
@@ -234,424 +234,427 @@ std::wstring GetHotkeyWarning(ModKeyType mod_key, BINDED_KEY key, const wchar_t*
 			wrn_str+=postfix;
 		return wrn_str;
 	} else
-		return defval;
+		return defval?defval:wrn_str;
 }
 
-std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, HkStrType type, const wchar_t* prefix, const wchar_t* postfix)
+std::wstring GetHotkeyString(BINDED_KEY key, const wchar_t* prefix, const wchar_t* postfix)
 {
-	std::wstring hk_str=L"";
+	std::wstring hk_str;
 	
 	if (prefix)
 		hk_str=prefix;
 	
-	if (type==HkStrType::FULL||type==HkStrType::MOD_KEY) {
-		switch (mod_key) {
-			case ModKeyType::CTRL_ALT:
-				hk_str+=L"Ctrl + Alt";
-				break;
-			case ModKeyType::SHIFT_ALT:
-				hk_str+=L"Shift + Alt";
-				break;
-			case ModKeyType::CTRL_SHIFT:
-				hk_str+=L"Ctrl + Shift";
-				break;
-		}
-	}
-	
-	if (type==HkStrType::FULL)
-		hk_str+=L" + ";
-	
 	//Mouse buttons and mod keys (Alt, Shift, Ctrl) are excluded from the list because binding keyboard hook ignores them
 	//Other excluded keys also can be set through register but in this case they will be displayed as hex characters signaling user that something is not right
 	//Function is trying to name keys more positionwise - e.g. independent of Shift, NumLock state and selected layout
-	if (type==HkStrType::FULL||type==HkStrType::VK) {
-		switch (key.vk) {
-			case VK_SPACE:
-				hk_str+=L"Space";
-				break;
-			case VK_RETURN:
-				hk_str+=L"Enter";
-				break;
-			case VK_CANCEL:
-				//Break is a special case
-				//It is always a two-key combination: Control followed by Break
-				//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Break";
-				else
-					hk_str+=L"ScrLock";
-				break;
-			case VK_BACK:
-				hk_str+=L"BS";
-				break;
-			case VK_TAB:
-				hk_str+=L"Tab";
-				break;
-			case VK_CLEAR:
-				//It's a less known alternative function of Num[5]
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Clear";
-				else
-					hk_str+=L"Num5";
-				break;
-			case VK_PAUSE:
-				//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"NumLock";
-				else
-					hk_str+=L"Pause";
-				break;
-			case VK_CAPITAL:
-				hk_str+=L"CapsLock";
-				break;
-			case VK_KANA:
-				hk_str+=L"Kana/Hangul";
-				break;
-			case VK_JUNJA:
-				hk_str+=L"Junja";
-				break;
-			case VK_KANJI:
-				hk_str+=L"Kanji/Hanja";
-				break;
-			case VK_ESCAPE:
-				hk_str+=L"Esc";
-				break;
-			case VK_CONVERT:
-				hk_str+=L"Convert";
-				break;
-			case VK_NONCONVERT:
-				hk_str+=L"NonConvert";
-				break;
-			case VK_ACCEPT:
-				hk_str+=L"Accept";
-				break;
-			case VK_MODECHANGE:
-				hk_str+=L"ModeChange";
-				break;
-			case VK_PRIOR:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"PgUp";
-				else
-					hk_str+=L"Num9";
-				break;
-			case VK_NEXT:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"PgDn";
-				else
-					hk_str+=L"Num3";
-				break;
-			case VK_END:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"End";
-				else
-					hk_str+=L"Num1";
-				break;
-			case VK_HOME:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Home";
-				else
-					hk_str+=L"Num7";
-				break;
-			case VK_LEFT:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Left";
-				else
-					hk_str+=L"Num4";
-				break;
-			case VK_RIGHT:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Right";
-				else
-					hk_str+=L"Num6";
-				break;
-			case VK_UP:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Up";
-				else
-					hk_str+=L"Num8";
-				break;
-			case VK_DOWN:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Down";
-				else
-					hk_str+=L"Num2";
-				break;
-			case VK_SELECT:
-				hk_str+=L"Select";
-				break;
-			case VK_PRINT:
-				//Used on old Nokia Data 121-key keyboards
-				hk_str+=L"Print";
-				break;
-			case VK_EXECUTE:
-				//Marked as "non used" in docs
-				hk_str+=L"Execute";
-				break;
-			case VK_SNAPSHOT:
-				//Starting with Windows 3.0 VK_SNAPSHOT is shared between SysRq and PrtScn scancodes
-				//Also PrtScn's scan code is shared between PrtScn and Num[*] virtual keys (because historically it first came as Num[*]'s alternative on IBM PC/XT/AT keyboard)
-				if (key.sc==0x54)
-					hk_str+=L"SysRq";
-				else
-					hk_str+=L"PrtScn";
-				break;
-			case VK_INSERT:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Ins";
-				else
-					hk_str+=L"Num0";
-				break;
-			case VK_DELETE:
-				//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
-				if (key.ext)
-					hk_str+=L"Del";
-				else
-					hk_str+=L"NumDecSep";
-				break;
-			case VK_HELP:
-				hk_str+=L"Help";
-				break;
-			case VK_LWIN:
-				hk_str+=L"LWin";
-				break;
-			case VK_RWIN:
-				hk_str+=L"RWin";
-				break;
-			case VK_APPS:
-				hk_str+=L"Menu";
-				break;
-			case VK_SLEEP:
-				hk_str+=L"Sleep";
-				break;
-			case VK_MULTIPLY:
-				hk_str+=L"Num*";
-				break;
-			case VK_ADD:
-				hk_str+=L"Num+";
-				break;
-			case 0xC2:	
-				//VK_ABNT_C2, replaces VK_SEPARATOR on Brazilian kb
-			case VK_SEPARATOR:
-				//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
-				hk_str+=L"NumTndSep";
-				break;
-			case VK_SUBTRACT:
-				hk_str+=L"Num-";
-				break;
-			case VK_DECIMAL:
-				//Decimal separator, localized (can be comma or period)
-				hk_str+=L"NumDecSep";
-				break;
-			case VK_DIVIDE:
-				//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there was no Num[/] on IBM PC/XT/AT keyboard)
-				hk_str+=L"Num/";
-				break;
-			case VK_NUMLOCK:
-				hk_str+=L"NumLock";
-				break;
-			case VK_SCROLL:
+	switch (key.vk) {
+		case VK_SPACE:
+			hk_str+=L"Space";
+			break;
+		case VK_RETURN:
+			hk_str+=L"Enter";
+			break;
+		case VK_CANCEL:
+			//Break is a special case
+			//It is always a two-key combination: Control followed by Break
+			//Break's scan code is shared between Break and ScrLock virtual keys (because historically it first came as ScrLock's alternative on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Break";
+			else
 				hk_str+=L"ScrLock";
-				break;
-			case VK_BROWSER_BACK:
-				hk_str+=L"BrowserBack";
-				break;
-			case VK_BROWSER_FORWARD:
-				hk_str+=L"BrowserForward";
-				break;
-			case VK_BROWSER_REFRESH:
-				hk_str+=L"BrowserRefresh";
-				break;
-			case VK_BROWSER_STOP:
-				hk_str+=L"BrowserStop";
-				break;
-			case VK_BROWSER_SEARCH:
-				hk_str+=L"BrowserSearch";
-				break;
-			case VK_BROWSER_FAVORITES:
-				hk_str+=L"BrowserFavorites";
-				break;
-			case VK_BROWSER_HOME:
-				hk_str+=L"BrowserHome";
-				break;
-			case VK_VOLUME_MUTE:
-				hk_str+=L"VolumeMute";
-				break;				
-			case VK_VOLUME_DOWN:
-				hk_str+=L"VolumeDown";
-				break;
-			case VK_VOLUME_UP:
-				hk_str+=L"VolumeUp";
-				break;
-			case VK_MEDIA_NEXT_TRACK:
-				hk_str+=L"MediaTrackNext";
-				break;
-			case VK_MEDIA_PREV_TRACK:
-				hk_str+=L"MediaTrackPrevious";
-				break;
-			case VK_MEDIA_STOP:
-				hk_str+=L"MediaStop";
-				break;
-			case VK_MEDIA_PLAY_PAUSE:
-				hk_str+=L"MediaPlayPause";
-				break;
-			case VK_LAUNCH_MAIL:
-				hk_str+=L"LaunchMail";
-				break;
-			case VK_LAUNCH_MEDIA_SELECT:
-				hk_str+=L"MediaSelect";
-				break;
-			case VK_LAUNCH_APP1:
-				hk_str+=L"LaunchApp1";
-				break;
-			case VK_LAUNCH_APP2:
-				hk_str+=L"LaunchApp2";
-				break;
-			case VK_OEM_1:
-				hk_str+=GetOemChar(L':', L';', key.vk, key.sc);
-				break;
-			case VK_OEM_PLUS:
-				hk_str+={L'+'};
-				break;
-			case VK_OEM_COMMA:
-				hk_str+={L','};
-				break;
-			case VK_OEM_MINUS:
-				hk_str+={L'-'};
-				break;
-			case VK_OEM_PERIOD:
-				hk_str+={L'.'};
-				break;
-			case VK_OEM_2:
-				hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
-				break;
-			case VK_OEM_3:
-				//[ ~ ` ] on US kb and [ @ ' ] on UK kb
-				hk_str+=GetOemChar(L'~', L'@', key.vk, key.sc);
-				break;
-			case VK_OEM_4:
-				hk_str+=GetOemChar(L'{', L'[', key.vk, key.sc);
-				break;
-			case VK_OEM_5:
-				hk_str+=GetOemChar(L'|', L'\\', key.vk, key.sc);
-				break;
-			case VK_OEM_6:
-				hk_str+=GetOemChar(L'}', L']', key.vk, key.sc);
-				break;
-			case VK_OEM_7:
-				//[ " ' ] on US kb and [ ~ # ] on UK kb
-				hk_str+=GetOemChar(L'"', L'~', key.vk, key.sc);
-				break;
-			case VK_OEM_8:
-				//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb and [ ¬ ` ] on UK QWERTY kb
-				hk_str+=GetOemChar(L'§', L'¬', key.vk, key.sc);
-				break;
-			case VK_OEM_102:
-				//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
-				//Also present on non-102 AZERTY kb as [ > < ]
-				hk_str+=GetOemChar(L'|', L'>', key.vk, key.sc);
-				break;
-			case 0xC1:	//VK_ABNT_C1
-				//Additional OEM key on Brazilian kb
-				hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
-				break;
-			case VK_OEM_AX:
-				hk_str+=L"AX";
-				break;	
-			case VK_PROCESSKEY:
-				hk_str+=L"Process";
-				break;
-			case VK_ATTN:
-				//Present on 122-key keyboard
-				hk_str+=L"Attn";
-				break;
-			case VK_CRSEL:
-				//Present on 122-key keyboard
-				hk_str+=L"CrSel";
-				break;
-			case VK_EXSEL:
-				//Present on 122-key keyboard
-				hk_str+=L"ExSel";
-				break;
-			case VK_EREOF:
-				//Present on 122-key keyboard
-				hk_str+=L"ErEOF";
-				break;
-			case VK_PLAY:
-				//Present on 122-key keyboard
-				hk_str+=L"Play";
-				break;
-			case VK_ZOOM:
-				//Present on 122-key keyboard
-				hk_str+=L"Zoom";
-				break;
-			case VK_PA1:
-				//Present on 122-key keyboard
-				hk_str+=L"PA1";
-				break;
-			case VK_OEM_CLEAR:
-				//Present on 122-key keyboard
+			break;
+		case VK_BACK:
+			hk_str+=L"BS";
+			break;
+		case VK_TAB:
+			hk_str+=L"Tab";
+			break;
+		case VK_CLEAR:
+			//It's a less known alternative function of Num[5]
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
 				hk_str+=L"Clear";
-				break;
-			case VK_NONAME:
-				//Present on 122-key keyboard
-				hk_str+=L"Noname";
-				break;
-			case VK_ICO_HELP:
-				//Present on Olivetti keyboard
-				hk_str+=L"Help";
-				break;
-			case VK_ICO_00:
-				//Present on Olivetti keyboard
-				hk_str+=L"00";
-				break;
-			case VK_ICO_CLEAR:
-				//Present on Olivetti keyboard
-				hk_str+=L"Clear";
-				break;
-			default:
-				if (key.vk>=0x30&&key.vk<=0x39) {
-					//0-9 keys
-					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={(wchar_t)key.vk /* vk-0x30+0x30 */};
-				} else if (key.vk>=0x41&&key.vk<=0x5A) {
-					//A-Z keys
-					//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
-					hk_str+={(wchar_t)key.vk /* vk-0x41+0x41 */};
-				} else if (key.vk>=0x60&&key.vk<=0x69) {
-					//Numpad 0-9 keys
-					//Using standard UTF-8 CP (0-9 are 0x30-0x39)
-					hk_str+={L'N', L'u', L'm', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */};
-				} else if (key.vk>=0x70&&key.vk<=0x87) {
-					//Function F1-F24 keys
-					hk_str+=L"F"+to_wstring_wrapper(key.vk-0x6F);
-				} else if (key.sc==0x5E&&key.ext) {
-					//Power management Power key
-					hk_str+=L"Power";
-				} else if (key.sc==0x5F&&key.ext) {
-					//Power management Sleep key
-					hk_str+=L"Sleep";
-				} else if (key.sc==0x63&&key.ext) {
-					//Power management Wake key
-					hk_str+=L"Wake";
-				} else {
-					//Unknown, reserved and rest of OEM specific keys goes here
-					hk_str+=DwordToHexString(key.vk, 2);
-				}
-		}
+			else
+				hk_str+=L"Num5";
+			break;
+		case VK_PAUSE:
+			//Pause's scan code is shared between Pause and NumLock virtual keys (because historically it first came as NumLock's alternative on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"NumLock";
+			else
+				hk_str+=L"Pause";
+			break;
+		case VK_CAPITAL:
+			hk_str+=L"CapsLock";
+			break;
+		case VK_KANA:
+			hk_str+=L"Kana/Hangul";
+			break;
+		case VK_JUNJA:
+			hk_str+=L"Junja";
+			break;
+		case VK_KANJI:
+			hk_str+=L"Kanji/Hanja";
+			break;
+		case VK_ESCAPE:
+			hk_str+=L"Esc";
+			break;
+		case VK_CONVERT:
+			hk_str+=L"Convert";
+			break;
+		case VK_NONCONVERT:
+			hk_str+=L"NonConvert";
+			break;
+		case VK_ACCEPT:
+			hk_str+=L"Accept";
+			break;
+		case VK_MODECHANGE:
+			hk_str+=L"ModeChange";
+			break;
+		case VK_PRIOR:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"PgUp";
+			else
+				hk_str+=L"Num9";
+			break;
+		case VK_NEXT:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"PgDn";
+			else
+				hk_str+=L"Num3";
+			break;
+		case VK_END:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"End";
+			else
+				hk_str+=L"Num1";
+			break;
+		case VK_HOME:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Home";
+			else
+				hk_str+=L"Num7";
+			break;
+		case VK_LEFT:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Left";
+			else
+				hk_str+=L"Num4";
+			break;
+		case VK_RIGHT:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Right";
+			else
+				hk_str+=L"Num6";
+			break;
+		case VK_UP:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Up";
+			else
+				hk_str+=L"Num8";
+			break;
+		case VK_DOWN:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Down";
+			else
+				hk_str+=L"Num2";
+			break;
+		case VK_SELECT:
+			hk_str+=L"Select";
+			break;
+		case VK_PRINT:
+			//Used on old Nokia Data 121-key keyboards
+			hk_str+=L"Print";
+			break;
+		case VK_EXECUTE:
+			//Marked as "non used" in docs
+			hk_str+=L"Execute";
+			break;
+		case VK_SNAPSHOT:
+			//Starting with Windows 3.0 VK_SNAPSHOT is shared between SysRq and PrtScn scancodes
+			//Also PrtScn's scan code is shared between PrtScn and Num[*] virtual keys (because historically it first came as Num[*]'s alternative on IBM PC/XT/AT keyboard)
+			if (key.sc==0x54)
+				hk_str+=L"SysRq";
+			else
+				hk_str+=L"PrtScn";
+			break;
+		case VK_INSERT:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Ins";
+			else
+				hk_str+=L"Num0";
+			break;
+		case VK_DELETE:
+			//Num keys' scancodes are shared with cursor and system keys (because historically there were no separate cursor and system keys and they all came as alternatives to num keys on IBM PC/XT/AT keyboard)
+			if (key.ext)
+				hk_str+=L"Del";
+			else
+				hk_str+=L"NumDecSep";
+			break;
+		case VK_HELP:
+			hk_str+=L"Help";
+			break;
+		case VK_LWIN:
+			hk_str+=L"LWin";
+			break;
+		case VK_RWIN:
+			hk_str+=L"RWin";
+			break;
+		case VK_APPS:
+			hk_str+=L"Menu";
+			break;
+		case VK_SLEEP:
+			hk_str+=L"Sleep";
+			break;
+		case VK_MULTIPLY:
+			hk_str+=L"Num*";
+			break;
+		case VK_ADD:
+			hk_str+=L"Num+";
+			break;
+		case 0xC2:	
+			//VK_ABNT_C2, replaces VK_SEPARATOR on Brazilian kb
+		case VK_SEPARATOR:
+			//Thousands separator, sometimes present on numpad and localized (so can be actually comma or period)
+			hk_str+=L"NumTnd";
+			break;
+		case VK_SUBTRACT:
+			hk_str+=L"Num-";
+			break;
+		case VK_DECIMAL:
+			//Decimal separator, localized (can be comma or period)
+			hk_str+=L"NumDec";
+			break;
+		case VK_DIVIDE:
+			//Num[/]'s scan code is shared between Num[/] and [?/] virtual keys (because historically at first there was no Num[/] on IBM PC/XT/AT keyboard)
+			hk_str+=L"Num/";
+			break;
+		case VK_NUMLOCK:
+			hk_str+=L"NumLock";
+			break;
+		case VK_SCROLL:
+			hk_str+=L"ScrLock";
+			break;
+		case VK_BROWSER_BACK:
+			hk_str+=L"BrowserBack";
+			break;
+		case VK_BROWSER_FORWARD:
+			hk_str+=L"BrowserForward";
+			break;
+		case VK_BROWSER_REFRESH:
+			hk_str+=L"BrowserRefresh";
+			break;
+		case VK_BROWSER_STOP:
+			hk_str+=L"BrowserStop";
+			break;
+		case VK_BROWSER_SEARCH:
+			hk_str+=L"BrowserSearch";
+			break;
+		case VK_BROWSER_FAVORITES:
+			hk_str+=L"BrowserFavorites";
+			break;
+		case VK_BROWSER_HOME:
+			hk_str+=L"BrowserHome";
+			break;
+		case VK_VOLUME_MUTE:
+			hk_str+=L"VolumeMute";
+			break;				
+		case VK_VOLUME_DOWN:
+			hk_str+=L"VolumeDown";
+			break;
+		case VK_VOLUME_UP:
+			hk_str+=L"VolumeUp";
+			break;
+		case VK_MEDIA_NEXT_TRACK:
+			hk_str+=L"MediaTrackNext";
+			break;
+		case VK_MEDIA_PREV_TRACK:
+			hk_str+=L"MediaTrackPrevious";
+			break;
+		case VK_MEDIA_STOP:
+			hk_str+=L"MediaStop";
+			break;
+		case VK_MEDIA_PLAY_PAUSE:
+			hk_str+=L"MediaPlayPause";
+			break;
+		case VK_LAUNCH_MAIL:
+			hk_str+=L"LaunchMail";
+			break;
+		case VK_LAUNCH_MEDIA_SELECT:
+			hk_str+=L"MediaSelect";
+			break;
+		case VK_LAUNCH_APP1:
+			hk_str+=L"LaunchApp1";
+			break;
+		case VK_LAUNCH_APP2:
+			hk_str+=L"LaunchApp2";
+			break;
+		case VK_OEM_1:
+			hk_str+=GetOemChar(L':', L';', key.vk, key.sc);
+			break;
+		case VK_OEM_PLUS:
+			hk_str+={L'+'};
+			break;
+		case VK_OEM_COMMA:
+			hk_str+={L','};
+			break;
+		case VK_OEM_MINUS:
+			hk_str+={L'-'};
+			break;
+		case VK_OEM_PERIOD:
+			hk_str+={L'.'};
+			break;
+		case VK_OEM_2:
+			hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
+			break;
+		case VK_OEM_3:
+			//[ ~ ` ] on US kb and [ @ ' ] on UK kb
+			hk_str+=GetOemChar(L'~', L'@', key.vk, key.sc);
+			break;
+		case VK_OEM_4:
+			hk_str+=GetOemChar(L'{', L'[', key.vk, key.sc);
+			break;
+		case VK_OEM_5:
+			hk_str+=GetOemChar(L'|', L'\\', key.vk, key.sc);
+			break;
+		case VK_OEM_6:
+			hk_str+=GetOemChar(L'}', L']', key.vk, key.sc);
+			break;
+		case VK_OEM_7:
+			//[ " ' ] on US kb and [ ~ # ] on UK kb
+			hk_str+=GetOemChar(L'"', L'~', key.vk, key.sc);
+			break;
+		case VK_OEM_8:
+			//MS defines this as "used for miscellaneous characters" but often it is [ § ! ] on AZERTY kb and [ ¬ ` ] on UK QWERTY kb
+			hk_str+=GetOemChar(L'§', L'¬', key.vk, key.sc);
+			break;
+		case VK_OEM_102:
+			//Used on 102 keyboard - often it is [ | \ ] on newer QWERTY kb or [ > < ] on QWERTZ kb
+			//Also present on non-102 AZERTY kb as [ > < ]
+			hk_str+=GetOemChar(L'|', L'>', key.vk, key.sc);
+			break;
+		case 0xC1:	//VK_ABNT_C1
+			//Additional OEM key on Brazilian kb
+			hk_str+=GetOemChar(L'?', L'/', key.vk, key.sc);
+			break;
+		case VK_OEM_AX:
+			hk_str+=L"AX";
+			break;	
+		case VK_PROCESSKEY:
+			hk_str+=L"Process";
+			break;
+		case VK_ATTN:
+			//Present on 122-key keyboard
+			hk_str+=L"Attn";
+			break;
+		case VK_CRSEL:
+			//Present on 122-key keyboard
+			hk_str+=L"CrSel";
+			break;
+		case VK_EXSEL:
+			//Present on 122-key keyboard
+			hk_str+=L"ExSel";
+			break;
+		case VK_EREOF:
+			//Present on 122-key keyboard
+			hk_str+=L"ErEOF";
+			break;
+		case VK_PLAY:
+			//Present on 122-key keyboard
+			hk_str+=L"Play";
+			break;
+		case VK_ZOOM:
+			//Present on 122-key keyboard
+			hk_str+=L"Zoom";
+			break;
+		case VK_PA1:
+			//Present on 122-key keyboard
+			hk_str+=L"PA1";
+			break;
+		case VK_OEM_CLEAR:
+			//Present on 122-key keyboard
+			hk_str+=L"Clear";
+			break;
+		case VK_NONAME:
+			//Present on 122-key keyboard
+			hk_str+=L"Noname";
+			break;
+		case VK_ICO_HELP:
+			//Present on Olivetti keyboard
+			hk_str+=L"Help";
+			break;
+		case VK_ICO_00:
+			//Present on Olivetti keyboard
+			hk_str+=L"00";
+			break;
+		case VK_ICO_CLEAR:
+			//Present on Olivetti keyboard
+			hk_str+=L"Clear";
+			break;
+		default:
+			if (key.vk>=0x30&&key.vk<=0x39) {
+				//0-9 keys
+				//Using standard UTF-8 CP (0-9 are 0x30-0x39)
+				hk_str+={(wchar_t)key.vk /* vk-0x30+0x30 */};
+			} else if (key.vk>=0x41&&key.vk<=0x5A) {
+				//A-Z keys
+				//Using standard UTF-8 CP (A-Z are 0x41-0x5A)
+				hk_str+={(wchar_t)key.vk /* vk-0x41+0x41 */};
+			} else if (key.vk>=0x60&&key.vk<=0x69) {
+				//Numpad 0-9 keys
+				//Using standard UTF-8 CP (0-9 are 0x30-0x39)
+				hk_str+={L'N', L'u', L'm', (wchar_t)(key.vk-0x30) /* vk-0x60+0x30 */};
+			} else if (key.vk>=0x70&&key.vk<=0x87) {
+				//Function F1-F24 keys
+				hk_str+=L"F"+to_wstring_wrapper(key.vk-0x6F);
+			} else if (key.sc==0x5E&&key.ext) {
+				//Power management Power key
+				hk_str+=L"Power";
+			} else if (key.sc==0x5F&&key.ext) {
+				//Power management Sleep key
+				hk_str+=L"Sleep";
+			} else if (key.sc==0x63&&key.ext) {
+				//Power management Wake key
+				hk_str+=L"Wake";
+			} else {
+				//Unknown, reserved and rest of OEM specific keys goes here
+				hk_str+=DwordToHexString(key.vk, 2);
+			}
 	}
 	
 	if (postfix)
 		hk_str+=postfix;
 	
 	return hk_str;
+}
+
+std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, const wchar_t* prefix, const wchar_t* postfix)
+{
+	std::wstring hk_str;
+	
+	if (prefix)
+		hk_str=prefix;
+
+	switch (mod_key) {
+		case ModKeyType::CTRL_ALT:
+			hk_str+=L"Ctrl + Alt + ";
+			break;
+		case ModKeyType::SHIFT_ALT:
+			hk_str+=L"Shift + Alt + ";
+			break;
+		case ModKeyType::CTRL_SHIFT:
+			hk_str+=L"Ctrl + Shift + ";
+			break;
+	}
+	
+	return hk_str+GetHotkeyString(key, NULL, postfix);
 }

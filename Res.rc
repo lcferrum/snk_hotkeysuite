@@ -53,7 +53,7 @@ BEGIN
 	BEGIN
 		MENUITEM "Stop", IDM_STOP_START
 		MENUITEM SEPARATOR
-		POPUP "Settings"
+		POPUP "Settings"	//if menu items are added or deleted above - modify this popup position (POS_SETTINGS) in Res.h accordingly
 		BEGIN
 			MENUITEM "Long press", IDM_SET_EN_LHK
 			MENUITEM SEPARATOR

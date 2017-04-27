@@ -20,7 +20,7 @@ HotkeyEngine* HotkeyEngine::MakeInstance(HINSTANCE hInstance)
 }
 
 HotkeyEngine::HotkeyEngine(HINSTANCE hInstance):
-	running(false), hook_thread_handle(NULL), hook_thread_id(0), app_instance(hInstance)
+	running(false), hook_thread_handle(NULL), hook_thread_id(0), app_instance(hInstance), stack_commit(0)
 {}
 
 HotkeyEngine::~HotkeyEngine() 
@@ -53,7 +53,7 @@ bool HotkeyEngine::Start()
 		HANDLE success_or_exited[2];	//Array for two events
 												
 		if ((success_or_exited[0]=CreateEvent(NULL, TRUE, FALSE, NULL))) {		//Success event
-			if ((success_or_exited[1]=hook_thread_handle=CreateThread(NULL, 0, ThreadProc, (LPVOID)success_or_exited[0], CREATE_SUSPENDED, &hook_thread_id))) {
+			if ((success_or_exited[1]=hook_thread_handle=CreateThread(NULL, stack_commit, ThreadProc, (LPVOID)success_or_exited[0], CREATE_SUSPENDED, &hook_thread_id))) {
 				SetThreadPriority(hook_thread_handle, THREAD_PRIORITY_TIME_CRITICAL);	//Set higher priority for hook thread
 				ResumeThread(hook_thread_handle);
 				switch (WaitForMultipleObjects(2, success_or_exited, FALSE, OBJECT_WAIT_TIMEOUT)) {
@@ -76,19 +76,21 @@ bool HotkeyEngine::Start()
 	return false;
 }
 
-bool HotkeyEngine::Set(KeyPressFn OnKeyPress)
+bool HotkeyEngine::Set(KeyPressFn OnKeyPress, size_t stack_commit)
 {
 	if (!running) {
 		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		this->stack_commit=stack_commit;
 		return true;
 	} else
 		return false;
 }
 
-bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress)
+bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress, size_t stack_commit)
 {
 	if (!running) {
 		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		this->stack_commit=stack_commit;
 		return Start();
 	} else
 		return false;

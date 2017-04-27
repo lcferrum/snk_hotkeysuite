@@ -33,6 +33,8 @@
 #define IDC_EXE_LOC			30012
 #define IDC_EXE_OPEN		30013
 
+#define POS_SETTINGS		2
+
 #define WM_HSTNAICO			(WM_USER+1)
 #define WM_BINDSC			(WM_USER+2)
 

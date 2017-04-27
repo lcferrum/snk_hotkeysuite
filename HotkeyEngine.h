@@ -20,6 +20,7 @@ private:
 	HANDLE hook_thread_handle;
 	DWORD hook_thread_id;
 	HINSTANCE app_instance;
+	size_t stack_commit;
 	
 	HotkeyEngine(HINSTANCE hInstance);
 public:
@@ -27,8 +28,8 @@ public:
 	bool IsRunning();
 	bool Stop();
 	bool Start();
-	bool Set(KeyPressFn OnKeyPress);
-	bool StartNew(KeyPressFn OnKeyPress);
+	bool Set(KeyPressFn OnKeyPress, size_t stack_commit=0);
+	bool StartNew(KeyPressFn OnKeyPress, size_t stack_commit=0);
 	
 	~HotkeyEngine();
 	HotkeyEngine(const HotkeyEngine&)=delete;				//Get rid of default copy constructor

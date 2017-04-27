@@ -17,7 +17,6 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical);
-void HotkeyEventHandler(wchar_t* snk_cmdline_buf);
 
 #ifdef __clang__
 //Obscure clang++ bug - it reports "multiple definition" of std::operator+() when statically linking with libstdc++
@@ -87,10 +86,15 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 			SnkIcon->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
 			break;
 	}
-	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, settings->GetBindedKey(), HkStrType::VK, L"Rebind ", L"...").c_str());
-	//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-	SnkIcon->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(settings->GetBindedKey(), L"Rebind ", L"...").c_str());
+	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str()); 
 
+	//It is possible to set initial stack commit size for hotkey hook thread
+	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4kB for MinGW/Clang)
+	//It was observed (on Win Server 2012 R2 x64 test machine) that hotkey hook thread consumes around 2kB of stack at it's peak usage when not triggered (i.e. no hotkey press actually happens)
+	//When hotkey press happens, stack peak usage jumps to around 9kB (thanks to CreateProcess call)
+	//Because most of the time hook thread stays in it's untriggered state, we keep default initial commit size value from PE header (i.e. 4kB)
+	//Commit size will grow automatically if more stack space is needed by the thread
 	if (!SnkHotkey->StartNew(std::bind(OnKeyTriplet.CreateEventHandler(settings), &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+3;
@@ -113,15 +117,6 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	settings->SaveSettings();	//Main parts of HotkeySuite are deinitialized and now it's time to save settings
 	
 	return msg.wParam;
-}
-
-void HotkeyEventHandler(wchar_t* snk_cmdline_buf) {
-	STARTUPINFO si={sizeof(STARTUPINFO)};
-	PROCESS_INFORMATION pi={};
-	if (CreateProcess(NULL, snk_cmdline_buf, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-	}
 }
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
@@ -193,8 +188,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_ALT);
-			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
@@ -202,8 +196,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_SHIFT_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::SHIFT_ALT);
-			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
@@ -211,8 +204,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			hk_was_running=hk_engine->Stop();
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_SHIFT);
-			//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-			sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey(), HkStrType::FULL).c_str()); 
+			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
@@ -247,9 +239,8 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						break;
 					case BD_DLGPRC_OK:
 						settings->SetBindedKey(bd_dlgprc_param.binded_key);
-						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param.binded_key, HkStrType::VK, L"Rebind ", L"...").c_str());
-						//Warning: POPUP menu item modified by position, so every time menu in Res.rc is changed next line should be modified accordingly
-						sender->ModifyIconMenu(2, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), 2), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key, HkStrType::FULL).c_str()); 
+						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(bd_dlgprc_param.binded_key, L"Rebind ", L"...").c_str());
+						sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key).c_str()); 
 					case BD_DLGPRC_CANCEL:
 						hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
 						if (hk_was_running&&!hk_engine->Start()) break;

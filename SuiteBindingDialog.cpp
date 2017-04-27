@@ -19,7 +19,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
 				bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)lParam;
 				
-				SetWindowText(hwndDlg, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->settings->GetBindedKey(), HkStrType::VK, L"Rebind ").c_str());
+				SetWindowText(hwndDlg, GetHotkeyString(bd_dlgprc_param->settings->GetBindedKey(), L"Rebind ").c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
@@ -49,7 +49,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				EnableWindow(GetDlgItem(hwndDlg, IDC_CANCEL_SC), TRUE);
 				//We should set focus to default button (it's not set by default because button was disabled) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
 				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CONFIRM_SC), TRUE);
-				SetDlgItemText(hwndDlg, IDC_BD_VIEWER, GetHotkeyString(ModKeyType::DONT_CARE, bd_dlgprc_param->binded_key, HkStrType::VK, L"Rebind to ", 
+				SetDlgItemText(hwndDlg, IDC_BD_VIEWER, GetHotkeyString(bd_dlgprc_param->binded_key, L"Rebind to ", 
 					GetHotkeyWarning(bd_dlgprc_param->settings->GetModKey(), bd_dlgprc_param->binded_key, L"?\nWarning: may not work with ", L" modifier key!", L"?").c_str()).c_str());
 			}
 			return TRUE;

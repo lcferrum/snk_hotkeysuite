@@ -25,13 +25,14 @@ extern "C" bool LongPressCtrlShiftEventHandler(KeyTriplet* this_ptr, WPARAM wPar
 
 //This version of KeyTriplet utilizes assembler-otimized callbacks for lowlevel keyboard hook HOOKPROC
 //For each modkey pair variation and single/long press mode we have it's own callback (6 in total)
-//It's somehow a code bloat but in the end we get less branching
+//It's somehow a code bloat, but in the end we get less branching
 //Funny thing is that resulting compiled object is smaller than pure-C++ version anyway
 //Some 57% smaller, and 14 times faster (though we are still talking about nanoseconds of execution time with both versions)
-//Resulting exe packed w/ UPX is also smaller but not considerably (around half-Kb)
+//Resulting exe packed w/ UPX is also smaller but not considerably (around half-KB)
 
 KeyTriplet::KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l):
-	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_pi{}, hk_si{sizeof(STARTUPINFO)}
+	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_pi{},
+	hk_si{sizeof(STARTUPINFO), NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, STARTF_USESHOWWINDOW, SW_SHOWNORMAL}
 {}
 
 inline void KeyTriplet::ResetEventHandler()

@@ -90,10 +90,10 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str()); 
 
 	//It is possible to set initial stack commit size for hotkey hook thread
-	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4kB for MinGW/Clang)
-	//It was observed (on Win Server 2012 R2 x64 test machine) that hotkey hook thread consumes around 2kB of stack at it's peak usage when not triggered (i.e. no hotkey press actually happens)
-	//When hotkey press happens, stack peak usage jumps to around 9kB (thanks to CreateProcess call)
-	//Because most of the time hook thread stays in it's untriggered state, we keep default initial commit size value from PE header (i.e. 4kB)
+	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4 KB for MinGW/Clang)
+	//It was observed (on Win Server 2012 R2 x64 test machine) that hotkey hook thread consumes around 2 KB of stack at it's peak usage when not triggered (i.e. no hotkey press actually happens)
+	//When hotkey press happens, stack peak usage jumps to around 9 KB (thanks to CreateProcess call)
+	//Because most of the time hook thread stays in it's untriggered state, we keep default initial commit size value from PE header (i.e. 4 KB)
 	//Commit size will grow automatically if more stack space is needed by the thread
 	if (!SnkHotkey->StartNew(std::bind(OnKeyTriplet.CreateEventHandler(settings), &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2))) {
 		ErrorMessage(L"Failed to set keyboard hook!");

@@ -95,7 +95,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//When hotkey press happens, stack peak usage jumps to around 9 KB (thanks to CreateProcess call)
 	//Because most of the time hook thread stays in it's untriggered state, we keep default initial commit size value from PE header (i.e. 4 KB)
 	//Commit size will grow automatically if more stack space is needed by the thread
-	if (!SnkHotkey->StartNew(std::bind(OnKeyTriplet.CreateEventHandler(settings), &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2))) {
+	if (!SnkHotkey->StartNew((LPARAM)&OnKeyTriplet, OnKeyTriplet.CreateEventHandler(settings))) {
 		ErrorMessage(L"Failed to set keyboard hook!");
 		return ERR_SUITEMAIN+3;
 	}
@@ -181,7 +181,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				sender->EnableIconMenuItem(IDM_EDIT_LHK, MF_BYCOMMAND|MF_ENABLED);
 				settings->SetLongPress(true);
 			}
-			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_ALT:
@@ -189,7 +189,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_ALT);
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey()).c_str()); 
-			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_SHIFT_ALT:
@@ -197,7 +197,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_SHIFT_ALT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::SHIFT_ALT);
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey()).c_str()); 
-			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CTRL_SHIFT:
@@ -205,7 +205,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->CheckIconMenuRadioItem(IDM_SET_CTRL_ALT, IDM_SET_CTRL_SHIFT, IDM_SET_CTRL_SHIFT, MF_BYCOMMAND);
 			settings->SetModKey(ModKeyType::CTRL_SHIFT);
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey()).c_str()); 
-			hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 		case IDM_SET_CUSTOM:
@@ -242,7 +242,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						sender->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(bd_dlgprc_param.binded_key, L"Rebind ", L"...").c_str());
 						sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), bd_dlgprc_param.binded_key).c_str()); 
 					case BD_DLGPRC_CANCEL:
-						hk_engine->Set(std::bind(hk_triplet->CreateEventHandler(settings), hk_triplet, std::placeholders::_1, std::placeholders::_2));
+						hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 						if (hk_was_running&&!hk_engine->Start()) break;
 						sender->Enable();
 						return true;
@@ -252,7 +252,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 #ifdef DEBUG
 		case IDM_DEBUG:
 			hk_was_running=hk_engine->Stop();
-			hk_engine->Set(DebugEventHandler);
+			hk_engine->Set(0, DebugEventHandler);
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 #endif

@@ -4,7 +4,8 @@
 #define OBJECT_WAIT_TIMEOUT	5000	//5 secs
 
 std::unique_ptr<HotkeyEngine> HotkeyEngine::instance;
-HotkeyEngine::KeyPressFn HotkeyEngine::OnKeyPress;
+LPARAM HotkeyEngine::event_param=0;
+HotkeyEngine::KeyPressFn HotkeyEngine::OnKeyPress=NULL;
 
 //When exiting or terminating thread we should set exit code
 //Here it is just formality because hook's thread exit code is never queried and not passed outside of class
@@ -76,20 +77,22 @@ bool HotkeyEngine::Start()
 	return false;
 }
 
-bool HotkeyEngine::Set(KeyPressFn OnKeyPress, size_t stack_commit)
+bool HotkeyEngine::Set(LPARAM event_param, KeyPressFn OnKeyPress, size_t stack_commit)
 {
 	if (!running) {
-		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		HotkeyEngine::OnKeyPress=OnKeyPress;
+		this->event_param=event_param;
 		this->stack_commit=stack_commit;
 		return true;
 	} else
 		return false;
 }
 
-bool HotkeyEngine::StartNew(KeyPressFn OnKeyPress, size_t stack_commit)
+bool HotkeyEngine::StartNew(LPARAM event_param, KeyPressFn OnKeyPress, size_t stack_commit)
 {
 	if (!running) {
-		HotkeyEngine::OnKeyPress=std::move(OnKeyPress);
+		HotkeyEngine::OnKeyPress=OnKeyPress;
+		this->event_param=event_param;
 		this->stack_commit=stack_commit;
 		return Start();
 	} else
@@ -120,7 +123,7 @@ LRESULT CALLBACK HotkeyEngine::LowLevelKeyboardProc(int nCode, WPARAM wParam, LP
 {
 	//HOOKPROC requires that on less-than-zero nCode CallNextHookEx should be returned immediately
 	//We should return non-zero value if event shouldn't be passed further down the keyboard handlers chain (OnKeyPress returned TRUE)
-	if (nCode>=0&&OnKeyPress(wParam, (KBDLLHOOKSTRUCT*)lParam))
+	if (nCode>=0&&OnKeyPress(event_param, wParam, (KBDLLHOOKSTRUCT*)lParam))
 		return 1;
 	
 	//Let CallNextHookEx handle everything else

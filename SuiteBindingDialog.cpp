@@ -2,7 +2,6 @@
 #include "SuiteBindingDialog.h"
 #include "SuiteCommon.h"
 #include "Res.h"
-#include <functional>
 
 INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -35,7 +34,7 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				}
 				
 				//If we fail with starting binding keyboard hook - exit immediately with BD_DLGPRC_ERROR result
-				if (!bd_dlgprc_param->hk_engine->StartNew(std::bind(BindKeyEventHandler, hwndDlg, WM_BINDSC, std::placeholders::_1, std::placeholders::_2)))
+				if (!bd_dlgprc_param->hk_engine->StartNew((LPARAM)hwndDlg, BindKeyEventHandler))
 					EndDialog(hwndDlg, BD_DLGPRC_ERROR);
 				
 				return TRUE;

@@ -2,14 +2,11 @@
 #define SUITEHOTKEYFUNCTIONS_H
 
 #include "SuiteSettings.h"
+#include "HotkeyEngine.h"
 #include <windows.h>
 
 class KeyTriplet {
-#ifndef _WIN64
-	typedef bool (__cdecl *EventHandlerFn)(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*);
-#else
-	typedef bool (*EventHandlerFn)(KeyTriplet*, WPARAM, KBDLLHOOKSTRUCT*);
-#endif
+	typedef bool (HKECALL *EventHandlerFn)(LPARAM, WPARAM, KBDLLHOOKSTRUCT*);
 private:
 	DWORD hk_sc;
 	DWORD hk_ext;
@@ -29,10 +26,10 @@ public:
 	EventHandlerFn CreateEventHandler(const SuiteSettings *settings);
 };
 
-bool BindKeyEventHandler(HWND dlg_hwnd, UINT bind_wm, WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
 
 #ifdef DEBUG
-bool DebugEventHandler(WPARAM wParam, KBDLLHOOKSTRUCT* kb_event);
+bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
 #endif
 
 #endif //SUITEHOTKEYFUNCTIONS_H

@@ -194,6 +194,14 @@ BOOL TskbrNtfAreaIcon::CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT id
 	return CheckMenuRadioItem(icon_menu, idFirst, idLast, idCheck, uFlags);
 }
 
+UINT TskbrNtfAreaIcon::GetIconMenuState(UINT uId, UINT uFlags)
+{
+	if (!valid)
+		return FALSE;
+	
+	return GetMenuState(icon_menu, uId, uFlags);
+}
+
 HWND TskbrNtfAreaIcon::GetIconWindow()
 {
 	if (valid)

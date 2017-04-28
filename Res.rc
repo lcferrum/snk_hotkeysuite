@@ -69,7 +69,8 @@ BEGIN
 		MENUITEM "On long press...", IDM_EDIT_LHK
 		MENUITEM SEPARATOR
 #ifdef DEBUG
-		MENUITEM "Set DEBUG output", IDM_DEBUG
+		MENUITEM "Keyboard monitor", IDM_DEBUG
+		MENUITEM SEPARATOR
 #endif
 		MENUITEM "About...", IDM_ABOUT
 		MENUITEM "Exit", IDM_EXIT

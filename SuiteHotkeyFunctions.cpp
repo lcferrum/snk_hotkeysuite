@@ -21,7 +21,6 @@ extern "C" bool HKECALL LongPressCtrlShiftEventHandler(LPARAM event_param, WPARA
 //It's somehow a code bloat, but in the end we get less branching
 //Funny thing is that resulting compiled object is smaller than pure-C++ version anyway
 //Some 57% smaller, and 14 times faster (though we are still talking about nanoseconds of execution time with both versions)
-//Resulting exe packed w/ UPX is also smaller but not considerably (around half-KB)
 
 KeyTriplet::KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l):
 	hk_sc(DEFAULT_SC), hk_ext(DEFAULT_EXT), hk_state(0), hk_engaged(0), hk_down_tick(0), hk_cmdline_s(cmdline_s), hk_cmdline_l(cmdline_l), hk_pi{},
@@ -89,7 +88,8 @@ bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTR
 				((llkh_msg==WM_KEYUP||llkh_msg==WM_SYSKEYUP)?L"KEYUP":L"KEYDOWN")<<
 				L" VK: "<<llkh_struct->vkCode<<
 				L" SC: "<<llkh_struct->scanCode<<
-				L" KEY: \""<<(GetKeyNameText((llkh_struct->scanCode&0xFF)<<16|(llkh_struct->flags&LLKHF_EXTENDED)<<24, key_buf, MAX_PATH)?key_buf:L"UNKNOWN")<<L"\""<<
+				L" GetKeyNameText: \""<<(GetKeyNameText((llkh_struct->scanCode&0xFF)<<16|(llkh_struct->flags&LLKHF_EXTENDED)<<24, key_buf, MAX_PATH)?key_buf:L"")<<L"\""<<
+				L" GetHotkeyString: \""<<GetHotkeyString({LOBYTE(llkh_struct->vkCode) /* vk */, LOBYTE(llkh_struct->scanCode) /* sc */, (bool)(llkh_struct->flags&LLKHF_EXTENDED) /* ext */})<<L"\""<<
 				(llkh_struct->scanCode&FAKE_SC?L" FAKE":L"")<<
 				(llkh_struct->scanCode?L"":L" NULL")<<
 				((llkh_msg==WM_SYSKEYDOWN||llkh_msg==WM_SYSKEYUP)?L" SYS":L"")<<

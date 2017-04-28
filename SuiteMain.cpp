@@ -252,7 +252,15 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 #ifdef DEBUG
 		case IDM_DEBUG:
 			hk_was_running=hk_engine->Stop();
-			hk_engine->Set(0, DebugEventHandler);
+			if (sender->GetIconMenuState(IDM_DEBUG, MF_BYCOMMAND)&MF_CHECKED) {
+				sender->CheckIconMenuItem(IDM_DEBUG, MF_BYCOMMAND|MF_UNCHECKED);
+				sender->EnableIconMenuItem(POS_SETTINGS, MF_BYPOSITION|MF_ENABLED);
+				hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
+			} else {
+				sender->CheckIconMenuItem(IDM_DEBUG, MF_BYCOMMAND|MF_CHECKED);
+				sender->EnableIconMenuItem(POS_SETTINGS, MF_BYPOSITION|MF_GRAYED);
+				hk_engine->Set(0, DebugEventHandler);
+			}
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 #endif

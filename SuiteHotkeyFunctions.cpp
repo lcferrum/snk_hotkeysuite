@@ -1,6 +1,5 @@
 #include "SuiteHotkeyFunctions.h"
 #include "SuiteCommon.h"
-#include "Res.h"
 
 #ifdef DEBUG
 #include <iostream>
@@ -8,12 +7,14 @@
 
 #define FAKE_SC	0x200	//Undocumented windows fake scancode flag
 
-extern "C" bool HKECALL SinglePressCtrlAltEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
-extern "C" bool HKECALL SinglePressShiftAltEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
-extern "C" bool HKECALL SinglePressCtrlShiftEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
-extern "C" bool HKECALL LongPressCtrlAltEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
-extern "C" bool HKECALL LongPressShiftAltEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
-extern "C" bool HKECALL LongPressCtrlShiftEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
+//All these externs should be actually defined as KeyTriplet friends because they access it's private members
+//But those are externs and compiler can't check what they actually do with KeyTriplet so whatever
+extern "C" bool HKECALL SinglePressCtrlAltEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
+extern "C" bool HKECALL SinglePressShiftAltEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
+extern "C" bool HKECALL SinglePressCtrlShiftEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
+extern "C" bool HKECALL LongPressCtrlAltEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
+extern "C" bool HKECALL LongPressShiftAltEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
+extern "C" bool HKECALL LongPressCtrlShiftEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
 
 //This version of KeyTriplet utilizes assembler-otimized callbacks for lowlevel keyboard hook HOOKPROC
 //For each modkey pair variation and single/long press mode we have it's own callback (6 in total)
@@ -34,7 +35,7 @@ inline void KeyTriplet::ResetEventHandler()
 	hk_down_tick=0; 
 }
 
-KeyTriplet::EventHandlerFn KeyTriplet::CreateEventHandler(const SuiteSettings *settings) 
+HotkeyEngine::KeyPressFn KeyTriplet::CreateEventHandler(const SuiteSettings *settings) 
 {
 	ResetEventHandler();
 	hk_sc=settings->GetBindedKey().sc;
@@ -53,7 +54,7 @@ KeyTriplet::EventHandlerFn KeyTriplet::CreateEventHandler(const SuiteSettings *s
 }
 
 #ifdef DEBUG
-bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event)
+bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct)
 {
 	//Good paper on scancodes can be found here http://www.quadibloc.com/comp/scan.htm or in "Windows Platform Design Notes / Keyboard Scan Code Specification"
 	//Over time IBM PC keyboards evolved, received new keys but maintained backward compatibility with software that expects some old as fuck 83-key keyboard
@@ -85,33 +86,33 @@ bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTR
 
 	wchar_t key_buf[MAX_PATH];
 	std::wcerr<<std::hex<<
-				((kb_param==WM_KEYUP||kb_param==WM_SYSKEYUP)?L"KEYUP":L"KEYDOWN")<<
-				L" VK: "<<kb_event->vkCode<<
-				L" SC: "<<kb_event->scanCode<<
-				L" KEY: \""<<(GetKeyNameText((kb_event->scanCode&0xFF)<<16|(kb_event->flags&LLKHF_EXTENDED)<<24, key_buf, MAX_PATH)?key_buf:L"UNKNOWN")<<L"\""<<
-				(kb_event->scanCode&FAKE_SC?L" FAKE":L"")<<
-				(kb_event->scanCode?L"":L" NULL")<<
-				((kb_param==WM_SYSKEYDOWN||kb_param==WM_SYSKEYUP)?L" SYS":L"")<<
+				((llkh_msg==WM_KEYUP||llkh_msg==WM_SYSKEYUP)?L"KEYUP":L"KEYDOWN")<<
+				L" VK: "<<llkh_struct->vkCode<<
+				L" SC: "<<llkh_struct->scanCode<<
+				L" KEY: \""<<(GetKeyNameText((llkh_struct->scanCode&0xFF)<<16|(llkh_struct->flags&LLKHF_EXTENDED)<<24, key_buf, MAX_PATH)?key_buf:L"UNKNOWN")<<L"\""<<
+				(llkh_struct->scanCode&FAKE_SC?L" FAKE":L"")<<
+				(llkh_struct->scanCode?L"":L" NULL")<<
+				((llkh_msg==WM_SYSKEYDOWN||llkh_msg==WM_SYSKEYUP)?L" SYS":L"")<<
 				//0x00000002 is LLKHF_LOWER_IL_INJECTED not found in MinGW-w64 4.9.2 winuser.h
-				(kb_event->flags&(0x00000002|LLKHF_INJECTED)?L" INJ":L"")<<
-				(kb_event->flags&LLKHF_EXTENDED?L" EXT":L"")<<
-				(kb_event->flags&LLKHF_ALTDOWN?L" ALT":L"")<<
+				(llkh_struct->flags&(0x00000002|LLKHF_INJECTED)?L" INJ":L"")<<
+				(llkh_struct->flags&LLKHF_EXTENDED?L" EXT":L"")<<
+				(llkh_struct->flags&LLKHF_ALTDOWN?L" ALT":L"")<<
 				std::dec<<std::endl;
 				
 	return false;
 }
 #endif
 
-bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event)
+bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct)
 {
-	//For a long story behind scancodes see KeyTriplet::OnKeyPress above
+	//For a long story behind scancodes see DebugEventHandler above
 
 	//It is possible to receive zero scancode if some other program artificially creates keyboard events
 	//Fake windows scancodes are discarded along with these zero scancodes
-	if (kb_event->scanCode&&!(kb_event->scanCode&FAKE_SC)&&(kb_param==WM_KEYDOWN||kb_param==WM_SYSKEYDOWN)) {
+	if (llkh_struct->scanCode&&!(llkh_struct->scanCode&FAKE_SC)&&(llkh_msg==WM_KEYDOWN||llkh_msg==WM_SYSKEYDOWN)) {
 		//Ignoring Ctrl, Alt and Shift
 		//This also helps detecting Break because of additonal Ctrl sent before every Break
-		switch (kb_event->vkCode) {
+		switch (llkh_struct->vkCode) {
 			case VK_LMENU:
 			case VK_RMENU:
 			case VK_MENU:
@@ -123,7 +124,7 @@ bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKS
 			case VK_CONTROL:
 				break;
 			default:
-				BINDED_KEY binded_key={LOBYTE(kb_event->vkCode) /* vk */, LOBYTE(kb_event->scanCode) /* sc */, (bool)(kb_event->flags&LLKHF_EXTENDED) /* ext */};
+				BINDED_KEY binded_key={LOBYTE(llkh_struct->vkCode) /* vk */, LOBYTE(llkh_struct->scanCode) /* sc */, (bool)(llkh_struct->flags&LLKHF_EXTENDED) /* ext */};
 				//We are passing BINDED_KEY as WPARAM because, even taking align into account, it spans 3 byte which is less than WPARAM size on both x86 and x86_64
 				static_assert(sizeof(BINDED_KEY)<=sizeof(WPARAM), L"sizeof(BINDED_KEY) should be less or equal sizeof(WPARAM)");
 				PostMessage((HWND)event_param, WM_BINDSC, (WPARAM)binded_key.tuple, 0);

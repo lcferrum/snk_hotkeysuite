@@ -36,13 +36,15 @@ private:
 	void ShellNotifyIconModifyOrAdd();
 public:
 	static TskbrNtfAreaIcon* MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue);	
-	bool IsValid();
+	bool IsValid() { return valid; }
 	void ChangeIconTooltip(const wchar_t* icon_tooltip);
 	void RefreshIcon();
 	void ChangeIcon(UINT icon_resid);
 	void Close();
 	void CloseAndQuit(int exit_code=0);
-	void Enable(bool state=true) { enabled=state; }
+	void Enable() { enabled=true; }
+	void Disable() { enabled=false; }
+	bool IsEnabled() { return enabled; }
 	HMENU GetIconMenu();
 	HWND GetIconWindow();
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);

@@ -1,8 +1,6 @@
 #ifndef RES_H
 #define RES_H
 
-#include <windows.h>
-
 #define IDI_HSTNAICO		101
 #define IDR_ICONMENU		102
 #define IDD_BINDINGDLG		103
@@ -34,8 +32,5 @@
 #define IDC_EXE_OPEN		30013
 
 #define POS_SETTINGS		2
-
-#define WM_HSTNAICO			(WM_USER+1)
-#define WM_BINDSC			(WM_USER+2)
 
 #endif //RES_H

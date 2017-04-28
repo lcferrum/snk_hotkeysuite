@@ -15,6 +15,9 @@
 #define ERR_SUITEMAIN		0x0200
 #define ERR_SUITEEXTREL		0x0300
 
+#define WM_HSTNAICO			(WM_USER+1)
+#define WM_BINDSC			(WM_USER+2)
+
 typedef struct {
 	union {
 		struct {

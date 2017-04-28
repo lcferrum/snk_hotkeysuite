@@ -11,11 +11,11 @@
 #define HKECALL __cdecl
 #endif
 
-//As with TskbrNtfAreaIcon. this is also singleton class
+//As with TskbrNtfAreaIcon this is also singleton class
 //Thoughts are the same - things are pretty incapsulated but only one instance is allowed to keep things simple giving customization options
 class HotkeyEngine {
 public:
-	typedef bool (HKECALL *KeyPressFn)(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
+	typedef bool (HKECALL *KeyPressFn)(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
 private:
 	static std::unique_ptr<HotkeyEngine> instance;
 	static LPARAM event_param;	//Custom value to be passed to the OnKeyPress event handler

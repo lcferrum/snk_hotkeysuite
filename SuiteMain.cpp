@@ -222,7 +222,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//A: DialogBoxParam won't return and last created message loop will still run until it's own dialog exits
 				//A: In the end, randomly closing dialogs, we get proper nested message loop unwinding (i.e. DialogBoxParam will return sequentially starting from the last called)
 				//All in all, it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
-				sender->Enable(false);
+				sender->Disable();
 				hk_was_running=hk_engine->Stop();
 				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, {0, 0, false}, NULL};
 				//Several words on InitCommonControls() and InitCommonControlsEx()
@@ -259,7 +259,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 		case IDM_ABOUT:
 			{
 				//Blah blah blah... see comments on IDM_SET_CUSTOM
-				sender->Enable(false);
+				sender->Disable();
 				hk_was_running=hk_engine->Stop();
 				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, (LPARAM)settings)) {
 					case DLGBX_FN_INV_PARAM:

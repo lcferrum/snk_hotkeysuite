@@ -6,7 +6,6 @@
 #include <windows.h>
 
 class KeyTriplet {
-	typedef bool (HKECALL *EventHandlerFn)(LPARAM, WPARAM, KBDLLHOOKSTRUCT*);
 private:
 	DWORD hk_sc;
 	DWORD hk_ext;
@@ -23,13 +22,13 @@ private:
 public:
 	KeyTriplet(wchar_t* cmdline_s, wchar_t* cmdline_l);
 	void ResetEventHandler();
-	EventHandlerFn CreateEventHandler(const SuiteSettings *settings);
+	HotkeyEngine::KeyPressFn CreateEventHandler(const SuiteSettings *settings);
 };
 
-bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
+bool HKECALL BindKeyEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
 
 #ifdef DEBUG
-bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM kb_param, KBDLLHOOKSTRUCT* kb_event);
+bool HKECALL DebugEventHandler(LPARAM event_param, WPARAM llkh_msg, KBDLLHOOKSTRUCT* llkh_struct);
 #endif
 
 #endif //SUITEHOTKEYFUNCTIONS_H

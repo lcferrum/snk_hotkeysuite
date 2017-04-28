@@ -102,12 +102,6 @@ inline void TskbrNtfAreaIcon::ShellNotifyIconModifyOrAdd()
 		Shell_NotifyIcon(NIM_ADD, &icon_ntfdata);
 }
 
-bool TskbrNtfAreaIcon::IsValid()
-{
-	return valid;
-}
-
-
 HMENU TskbrNtfAreaIcon::GetIconMenu()
 {
 	if (valid)
@@ -220,11 +214,11 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
 			case WM_CLOSE:			//Though icon window has no (X) button, WM_CLOSE is sent when opening menu and pressing Alt+F4, by Task Scheduler to GUI apps in response to stopping task and by OS to GUI apps when it is ending user session
-				if (instance->enabled&&OnWmCommand)
+				if (OnWmCommand)
 					OnWmClose(instance.get());
 				return 0;
 			case WM_ENDSESSION:		//WM_ENDSESSION w/ wParam=TRUE is sent to apps when user session is about to end - after this message is answered, app can be terminated at any moment (even before exiting message loop)
-				if (wParam==TRUE&&instance->enabled&&OnWmEndsessionTrue)
+				if (wParam==TRUE&&OnWmEndsessionTrue)
 					OnWmEndsessionTrue(instance.get(), lParam&ENDSESSION_CRITICAL);
 				return 0;
 			case WM_COMMAND:

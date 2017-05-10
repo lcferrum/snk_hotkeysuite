@@ -63,8 +63,10 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 		return;
 	}
 	
-	//If process has higher privileges than Explorer, UIPI will block WM_TASKBARCREATED by default
-	//This happens when process is run with Administrator privileges under Vista and above
+	//If process has higher privileges than Explorer, UIPI by default will block all messages with value above WM_USER
+	//That includes TaskbarCreated message because RegisterWindowMessage assigns values in the range 0xC000-0xFFFF while WM_USER is 0x0400
+	//To change this behaviour we should unblock TaskbarCreated using ChangeWindowMessageFilter
+	//This only applies to processes running with Administrator privileges under Vista and above
 	if (fnChangeWindowMessageFilter)
 		fnChangeWindowMessageFilter(WmTaskbarCreated, MSGFLT_ADD);
 		
@@ -120,7 +122,7 @@ void TskbrNtfAreaIcon::ChangeIconTooltip(const wchar_t* icon_tooltip)
 	ShellNotifyIconModifyOrAdd();
 }
 
-inline void TskbrNtfAreaIcon::RefreshIcon()	//Thing is inline because it can be potentially run as timed event to keep icon always visible
+void TskbrNtfAreaIcon::RefreshIcon()
 {
 	if (!valid)
 		return;

@@ -87,11 +87,6 @@ public:
 	SuiteSettingsIni();
 };
 
-class SuiteSettingsSection: public SuiteSettingsIni {
-public:
-	SuiteSettingsSection(const std::wstring &ini_section);
-};
-
 class SuiteSettingsAppData: public SuiteSettingsIni {
 private:
 	enum class Location:char {AUTO, CURRENT_USER, ALL_USERS};

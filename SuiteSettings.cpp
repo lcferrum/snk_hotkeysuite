@@ -1,7 +1,9 @@
 #include "SuiteSettings.h"
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
+#include <algorithm>
 #include <cstdlib>
+#include <cctype>
 #include <cwchar>
 #include <shlobj.h>
 
@@ -28,6 +30,9 @@
 #define VAL_CTRLALT						L"CtrlAlt"
 #define VAL_SHIFTALT					L"ShiftAlt"
 #define VAL_CTRLSHIFT					L"CtrlShift"
+#define VAL_LC_CTRLALT					L"ctrlalt"
+#define VAL_LC_SHIFTALT					L"shiftalt"
+#define VAL_LC_CTRLSHIFT				L"ctrlshift"
 
 #define DEFAULT_SHK_CFG_PATH	L"on_hotkey.txt"
 #define DEFAULT_LHK_CFG_PATH	L"on_hotkey_long_press.txt"
@@ -199,11 +204,12 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	
 	std::wstring mod_key_str;
 	IniSzQueryValue(KEY_HOTKEYMODIFIERKEY, mod_key_str);
-	if (!mod_key_str.compare(VAL_CTRLALT)) {
+	std::transform(mod_key_str.begin(), mod_key_str.end(), mod_key_str.begin(), tolower);
+	if (!mod_key_str.compare(VAL_LC_CTRLALT)) {
 		mod_key=ModKeyType::CTRL_ALT;
-	} else if (!mod_key_str.compare(VAL_SHIFTALT)) {
+	} else if (!mod_key_str.compare(VAL_LC_SHIFTALT)) {
 		mod_key=ModKeyType::SHIFT_ALT;
-	} else if (!mod_key_str.compare(VAL_CTRLSHIFT)) {
+	} else if (!mod_key_str.compare(VAL_LC_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
 	}
 	
@@ -303,10 +309,10 @@ bool SuiteSettingsIni::SaveSettings()
 	if (changed&CHG_SNKPATH&&!WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (changed&CHG_HOTKEYSCANCODE&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString((binded_key.ext?0xE000:0x0)|binded_key.sc, 8).c_str(), ini_path.c_str()))
+	if (changed&CHG_HOTKEYSCANCODE&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString((binded_key.ext?0xE000:0x0)|binded_key.sc, 2).c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
-	if (changed&CHG_HOTKEYVIRTUALKEY&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_key.vk, 8).c_str(), ini_path.c_str()))
+	if (changed&CHG_HOTKEYVIRTUALKEY&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYVIRTUALKEY, DwordToHexString(binded_key.vk, 2).c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
 	if (changed&CHG_HOTKEYMODIFIERKEY)
@@ -326,8 +332,7 @@ bool SuiteSettingsIni::SaveSettings()
 		}
 	
 	if (changed&CHG_LONGPRESSENABLED) {
-		DWORD long_press_dw=long_press?1:0;
-		if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, DwordToHexString(long_press_dw, 8).c_str(), ini_path.c_str()))
+		if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, to_wstring_wrapper(long_press).c_str(), ini_path.c_str()))
 			save_succeeded=false;
 	}
 	
@@ -338,12 +343,6 @@ bool SuiteSettingsIni::SaveSettings()
 	
 	return save_succeeded;
 }
-
-//------------------------------ SECTION -------------------------------
-
-SuiteSettingsSection::SuiteSettingsSection(const std::wstring &ini_section):
-	SuiteSettingsIni(std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_SHK_CFG_PATH, std::wstring(L"%HS_EXE_PATH%\\")+StringToLower(ini_section)+L"_" DEFAULT_LHK_CFG_PATH, GetExecutableFileName(L"\\" DEFAULT_INI_PATH), ini_section)
-{}
 
 //------------------------------ APPDATA -------------------------------
 
@@ -514,11 +513,12 @@ SuiteSettingsReg::SuiteSettingsReg(Hive hive):
 	
 	std::wstring mod_key_str;
 	RegSzQueryValue(reg_key, KEY_HOTKEYMODIFIERKEY, mod_key_str);
-	if (!mod_key_str.compare(VAL_CTRLALT)) {
+	std::transform(mod_key_str.begin(), mod_key_str.end(), mod_key_str.begin(), tolower);
+	if (!mod_key_str.compare(VAL_LC_CTRLALT)) {
 		mod_key=ModKeyType::CTRL_ALT;
-	} else if (!mod_key_str.compare(VAL_SHIFTALT)) {
+	} else if (!mod_key_str.compare(VAL_LC_SHIFTALT)) {
 		mod_key=ModKeyType::SHIFT_ALT;
-	} else if (!mod_key_str.compare(VAL_CTRLSHIFT)) {
+	} else if (!mod_key_str.compare(VAL_LC_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
 	}
 	
@@ -639,7 +639,7 @@ bool SuiteSettingsReg::SaveSettings()
 		}
 	
 	if (changed&CHG_LONGPRESSENABLED) {
-		DWORD long_press_dw=long_press?1:0;
+		DWORD long_press_dw=long_press;
 		if (RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD))!=ERROR_SUCCESS)
 			save_succeeded=false;
 	}

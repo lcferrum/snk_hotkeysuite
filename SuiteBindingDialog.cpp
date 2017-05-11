@@ -57,6 +57,13 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 			bd_dlgprc_param->hk_engine->Stop();
 			EndDialog(hwndDlg, BD_DLGPRC_CANCEL);
 			return TRUE;
+		case WM_SYSCOMMAND:
+			//Dialog doesn't have menu so trap SC_KEYMENU
+			//This will prevent losing focus on pressing Alt key but won't prevent disable keyboard accelerators
+			if ((wParam&0xFFF0)==SC_KEYMENU)
+				return TRUE;
+			else
+				return FALSE;
 		case WM_DESTROY:
 			if (bd_dlgprc_param->bold_font)
 				DeleteObject(bd_dlgprc_param->bold_font);

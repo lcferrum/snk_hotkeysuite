@@ -4,7 +4,7 @@
 #include <typeinfo>
 
 namespace AboutDialog {
-	INT_PTR CALLBACK StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	INT_PTR CALLBACK HyperlinkProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam);
 }
 
 INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -32,14 +32,16 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hIcon, 0);
 				}
 				
+				// ------ HYPERLINK INITIALIZATION START -------
 				HWND hwndHlinkCtl=GetDlgItem(hwndDlg, IDC_PROJECT_HOME);
 				
+				//Sublassing Static control
 				SetProp(hwndHlinkCtl, L"PROP_ORIG_STATIC_PROC", (HANDLE)GetWindowLongPtr(hwndHlinkCtl, GWLP_WNDPROC));
-				SetWindowLongPtr(hwndHlinkCtl, GWLP_WNDPROC, (LONG_PTR)StaticProc);
+				SetWindowLongPtr(hwndHlinkCtl, GWLP_WNDPROC, (LONG_PTR)HyperlinkProc);
 				
 				//Resizing hyperlink to text size (so mouse hover will look properly)
 				//Also, setting default and underlined fonts for hyperlink
-				//Created font should be destroyed before destroying dialog so not to leak resources
+				//Created font should be destroyed before destroying dialog so not to leak resources (done in hyperlink subclass)
 				HFONT hFont=(HFONT)SendMessage(hwndHlinkCtl, WM_GETFONT, 0, 0);
 				SetProp(hwndHlinkCtl, L"PROP_DEF_FONT", (HANDLE)hFont);
 				HDC hdcHlinkCtl=GetDC(hwndHlinkCtl);
@@ -59,14 +61,16 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					if ((hFont=CreateFontIndirect(&logfont)))
 						SetProp(hwndHlinkCtl, L"PROP_ULINE_FONT", (HANDLE)hFont);
 				}
+				// ------ HYPERLINK INITIALIZATION END -------
 				
 				//We should set focus to default button (because we are returning FALSE from WM_INITDIALOG) but without bypassing dialog manager: https://blogs.msdn.microsoft.com/oldnewthing/20040802-00/?p=38283
 				SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hwndDlg, IDC_CLOSE_ABOUT), TRUE);
 				return FALSE;	//Returning false so not to set default focus on edit control
 			}
 		case WM_CTLCOLORSTATIC:
+			//Hyperlink related code - setting hyperlink text color
 			if (GetDlgItem(hwndDlg, IDC_PROJECT_HOME)==(HWND)lParam) {
-				SetTextColor((HDC)wParam, RGB(0, 0, 192));
+				SetTextColor((HDC)wParam, GetSysColor(COLOR_HOTLIGHT));	//TODO: check if avilable on NT4 - if not, check in runtime with GetSysColorBrush and substitute to RGB(0, 0, 192)
 				SetBkMode((HDC)wParam, TRANSPARENT);
 				return (INT_PTR)GetSysColorBrush(COLOR_BTNFACE);
 			} else
@@ -75,6 +79,13 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
 			EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
 			return TRUE;
+		case WM_SYSCOMMAND:
+			//Dialog doesn't have menu so trap SC_KEYMENU
+			//This will prevent losing focus on pressing Alt key but won't prevent disable keyboard accelerators
+			if ((wParam&0xFFF0)==SC_KEYMENU)
+				return TRUE;
+			else
+				return FALSE;
 		case WM_HELP:
 			//Received on F1
 			ShellExecute(NULL, L"open", GetExecutableFileName(L"\\README.TXT").c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -113,14 +124,16 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 	}
 }
 
-INT_PTR CALLBACK AboutDialog::StaticProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK AboutDialog::HyperlinkProc(HWND hwndCtl, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	//This is rather simple substitution for SysLink control from ComCtl32 v6+
 	//We are subclassing Static control to make it look and behave like some kind of hyperlink control
 	//This is mainly done with WM_CANCELMODE, WM_CAPTURECHANGED, WM_MOUSEMOVE and WM_LBUTTONDOWN messages to make underline on mouse hover
 	//We are using mouse capture to monitor when mouse leaves Static control
-	//Link is opened on WM_LBUTTONUP
-
+	//Link is opened on WM_LBUTTONUP, hyperlink text is set in .rc
+	//Also used with this subclass are WM_CTLCOLORSTATIC and WM_INITDIALOG (hyperlink initialization section) parent dialog's message handlers
+	//Static control should have SS_NOTIFY style set for this subclass to work
+	
 	WNDPROC orig_proc=(WNDPROC)GetProp(hwndCtl, L"PROP_ORIG_STATIC_PROC");
 
 	switch (uMsg) {

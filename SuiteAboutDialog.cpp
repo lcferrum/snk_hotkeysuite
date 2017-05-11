@@ -81,7 +81,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			return TRUE;
 		case WM_SYSCOMMAND:
 			//Dialog doesn't have menu so trap SC_KEYMENU
-			//This will prevent losing focus on pressing Alt key but won't prevent disable keyboard accelerators
+			//This will prevent losing focus on pressing Alt key but won't disable keyboard accelerators
 			if ((wParam&0xFFF0)==SC_KEYMENU)
 				return TRUE;
 			else

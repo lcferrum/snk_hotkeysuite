@@ -6,6 +6,7 @@
 #define IDD_BINDINGDLG		103
 #define IDI_HSSTOPICO		104
 #define IDD_ABOUTDLG		105
+#define IDI_HANDCUR			106
 #define IDM_EXIT			40001
 #define IDM_STOP_START		40002
 #define IDM_EDIT_SHK		40003

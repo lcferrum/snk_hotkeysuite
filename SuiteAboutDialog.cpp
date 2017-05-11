@@ -70,7 +70,11 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 		case WM_CTLCOLORSTATIC:
 			//Hyperlink related code - setting hyperlink text color
 			if (GetDlgItem(hwndDlg, IDC_PROJECT_HOME)==(HWND)lParam) {
-				SetTextColor((HDC)wParam, GetSysColor(COLOR_HOTLIGHT));	//TODO: check if avilable on NT4 - if not, check in runtime with GetSysColorBrush and substitute to RGB(0, 0, 192)
+				//If COLOR_HOTLIGHT is not available - use default blue color
+				if (GetSysColorBrush(COLOR_HOTLIGHT))
+					SetTextColor((HDC)wParam, GetSysColor(COLOR_HOTLIGHT));
+				else
+					SetTextColor((HDC)wParam, RGB(0, 0, 255));
 				SetBkMode((HDC)wParam, TRANSPARENT);
 				return (INT_PTR)GetSysColorBrush(COLOR_BTNFACE);
 			} else
@@ -181,11 +185,11 @@ INT_PTR CALLBACK AboutDialog::HyperlinkProc(HWND hwndCtl, UINT uMsg, WPARAM wPar
 			ShellExecute(NULL, L"open", L"https://github.com/lcferrum/snk_hotkeysuite", NULL, NULL, SW_SHOWNORMAL);
 			break;
 		case WM_SETCURSOR:
-			//Since IDC_HAND is not available on all operating systems, we will load the arrow cursor if IDC_HAND is not present
+			//If IDC_HAND is not available - load custom hand cursor
 			if (HCURSOR hCursor=LoadCursor(NULL, IDC_HAND))
 				SetCursor(hCursor);
 			else
-				SetCursor(LoadCursor(NULL, IDC_ARROW));
+				SetCursor(LoadCursor(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HANDCUR)));
 			//Don't need anyone else to change cursor here so returning TRUE
 			return TRUE;
 	}

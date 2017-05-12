@@ -87,6 +87,8 @@ endif
 
 # Clang 3.6.2 with includes from current MinGW-w64
 # pentium4 is Clang 3.6.2 default arch
+# Clang uses libraries from MinGW 4.7.2
+# i386 is MinGW 4.7.2 default arch
 ifeq ($(BUILD),Clang_362)
 	CC=clang++
 	WINDRES=windres
@@ -94,7 +96,7 @@ ifeq ($(BUILD),Clang_362)
 	CFLAGS+=-target i486-pc-windows-gnu -march=i486 -Wno-ignored-attributes -Wno-deprecated-register -Wno-inconsistent-dllimport -Wno-missing-declarations -Wno-unknown-attributes -DUMDF_USING_NTSTATUS -DOBSOLETE_WWINMAIN
 	LDFLAGS+=-Wl,--subsystem,windows
 	ifndef DEBUG
-		CFLAGS+=-Wno-unused-value -Wno-macro-redefined
+		CFLAGS+=-Wno-unused-value -Wno-macro-redefined -Wno-ignored-pragmas
 	endif
 ifeq ($(HOST),x86-64)
 $(error not implemented)
@@ -107,7 +109,7 @@ endif
 .PHONY: all exe clean upx install
 .INTERMEDIATE: $(OBJ)
 
-all: exe upx install
+all: exe install
 
 exe: $(SRC) $(TARGET)
 

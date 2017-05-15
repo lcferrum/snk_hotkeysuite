@@ -109,7 +109,7 @@ endif
 .PHONY: all exe clean upx install
 .INTERMEDIATE: $(OBJ)
 
-all: exe install
+all: exe
 
 exe: $(SRC) $(TARGET)
 

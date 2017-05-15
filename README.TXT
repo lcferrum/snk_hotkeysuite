@@ -85,6 +85,6 @@ In HotkeySuite menu you can choose to start/stop application, exit it or change
 various settings: enable/disable long press detection, change key combination
 used to launch SnK and edit SnK scripts used by launched SnK.
 
-5. Usage example
-----------------                              
+5. Default SnK script
+---------------------                         
 TBD

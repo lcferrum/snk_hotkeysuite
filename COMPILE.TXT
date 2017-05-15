@@ -10,8 +10,44 @@ Licensed under BSD license - see LICENSE.TXT file for details.
 
 2. General
 ----------
-TBD
+SnK HotkeySuite is written using C++11 and requires at least Windows NT4.
+General compilation steps:
+
+    1) Download sources from https://github.com/lcferrum/snk_hotkeysuite
+
+    2) Compile it using makefile
+
+    3) SnK itself is not included - download precompiled binaries or build it
+       from the sources
 
 3. Specific compiling instructions
 ----------------------------------
-TBD
+Current distribution only supports MinGW-w64 and Clang 3.6.2. If you intend to
+use compiled binary on Windows 2000 and later, it is recommended to compile
+using latest MinGW-w64 that can be installed through cygwin. The problem is
+that MinGW-w64 uses MSVCRT.DLL version incompatible with NT4. If you want
+resulting binaries to support this OS, you should use old version of 
+MinGW/Clang combination (latest verions to support needed MSVCRT.DLL are 4.7.2
+and 3.6.2 accordingly). MinGW 4.7.2 itself is not supported (because it's C++11
+support lacks some features used by the sources) but is needed for the Clang.
+Windows 9x and pre-NT4 versions are not supported in either case.
+
+Support for building installer is also inluded in makefile. For this to work
+you should install NSIS and make sure that makensis is availabe to make
+utility.
+
+It's not recommended to pack resulting binaries with UPX because it slightly
+lowers HotkeySuite performance.
+
+To build just binary, when using MinGW-w64 from under cygwin, switch to source
+directory and type (for x86 build):
+
+    make BUILD=MinGW-w64 HOST=x86
+
+Or, for x86-64 build:
+
+    make BUILD=MinGW-w64 HOST=x86-64
+	
+To build x86 binary with Clang 3.6.2 type the following:
+
+    make BUILD=Clang_362 HOST=x86

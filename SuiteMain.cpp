@@ -34,7 +34,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	std::wstring snk_path=settings->GetSnkPath();
 	DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
 	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		const wchar_t *wrn_msg=L"Path to SnK is not valid!\nPlease choose valid SnK path.";
+		const wchar_t *wrn_msg=L"Path to SnK is not valid!\n\nPlease choose valid SnK path.";
 		if (fnTaskDialog) {
 			int btn_clicked;
 			fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, wrn_msg, TDCBF_OK_BUTTON, TD_WARNING_ICON, &btn_clicked);

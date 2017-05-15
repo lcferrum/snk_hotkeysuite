@@ -43,7 +43,8 @@ If installer was used, HotkeySuite can be uninstalled using Uninstall shortcut
 in Start menu HotkeySuite folder (if it was created during install) or from
 Control Panel (in both cases, this will also uninstall bundled SnK). If
 HotkeySuite was installed from ZIP archive - no actual uninstallation is
-needed, just delete the folder where HotkeySuite was copied to.
+needed, just delete whatever was copied from archive with HotkeySuite settings
+file (.ini) and SnK scripts (.txt) stored in the same folder.
 
 5. Usage
 --------
@@ -53,27 +54,27 @@ of ZIP archive or choose not to run it automatically during install, launch it
 manually using executable or link in Start menu (if it was created during
 install). 
 
-If SnK is not found by HotkeySuite, it won't run and ask to specify valid SnK
-path in INI file. This may happen if you choose not to install bundled SnK
-distribution during install or downloaded HotkeySuite in the form of ZIP
-archive. In this case, if SnK is present on the system, edit INI accordingly or
+If SnK is not found by HotkeySuite, it won't run and will ask to select valid 
+windowless SnK executable. This may happen if you choose not to install bundled
+SnK distribution during install or downloaded HotkeySuite in the form of ZIP
+archive. In this case, select windowless SnK version present on the system or
 download SnK separately and place it's binaries in the same folder where
 HotkeySuite was installed.
 
-Settings are stored in INI files. If HotkeySuite was installed with installer,
+Settings are stored in INI file. If HotkeySuite was installed with installer,
 INI is located in user or common AppData folder (depending on installation
 type). Running HotkeySuite copied from ZIP archive creates portable
 installation - INI file will be stored in the same folder as HotkeySuite
 binary. Latter works only if HotkeySuite was not previously installed with
 installer, otherwise INI created by installer will be used instead. By default
 SnK scripts are stored in the same folder as INI file, but you can place them
-elsewhere and edit INI accrodingly. 
+elsewhere and edit INI accordingly. 
 
 Two environment variables are provided by HotkeySuite that you can use in INI
 path settings: %HS_EXE_PATH% and %HS_INI_PATH% - they provide absolute paths to
 executable and INI folders accordingly (w/o trailing backslash). Besides these
 two variables, you can use any other environment variable that is available at
-the time executable is run.
+execution time.
 
 When HotkeySuite is running - it's icon is present in the system tray. Right
 click on it to bring up menu. Double click to quickly stop/start HotkeySuite.
@@ -82,7 +83,7 @@ used to launch SnK.
 
 In HotkeySuite menu you can choose to start/stop application, exit it or change
 various settings: enable/disable long press detection, change key combination
-used to launch SnK and edit SnK script that is ...
+used to launch SnK and edit SnK scripts used by launched SnK.
 
 5. Usage example
 ----------------                              

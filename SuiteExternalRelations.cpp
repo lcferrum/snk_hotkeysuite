@@ -1,7 +1,6 @@
 #include "SuiteExternalRelations.h"
 #include "SuiteExterns.h"
 #include "SuiteCommon.h"
-#include <string>
 #include <windows.h>
 #include <initguid.h>
 #include <mstask.h>
@@ -23,6 +22,64 @@ namespace SuiteExtRel {
 	bool GetUserNameWrapper(std::wstring &sname, std::wstring &fname);
 	bool EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &key_value, DWORD &key_type);
 	size_t FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len);
+	bool LaunchSnkOpenDialogCom(bool &na, std::wstring &fpath);
+	bool LaunchSnkOpenDialogWin32(std::wstring &fpath);
+}
+
+bool SuiteExtRel::LaunchSnkOpenDialog(std::wstring &fpath)
+{
+	bool ret;
+	bool na;
+	
+	ret=LaunchSnkOpenDialogCom(na, fpath);
+	if (na)
+		return LaunchSnkOpenDialogWin32(fpath);
+	else
+		return ret;
+}
+
+bool SuiteExtRel::LaunchSnkOpenDialogCom(bool &na, std::wstring &fpath)
+{
+	na=true;
+	return false;
+}
+
+bool SuiteExtRel::LaunchSnkOpenDialogWin32(std::wstring &fpath)
+{
+	//TODO: Check GetOpenFileName availability on NT4/9x and it's behaviour (old-style/explorer-style) and description in old MSDN 
+	wchar_t buf[MAX_PATH]=L"";
+
+	OPENFILENAME ofn={
+		sizeof(OPENFILENAME),						//lStructSize
+		NULL,										//hwndOwner
+		NULL,										//hInstance
+		L"Executables\0*.exe\0All Files\0*.*\0",	//lpstrFilter
+		NULL,										//lpstrCustomFilter
+		0,											//nMaxCustFilter
+		1,											//nFilterIndex
+		buf,										//lpstrFile
+		MAX_PATH,									//nMaxFile
+		NULL,										//lpstrFileTitle
+		0,											//nMaxFileTitle
+		NULL,										//lpstrInitialDir
+		L"Select SnK Executable",					//lpstrTitle
+		OFN_DONTADDTORECENT||OFN_FILEMUSTEXIST,		//Flags
+		0,											//nFileOffset
+		0,											//nFileExtension
+		NULL,										//lpstrDefExt
+		0,											//lCustData
+		NULL,										//lpfnHook
+		NULL,										//lpTemplateName
+		NULL,										//pvReserved
+		0,											//dwReserved
+		0											//FlagsEx
+	};
+	
+	if (GetOpenFileName(&ofn)) {
+		fpath=buf;
+		return true;
+	} else
+		return false;
 }
 
 int SuiteExtRel::AddToAutorun(bool current_user, wchar_t** argv, int argc)

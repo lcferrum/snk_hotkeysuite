@@ -55,7 +55,7 @@ void ErrorMessage(const wchar_t* err_msg)
 		int btn_clicked;
 		fnTaskDialog(NULL, NULL, SNK_HS_TITLE, SNK_HS_TITLE L" encountered an error and will be closed", full_msg.c_str(), TDCBF_CLOSE_BUTTON, TD_ERROR_ICON, &btn_clicked);
 	} else {
-		full_msg+=L"\n\nPress 'OK' to close " SNK_HS_TITLE;
+		full_msg+=L"\n\nPress 'OK' to close " SNK_HS_TITLE ".";
 		MessageBox(NULL, full_msg.c_str(), SNK_HS_TITLE, MB_ICONERROR|MB_OK);
 	}
 }

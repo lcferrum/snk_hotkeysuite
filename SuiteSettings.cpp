@@ -79,6 +79,12 @@ void SuiteSettings::SetBindedKey(BINDED_KEY new_key_binding)
 	binded_key=new_key_binding; 
 }
 
+void SuiteSettings::SetSnkPath(const std::wstring &new_path)
+{
+	changed|=CHG_SNKPATH;
+	snk_path=new_path; 
+}
+
 std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &path) const
 { 
 	wchar_t dummy_buf;

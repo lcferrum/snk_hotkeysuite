@@ -1,6 +1,7 @@
 #ifndef SUITEEXTERNALRELATIONS_H
 #define SUITEEXTERNALRELATIONS_H
 
+#include <string>
 #include <windows.h>
 
 namespace SuiteExtRel {
@@ -10,6 +11,7 @@ namespace SuiteExtRel {
 	int Unschedule(bool current_user);
 	int AddToAutorun(bool current_user, wchar_t** argv, int argc);
 	int RemoveFromAutorun(bool current_user);
+	bool LaunchSnkOpenDialog(std::wstring &fpath);
 }
 
 #endif //SUITEEXTERNALRELATIONS_H

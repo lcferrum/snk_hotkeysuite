@@ -1,5 +1,6 @@
 #include "SuiteMain.h"
 #include "TaskbarNotificationAreaIcon.h"
+#include "SuiteExternalRelations.h"
 #include "SuiteHotkeyFunctions.h"
 #include "SuiteBindingDialog.h"
 #include "SuiteAboutDialog.h"
@@ -30,13 +31,24 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
 	
-	DWORD dwAttrib=GetFileAttributes(settings->GetSnkPath().c_str());
+	std::wstring snk_path=settings->GetSnkPath();
+	DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
 	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		ErrorMessage(L"Path to SnK is not valid! Correct it in HotkeySuite INI file!");
-		ShellExecute(NULL, L"open", settings->GetStoredLocation().c_str(), NULL, NULL, SW_SHOWNORMAL);
-		return ERR_SUITEMAIN+1;
+		const wchar_t *wrn_msg=L"Path to SnK is not valid!\nPlease choose valid SnK path.";
+		if (fnTaskDialog) {
+			int btn_clicked;
+			fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, wrn_msg, TDCBF_OK_BUTTON, TD_WARNING_ICON, &btn_clicked);
+		} else {
+			MessageBox(NULL, wrn_msg, SNK_HS_TITLE, MB_ICONWARNING|MB_OK);
+		}
+		if (SuiteExtRel::LaunchSnkOpenDialog(snk_path))
+			settings->SetSnkPath(snk_path);
+		else {
+			ErrorMessage(L"Path to SnK is not valid!");
+			return ERR_SUITEMAIN+1;
+		}
 	}	
-	std::wstring snk_cmdline_s=QuoteArgument(settings->GetSnkPath().c_str())+L" /sec /bpp +mb /pid="+to_wstring_wrapper(GetCurrentProcessId())+L" -mb /cmd=";
+	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +mb /pid="+to_wstring_wrapper(GetCurrentProcessId())+L" -mb /cmd=";
 	std::wstring snk_cmdline_l=snk_cmdline_s;
 	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());

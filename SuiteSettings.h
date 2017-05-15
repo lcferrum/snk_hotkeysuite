@@ -42,6 +42,7 @@ public:
 	std::wstring GetShkCfgPath() const { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
 	std::wstring GetLhkCfgPath() const { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
 	std::wstring GetSnkPath() const { return ExpandEnvironmentStringsWrapper(snk_path); }
+	void SetSnkPath(const std::wstring &snk_path);
 	bool IsStored() const { return stored; }
 	
 	virtual std::wstring GetStoredLocation() const { return snk_path; }

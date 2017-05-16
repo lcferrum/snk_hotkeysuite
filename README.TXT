@@ -10,14 +10,23 @@ Licensed under BSD license - see LICENSE.TXT file for details.
 
 2. About
 --------
-HotkeySuite is a resident program that will launch SnK when certain key
-combination is pressed. When launched, program will reside in tray - various
-launch options, such as key combination and actual SnK command line, can be
-changed through it's tray icon menu.
+SnK HotkeySuite is all-in-one solution for hung and unresponsive Windows apps
+which hinder further user interaction with OS, complicate Task Manager use or
+even force user to restart computer. SnK HotkeySuite, like Task Manager, is
+activated with key combination. But in contrast to it, when fired, will not
+require any more user input and will automatically search and kill troublesome
+apps.
 
-What is SnK? Search and Kill is a console tool that automatically kills Windows
-processes using search criteria supplied via command line. You can learn more
-about SnK on it's GitHub project page: https://github.com/lcferrum/snk
+SnK HotkeySuite actually consists of two programs: HotkeySuite itself, a
+resident program that detects key combination, and SnK (Search and Kill),
+console tool that automatically kills Windows processes using search criteria
+supplied via command line. When started, HotkeySuite will reside in tray.
+Various launch options, such as key combination and actual SnK command line,
+can be changed through it's tray icon menu. You can learn more about SnK on
+it's GitHub project page: https://github.com/lcferrum/snk
+
+Check out Tutorial chapter in this README to find out typical SnK HotkeySuite
+use case.
 
 3. Where to get
 ---------------
@@ -85,6 +94,21 @@ In HotkeySuite menu you can choose to start/stop application, exit it or change
 various settings: enable/disable long press detection, change key combination
 used to launch SnK and edit SnK scripts used by launched SnK.
 
-5. Default SnK script
----------------------                         
-TBD
+6. Tutorial
+-----------                        
+This tutorial demonstrates typical SnK HotkeySuite use case. It's assumed that
+SnK HotkeySuite was installed using installer with default options: SnK
+binaries are present and known to HotkeySuite, HotkeySuite is already launched,
+default SnK script is used, key combination is Ctrl+Alt+Backspace.
+
+Default SnK script is specifically tailored to be used with fullscreen video
+games, which are major source of nuisance associated with hung apps. It doesn't
+mean that it won't work with other hung apps, but first it checks for any apps
+running in fullscreen and only then switches to other hung apps detection
+methods. Get familiar with what it does by opening it: right click on
+HotkeySuite icon in the tray and select "On single press..." menu item. This
+will open the sctipt in default Windows TXT editor (usually Notepad). Here you
+can edit it and save the changes. For now just review it and close the editor
+when done.
+
+...

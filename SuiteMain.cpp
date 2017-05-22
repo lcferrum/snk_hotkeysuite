@@ -48,7 +48,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 			return ERR_SUITEMAIN+1;
 		}
 	}	
-	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +mb /pid="+to_wstring_wrapper(GetCurrentProcessId())+L" -mb /cmd=";
+	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +mb /pid:parent -mb /cmd=";
 	std::wstring snk_cmdline_l=snk_cmdline_s;
 	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());

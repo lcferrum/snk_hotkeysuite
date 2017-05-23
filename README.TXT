@@ -20,13 +20,14 @@ apps.
 SnK HotkeySuite actually consists of two programs: HotkeySuite itself, a
 resident program that detects key combination, and SnK (Search and Kill),
 console tool that automatically kills Windows processes using search criteria
-supplied via command line. When started, HotkeySuite will reside in tray.
-Various launch options, such as key combination and actual SnK command line,
-can be changed through it's tray icon menu. You can learn more about SnK on
-it's GitHub project page: https://github.com/lcferrum/snk
+supplied via command line. When started, HotkeySuite will reside in tray and
+launch SnK when certain key combination is pressed. Various launch options,
+such as actual key combination and SnK command line, can be changed through
+it's tray icon menu. You can learn more about SnK on it's GitHub project page:
+https://github.com/lcferrum/snk
 
-Check out Tutorial chapter in this README to find out typical SnK HotkeySuite
-use case.
+Check out 'Usage example' chapter in this README to find out typical SnK
+HotkeySuite use case.
 
 3. Where to get
 ---------------
@@ -92,23 +93,39 @@ used to launch SnK.
 
 In HotkeySuite menu you can choose to start/stop application, exit it or change
 various settings: enable/disable long press detection, change key combination
-used to launch SnK and edit SnK scripts used by launched SnK.
+used to launch SnK and edit SnK scripts used when SnK is launched.
 
-6. Tutorial
------------                        
-This tutorial demonstrates typical SnK HotkeySuite use case. It's assumed that
-SnK HotkeySuite was installed using installer with default options: SnK
-binaries are present and known to HotkeySuite, HotkeySuite is already launched,
-default SnK script is used, key combination is Ctrl+Alt+Backspace.
+6. Usage example
+----------------                       
+For this example it's assumed that SnK HotkeySuite was installed using
+installer with default options: SnK binaries are present and known to
+HotkeySuite, HotkeySuite is already launched, default SnK script is used, key
+combination is Ctrl+Alt+Backspace.
 
 Default SnK script is specifically tailored to be used with fullscreen video
 games, which are major source of nuisance associated with hung apps. It doesn't
 mean that it won't work with other hung apps, but first it checks for any apps
 running in fullscreen and only then switches to other hung apps detection
-methods. Get familiar with what it does by opening it: right click on
-HotkeySuite icon in the tray and select "On single press..." menu item. This
+methods. You can check what exactly this script does by opening it: right click
+on HotkeySuite icon in the tray and select "On single press..." menu item. This
 will open the sctipt in default Windows TXT editor (usually Notepad). Here you
-can edit it and save the changes. For now just review it and close the editor
-when done.
+can edit it and save the changes. For this example, we will stick to it's
+default contents.
 
-...
+Launch some fullscreen (exclusive or borderless windowed) video game that will
+be used as guinea pig. Wait for it to load. Now press Ctrl+Alt+Backspace and
+watch it die. Don't forget that any unsaved data (settings, game progress,
+etc.) will be lost!
+
+If you don't have any videogame installed, it's time for some advanced stuff.
+Open SnK script (HotkeySuite "On single press..." menu item), comment current
+script by placing number sign (#) exactly at the beginning of the line where
+actual script starts (like all the comments above), add new line and type:
+
+    +v /pth="calc.exe"
+	
+This will instruct SnK to kill Windows Calculator when launched. Save and close
+the script, launch Calculator, press Ctrl+Alt+Backspace, and voila! Calculator
+is killed. Revert script back to it's default state by deleting recently added
+line and uncommenting (remove number sign) original script. Don't forget to
+save the changes.

@@ -91,15 +91,15 @@ std::wstring SuiteSettings::ExpandEnvironmentStringsWrapper(const std::wstring &
 
 	//Documentation says that lpDst parameter is optional but Win 95 version of this function actually fails if lpDst is NULL
 	//So using dummy buffer to get needed buffer length (function returns length in characters including terminating NULL)
-	//If returned length is 0 - it is error
+	//If returned length is 0 - it is an error
 	if (DWORD buf_len=ExpandEnvironmentStrings(path.c_str(), &dummy_buf, 0)) {
 		wchar_t string_buf[buf_len];
 		//Ensuring that returned length is expected length
-		if (ExpandEnvironmentStrings(path.c_str(), string_buf, buf_len)==buf_len) 
+		if (ExpandEnvironmentStrings(path.c_str(), string_buf, buf_len)<=buf_len) 
 			return string_buf;
 	}
 	
-	return L"";
+	return path;
 }
 
 bool SuiteSettings::MapVkToSc(DWORD src_vk, BINDED_KEY &dst_key) const

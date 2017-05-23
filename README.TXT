@@ -115,7 +115,7 @@ contents.
 Launch some fullscreen (exclusive or borderless windowed) video game that will
 be used as guinea pig. Wait for it to load. Now press Ctrl+Alt+Backspace and
 watch it die. Don't forget that any unsaved data (settings, game progress,
-etc.) will be lost! As you can see, though the game hasn't hung it is still was
+etc.) will be lost! As you can see, though the game hasn't hung it still was
 killed by SnK because of fullscreen search criterion. SnK fully relies on the
 search criteria supplied via script and doesn't check if found app is really
 in hung state. So you should launch it only when you are sure that there really

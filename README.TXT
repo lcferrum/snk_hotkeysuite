@@ -109,13 +109,18 @@ running in fullscreen and only then switches to other hung apps detection
 methods. You can check what exactly this script does by opening it: right click
 on HotkeySuite icon in the tray and select "On single press..." menu item. This
 will open the sctipt in default Windows TXT editor (usually Notepad). Here you
-can edit it and save the changes. For this example, we will stick to it's
-default contents.
+can edit it and save the changes. For now we will stick to it's default
+contents.
 
 Launch some fullscreen (exclusive or borderless windowed) video game that will
 be used as guinea pig. Wait for it to load. Now press Ctrl+Alt+Backspace and
 watch it die. Don't forget that any unsaved data (settings, game progress,
-etc.) will be lost!
+etc.) will be lost! As you can see, though the game hasn't hung it is still was
+killed by SnK because of fullscreen search criterion. SnK fully relies on the
+search criteria supplied via script and doesn't check if found app is really
+in hung state. So you should launch it only when you are sure that there really
+is hung app on the system and it should be killed (at least this applies to
+default script).
 
 If you don't have any videogame installed, it's time for some advanced stuff.
 Open SnK script (HotkeySuite "On single press..." menu item), comment current
@@ -126,6 +131,7 @@ actual script starts (like all the comments above), add new line and type:
 	
 This will instruct SnK to kill Windows Calculator when launched. Save and close
 the script, launch Calculator, press Ctrl+Alt+Backspace, and voila! Calculator
-is killed. Revert script back to it's default state by deleting recently added
-line and uncommenting (remove number sign) original script. Don't forget to
-save the changes.
+is killed. Once again, it is shown that SnK doesn't care if app was really
+hung - it just do what is told in the script. Revert script back to it's
+default state by deleting recently added line and uncommenting original script
+(remove number sign). Don't forget to save the changes.

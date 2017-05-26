@@ -16,6 +16,7 @@
 !define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
 !include MultiUser.nsh	;This script has specific hacks for MultiUser included with NSIS v3.01 - future versions may break them
 !include MUI2.nsh
+!include nsDialogs.nsh
 !include LogicLib.nsh
 !include WinVer.nsh
 
@@ -49,6 +50,7 @@ Name "${APPNAME}"
 BrandingText " "
 Var USER_APPDATA
 Var D_INSTDIR
+Var UPG_DIALOG
 Var StartMenuLocation
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
@@ -61,8 +63,9 @@ InstallDir "\${APPNAME}"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "SuiteInstaller.License.rtf"
+Page Custom upgradePage
 !insertmacro MUI_PAGE_COMPONENTS
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE checkIfD
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE reapplyD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
@@ -314,7 +317,39 @@ Function un.onInit
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 
-Function checkIfD
+Function upgradePage
+	;ClearErrors
+	;ReadRegStr $0 SHCTX "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}" "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
+	;${IfNot} ${Errors}
+	;	MessageBox MB_OK "Was already installed"
+	;${EndIf}
+	nsDialogs::Create 1018
+	Pop $UPG_DIALOG
+
+	${If} $UPG_DIALOG == error
+		Abort
+	${EndIf}
+	
+	!insertmacro MUI_HEADER_TEXT "Upgrade Installation" "Upgrade existing version of SnK HotkeySuite."
+	
+	;${NSD_CreateBitmap} 0u 0u 109u 193u ""
+	;${NSD_CreateRadioButton} 120u TOP+20 195u 10u "Upgrade"
+	
+	${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed on this machine. You can upgrade installed SnK HotkeySuite version. Uninstall it. Or continue with normal installation."
+	Pop $0
+	
+	${NSD_CreateRadioButton} 20u 50u 280u 10u "Upgrade"
+	Pop $0
+	SendMessage $0 ${BM_SETCHECK} ${BST_CHECKED} 0
+	${NSD_CreateRadioButton} 20u 70u 280u 10u "Uninstall"
+	Pop $0
+	${NSD_CreateRadioButton} 20u 90u 280u 10u "Continue"
+	Pop $0
+	
+	nsDialogs::Show
+FunctionEnd
+
+Function reapplyD
 	;If $INSTDIR was set with /D - reapply it after MULTIUSER_PAGE_INSTALLMODE
 	;Works only with GUI mode
 	${if} "$D_INSTDIR" != ""

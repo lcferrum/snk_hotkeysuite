@@ -76,7 +76,11 @@ int SuiteExtRel::AddToAutorun(bool current_user, wchar_t** argv, int argc)
 			hs_path.append(QuoteArgument(*argv++));
 		}
 		//RegSetValueEx will create absent value or overwrite present value (even if present value have different type)
+#ifdef _WIN64
+		if (RegSetValueEx(reg_key, L"SnK HotkeySuite (x64)", 0, REG_SZ, (BYTE*)hs_path.c_str(), (hs_path.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+#else
 		if (RegSetValueEx(reg_key, L"SnK HotkeySuite", 0, REG_SZ, (BYTE*)hs_path.c_str(), (hs_path.length()+1)*sizeof(wchar_t))==ERROR_SUCCESS) ret=0;
+#endif
 		RegCloseKey(reg_key);
 	}
 	
@@ -92,7 +96,11 @@ int SuiteExtRel::RemoveFromAutorun(bool current_user)
 	HKEY reg_key;
 	LONG res=RegOpenKeyEx(current_user?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &reg_key);
 	if (res==ERROR_SUCCESS) {
+#ifdef _WIN64
+		res=RegDeleteValue(reg_key, L"SnK HotkeySuite (x64)");
+#else
 		res=RegDeleteValue(reg_key, L"SnK HotkeySuite");
+#endif
 		//If value doesn't exists - ignore it, but don't ignore other errors
 		if (res==ERROR_SUCCESS||res==ERROR_FILE_NOT_FOUND) ret=0;
 		RegCloseKey(reg_key);
@@ -166,7 +174,11 @@ int SuiteExtRel::Unschedule10(bool &na)
 	DWORD uname_len=UNLEN+1;
 	if (!GetUserName(uname, &uname_len))
 		CoUninitialize();
+#ifdef _WIN64
+	std::wstring tname(L"SnK HotkeySuite (x64) [");
+#else
 	std::wstring tname(L"SnK HotkeySuite [");
+#endif
 	tname.append(uname);
 	tname.push_back(L']');
 	
@@ -196,8 +208,12 @@ int SuiteExtRel::Unschedule20(bool &na, bool current_user)
 	na=false;
 	
 	CoInitialize(NULL);	//Same as CoInitializeEx(NULL, COINIT_APARTMENTTHREADED), whatever, we don't need COINIT_MULTITHREADED
-	
+
+#ifdef _WIN64
+	std::wstring tname(L"SnK HotkeySuite (x64)");
+#else
 	std::wstring tname(L"SnK HotkeySuite");
+#endif
 	if (current_user) {
 		wchar_t uname[UNLEN+1];
 		DWORD uname_len=UNLEN+1;
@@ -279,7 +295,11 @@ int SuiteExtRel::Schedule10(bool &na, const wchar_t* params)
 	DWORD uname_len=UNLEN+1;
 	if (!GetUserName(uname, &uname_len))
 		CoUninitialize();
+#ifdef _WIN64
+	std::wstring tname(L"SnK HotkeySuite (x64) [");
+#else
 	std::wstring tname(L"SnK HotkeySuite [");
+#endif
 	tname.append(uname);
 	tname.push_back(L']');
 	
@@ -337,7 +357,11 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user, const wchar_t* params)
 	
 	CoInitialize(NULL);	//Same as CoInitializeEx(NULL, COINIT_APARTMENTTHREADED), whatever, we don't need COINIT_MULTITHREADED
 	
+#ifdef _WIN64
+	std::wstring tname(L"SnK HotkeySuite (x64)");
+#else
 	std::wstring tname(L"SnK HotkeySuite");
+#endif
 	std::wstring uname;	
 	if (current_user) {		
 		std::wstring sname;

@@ -14,6 +14,7 @@
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
 !define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
+!define INST_FEATURES "Features"
 !include MultiUser.nsh	;This script has specific hacks for MultiUser included with NSIS v3.01 - future versions may break them
 !include MUI2.nsh
 !include nsDialogs.nsh
@@ -50,7 +51,10 @@ Name "${APPNAME}"
 BrandingText " "
 Var USER_APPDATA
 Var D_INSTDIR
-Var UPG_DIALOG
+Var UpgDialog_Upg
+Var UpgDialog_Uninst
+Var UpgDialog_Cont
+Var InstFeatures
 Var StartMenuLocation
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
@@ -63,11 +67,15 @@ InstallDir "\${APPNAME}"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "SuiteInstaller.License.rtf"
-Page Custom upgradePage
+Page Custom upgradePage upgradePageLeave
+!define MUI_PAGE_CUSTOMFUNCTION_PRE changeNextToInst
 !insertmacro MUI_PAGE_COMPONENTS
+!define MUI_PAGE_CUSTOMFUNCTION_PRE skipPageIfUpgrade
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE reapplyD
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
+!define MUI_PAGE_CUSTOMFUNCTION_PRE skipPageIfUpgrade
 !insertmacro MUI_PAGE_DIRECTORY
+!define MUI_PAGE_CUSTOMFUNCTION_PRE skipStartmenuIfUpgrade
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
 !define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINST_KEY}" 
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuLocation"
@@ -134,6 +142,7 @@ SectionGroup /e "HotkeySuite" Grp_HS
 		File /oname=on_hotkey.txt "snk_default_script.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
+		IntOp $InstFeatures $InstFeatures | 1
 		;/S and /A switches will silently update scheduled task and autorun entry if they already exist
 		${if} ${AtLeastWinVista}
 			${if} $MultiUser.InstallMode == AllUsers
@@ -154,6 +163,7 @@ SectionGroupEnd
 Section "SnK" Sec_SNK
 	SetOverwrite on
 	SetOutPath $INSTDIR
+	IntOp $InstFeatures $InstFeatures | 2
 	File "..\snk\SnK.exe"
 	File "..\snk\SnKh.exe"
 	File /oname=SnK.CHANGELOG.TXT "..\snk\CHANGELOG.TXT"
@@ -163,6 +173,7 @@ Section "SnK" Sec_SNK
 SectionEnd
 
 Section /o "Add to PATH" Sec_PATH
+	IntOp $InstFeatures $InstFeatures | 4
 	;/P switch won't add dublicated entries to PATH variable
 	${if} $MultiUser.InstallMode == AllUsers
 		ExecWait '"$INSTDIR\HotkeySuite.exe" /P machine'
@@ -199,10 +210,13 @@ Section "-Postinstall"
 	WriteRegDWORD SHCTX "${UNINST_KEY}" "EstimatedSize" "$0"
 	
 	!insertmacro MUI_STARTMENU_WRITE_BEGIN Page_SMenu
+		IntOp $InstFeatures $InstFeatures | 8
 		CreateDirectory "$SMPROGRAMS\$StartMenuLocation"
 		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk" "$INSTDIR\${UNINST_NAME}" "/$MultiUser.InstallMode"
 		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk" "$INSTDIR\HotkeySuite.exe" "/a user"
 	!insertmacro MUI_STARTMENU_WRITE_END
+	
+	WriteRegDWORD SHCTX "${UNINST_KEY}" "${INST_FEATURES}" "$InstFeatures"
 	
 	${if} ${Silent}
 		Exec '"$INSTDIR\HotkeySuite.exe" /a user'
@@ -295,6 +309,9 @@ Function .onInit
 	
 	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
 	
+	StrCpy $InstFeatures 0
+	StrCpy $UpgDialog_Upg ${BST_UNCHECKED}
+	
 	${if} ${FileExists} "$USER_APPDATA\${APPNAME}\on_hotkey.txt"	;If on_hotkey.txt already exists - don't offer to install default SnK script
 		SectionSetText ${Sec_DEF_SCRIPT} ""
 		SectionSetFlags ${Sec_DEF_SCRIPT} 0x0
@@ -318,35 +335,105 @@ Function un.onInit
 FunctionEnd
 
 Function upgradePage
-	;ClearErrors
-	;ReadRegStr $0 SHCTX "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}" "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
-	;${IfNot} ${Errors}
-	;	MessageBox MB_OK "Was already installed"
-	;${EndIf}
-	nsDialogs::Create 1018
-	Pop $UPG_DIALOG
-
-	${If} $UPG_DIALOG == error
+	ClearErrors
+	ReadRegStr $R1 SHCTX "${UNINST_KEY}" "InstallLocation"
+	${if} ${Errors}
+	${orif} "$D_INSTDIR" != ""
 		Abort
-	${EndIf}
+	${endif}
+	
+	nsDialogs::Create 1018
+	Pop $R0
+
+	${if} $R0 == error
+		Abort
+	${endif}
 	
 	!insertmacro MUI_HEADER_TEXT "Upgrade Installation" "Upgrade existing version of SnK HotkeySuite."
 	
-	;${NSD_CreateBitmap} 0u 0u 109u 193u ""
-	;${NSD_CreateRadioButton} 120u TOP+20 195u 10u "Upgrade"
-	
-	${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed on this machine. You can upgrade installed SnK HotkeySuite version. Uninstall it. Or continue with normal installation."
-	Pop $0
-	
 	${NSD_CreateRadioButton} 20u 50u 280u 10u "Upgrade"
-	Pop $0
-	SendMessage $0 ${BM_SETCHECK} ${BST_CHECKED} 0
+	Pop $UpgDialog_Upg
+	SendMessage $UpgDialog_Upg ${BM_SETCHECK} ${BST_CHECKED} 0
 	${NSD_CreateRadioButton} 20u 70u 280u 10u "Uninstall"
-	Pop $0
+	Pop $UpgDialog_Uninst
+	
+	${if} ${FileExists} "$R1\${UNINST_NAME}"
+		${if} $MultiUser.InstallMode == AllUsers
+			${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed on this machine. You can upgrade installed SnK HotkeySuite version. Uninstall it. Or continue with normal installation."
+			Pop $R0
+		${else}
+			${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed for current user. You can upgrade installed SnK HotkeySuite version. Uninstall it. Or continue with normal installation."
+			Pop $R0
+		${endif}
+	${else}
+		EnableWindow $UpgDialog_Uninst 0
+		${if} $MultiUser.InstallMode == AllUsers
+			${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed on this machine, but appears damaged. It is advised to upgrade installed SnK HotkeySuite. Or you can continue with normal installation."
+			Pop $R0
+		${else}
+			${NSD_CreateLabel} 0u 0u 300u 20u "SnK HotkeySuite is already installed for current user, but appears damaged. It is advised to upgrade installed SnK HotkeySuite. Or you can continue with normal installation."
+			Pop $R0
+		${endif}
+	${endif}
+	
 	${NSD_CreateRadioButton} 20u 90u 280u 10u "Continue"
-	Pop $0
+	Pop $UpgDialog_Cont
 	
 	nsDialogs::Show
+FunctionEnd
+
+Function upgradePageLeave
+	${NSD_GetState} $UpgDialog_Upg $R0
+	${NSD_GetState} $UpgDialog_Uninst $R1
+	${NSD_GetState} $UpgDialog_Cont $R2
+	StrCpy $UpgDialog_Upg $R0
+	
+	${if} $R0 == ${BST_CHECKED}
+		ReadRegStr $InstFeatures SHCTX "${UNINST_KEY}" "${INST_FEATURES}"
+		IntOp $R5 ${SF_SELECTED} | ${SF_RO}
+		IntOp $R2 $InstFeatures & 1
+		IntOp $R3 $InstFeatures & 2
+		IntOp $R4 $InstFeatures & 4
+		${if} $R2 == 1
+			SectionSetFlags ${Sec_AUTORUN} $R5
+		${endif}
+		${if} $R3 == 2
+			SectionSetFlags ${Sec_SNK} $R5
+		${endif}
+		${if} $R4 == 4
+			SectionSetFlags ${Sec_PATH} $R5
+		${endif}
+	${elseif} $R1 == ${BST_CHECKED}
+		ReadRegStr $R2 SHCTX "${UNINST_KEY}" "UninstallString"
+		Exec "$R2"
+		Quit
+	${elseif} $R2 == ${BST_CHECKED}
+		StrCpy $InstFeatures 0
+		SectionSetFlags ${Sec_AUTORUN} ${SF_SELECTED}
+		SectionSetFlags ${Sec_SNK} ${SF_SELECTED}
+		SectionSetFlags ${Sec_PATH} 0
+	${endif}
+FunctionEnd
+
+Function skipPageIfUpgrade
+	${if} $UpgDialog_Upg == ${BST_CHECKED}
+		Abort
+	${endif}
+FunctionEnd
+
+Function changeNextToInst
+	IntOp $R0 $InstFeatures & 8
+	${if} $R0 == 8
+		GetDlgItem $R1 $HWNDPARENT 1
+		SendMessage $R1 ${WM_SETTEXT} 0 "STR:$(^InstallBtn)"
+	${endif}
+FunctionEnd
+
+Function skipStartmenuIfUpgrade
+	IntOp $R0 $InstFeatures & 8
+	${if} $R0 == 8
+		Abort
+	${endif}
 FunctionEnd
 
 Function reapplyD

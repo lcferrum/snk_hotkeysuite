@@ -391,13 +391,13 @@ Function upgradePageLeave
 	${if} $R0 == ${BST_CHECKED}
 		ReadRegStr $InstFeatures SHCTX "${UNINST_KEY}" "${INST_FEATURES}"
 		IntOp $R5 ${SF_SELECTED} | ${SF_RO}
-		IntOp $R2 $InstFeatures & 1
-		IntOp $R3 $InstFeatures & 2
+		IntOp $R1 $InstFeatures & 1
+		IntOp $R2 $InstFeatures & 2
 		IntOp $R4 $InstFeatures & 4
-		${if} $R2 == 1
+		${if} $R1 == 1
 			SectionSetFlags ${Sec_AUTORUN} $R5
 		${endif}
-		${if} $R3 == 2
+		${if} $R2 == 2
 			SectionSetFlags ${Sec_SNK} $R5
 		${endif}
 		${if} $R4 == 4

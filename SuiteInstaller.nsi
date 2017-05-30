@@ -1,5 +1,6 @@
 !define APPNAME "SnK HotkeySuite"
 !define UNINST_NAME "unins000.exe"
+!define INST_FEATURES "InstalledFeatures"
 !ifdef INST64
 	!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME} (x64)"
 !else
@@ -14,7 +15,6 @@
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
 !define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
-!define INST_FEATURES "Features"
 !include MultiUser.nsh	;This script has specific hacks for MultiUser included with NSIS v3.01 - future versions may break them
 !include MUI2.nsh
 !include nsDialogs.nsh

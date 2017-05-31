@@ -35,7 +35,7 @@ You can compile SnK HotkeySuite by yourself (refer to COMPILE.TXT that comes
 with the sources) or download binary distribution (in the form of installer or
 ZIP archive) from Sourceforge:
 
-    https://sourceforge.net/projects/sandk/files/SnK_HotkeySuite/
+    https://sourceforge.net/projects/sandk/files/SnK%20HotkeySuite/
     
 Main project homepage is at GitHub:
 

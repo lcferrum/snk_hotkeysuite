@@ -434,8 +434,7 @@ Function upgradePageLeave
 	${NSD_GetState} $UpgDialog.HWND_CNT $R2
 	
 	${if} $R0 == ${BST_CHECKED}
-		;If we are returning from Continue - reapply MULTIUSER_INIT to set right registry hive and reset INSTDIR
-		;StartMenuLocation will be also reset
+		;If we are returning from Continue - reapply MULTIUSER_INIT to set right registry hive and INSTDIR
 		${if} $UpgDialog.Status == "Continue"
 			${if} $UpgDialog.OrigMode == AllUsers
 				Call MultiUser.InstallMode.AllUsers
@@ -450,6 +449,7 @@ Function upgradePageLeave
 		IntOp $R1 $InstFeatures & 1
 		IntOp $R2 $InstFeatures & 2
 		IntOp $R4 $InstFeatures & 4
+		IntOp $R8 $InstFeatures & 8
 		${if} $R1 == 1
 			SectionSetFlags ${Sec_AUTORUN} $R3
 		${endif}
@@ -459,9 +459,14 @@ Function upgradePageLeave
 		${if} $R4 == 4
 			SectionSetFlags ${Sec_PATH} $R3
 		${endif}
+		${if} $R8 == 8
+			;This resets MUI_PAGE_STARTMENU to default (enabled) state with path taken from registry
+			;Lock is achieved by skipping page with skipStartmenuIfUpgrade function
+			StrCpy $StartMenuLocation ""
+		${endif}
 	${elseif} $R1 == ${BST_CHECKED}
 		StrCpy $UpgDialog.Status "Uninstall"
-		;In case of returning from Continue - do not rely on SHCTX
+		;We may return here from Continue - do not rely on SHCTX
 		${if} $UpgDialog.OrigMode == AllUsers
 			ReadRegStr $R2 HKLM "${UNINST_KEY}" "UninstallString"
 		${else}
@@ -487,7 +492,7 @@ Function upgradePageLeave
 				SectionSetFlags ${Sec_PATH} 0x0
 			${endif}
 			${if} $R8 == 8
-				StrCpy $StartMenuLocation ""	;This resets StartMenu page
+				StrCpy $StartMenuLocation ""	;This resets MUI_PAGE_STARTMENU to default (enabled) state with path taken from registry
 			${endif}
 			StrCpy $InstFeatures 0
 		${endif}
@@ -511,7 +516,6 @@ FunctionEnd
 Function skipStartmenuIfUpgrade
 	IntOp $R0 $InstFeatures & 8
 	${if} $R0 == 8
-		StrCpy $StartMenuLocation ""	;This forces MUI_STARTMENU_WRITE macros to get StartMenu path from registry
 		Abort
 	${endif}
 FunctionEnd
@@ -557,10 +561,6 @@ Function un.killInstalledSnK
 FunctionEnd
 
 Function patchInstdir
-	;Reset StartMenu page on install mode change
-	;So StartMenu path will be taken from right registry hive
-	StrCpy $StartMenuLocation ""
-		
 	;If $INSTDIR was set with /D - reapply it
 	${if} "$D_INSTDIR" != ""
 		StrCpy $INSTDIR "$D_INSTDIR"

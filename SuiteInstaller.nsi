@@ -16,7 +16,8 @@
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}"
 !define MULTIUSER_INSTALLMODE_FUNCTION patchInstdir
-!include MultiUser.nsh	;This script has specific hacks for MultiUser included with NSIS v3.01 - future versions may break them
+;This script has specific hacks for MultiUser and MUI2/StartMenu included with NSIS v3.01 - future versions may break them
+!include MultiUser.nsh
 !include MUI2.nsh
 !include nsDialogs.nsh
 !include LogicLib.nsh
@@ -311,18 +312,23 @@ Function .onInit
 		${endif}
 	!endif
 	
-	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
+	;Hack to get SetShellVarContext-independent APPDATA
+	;By default (on init) SetShellVarContext is set to "current" so $APPDATA points to %APPDATA%
+	StrCpy $USER_APPDATA "$APPDATA"
 	
-	${if} ${FileExists} "$USER_APPDATA\${APPNAME}\on_hotkey.txt"	;If on_hotkey.txt already exists - don't offer to install default SnK script
+	;If on_hotkey.txt already exists - don't offer to install default SnK script
+	${if} ${FileExists} "$USER_APPDATA\${APPNAME}\on_hotkey.txt"
 		SectionSetText ${Sec_DEF_SCRIPT} ""
 		SectionSetFlags ${Sec_DEF_SCRIPT} 0x0
 		SectionSetText ${Sec_DEF_SCRIPT2} "Default SnK Script"
 	${endif}
 	
-	${if} "$INSTDIR" != "\${APPNAME}"	;Don't loose $INSTDIR set with /D
+	;Don't loose $INSTDIR set with /D
+	${if} "$INSTDIR" != "\${APPNAME}"
 		StrCpy $D_INSTDIR "$INSTDIR"
 	${endif}
 	
+	;Initialize MultiUser module
 	!insertmacro MULTIUSER_INIT
 
 	;Initialize Upgrade page variables
@@ -381,7 +387,11 @@ Function .onInit
 FunctionEnd
 
 Function un.onInit
-	StrCpy $USER_APPDATA "$APPDATA"	;Hack to get SetShellVarContext-independent APPDATA
+	;Hack to get SetShellVarContext-independent APPDATA
+	;By default (on init) SetShellVarContext is set to "current" so $APPDATA points to %APPDATA%
+	StrCpy $USER_APPDATA "$APPDATA"
+	
+	;Initialize MultiUser module
 	!insertmacro MULTIUSER_UNINIT
 FunctionEnd
 

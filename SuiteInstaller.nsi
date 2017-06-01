@@ -1,6 +1,7 @@
 !define APPNAME "SnK HotkeySuite"
 !define UNINST_NAME "unins000.exe"
 !define INST_FEATURES "InstalledFeatures"
+!define STARTMENU_LOC "StartMenuLocation"
 !ifdef INST64
 	!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME} (x64)"
 !else
@@ -58,7 +59,8 @@ Var UpgDialog.Status
 Var UpgDialog.OrigPath
 Var UpgDialog.OrigMode
 Var InstFeatures
-Var StartMenuLocation
+Var StartMenu.Location
+Var StartMenu.PrevMode
 ;Override RequestExecutionLevel set by MultiUser (MULTIUSER_EXECUTIONLEVEL Highest)
 ;On Vista and above Admin rights will be required while on pre-Vista highest available security level will be used
 ;Installer requires admin rights - because of the need to register HotkeySuite with Task Scheduler
@@ -77,11 +79,11 @@ Page Custom upgradePage upgradePageLeave
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !define MUI_PAGE_CUSTOMFUNCTION_PRE skipPageIfUpgrade
 !insertmacro MUI_PAGE_DIRECTORY
-!define MUI_PAGE_CUSTOMFUNCTION_PRE skipStartmenuIfUpgrade
+!define MUI_PAGE_CUSTOMFUNCTION_PRE customStartMenuPageIni
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
 !define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINST_KEY}" 
-!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuLocation"
-!insertmacro MUI_PAGE_STARTMENU Page_SMenu $StartMenuLocation
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "${STARTMENU_LOC}"
+!insertmacro MUI_PAGE_STARTMENU Page_SMenu $StartMenu.Location
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\HotkeySuite.exe"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "/a user"
@@ -213,9 +215,9 @@ Section "-Postinstall"
 	
 	!insertmacro MUI_STARTMENU_WRITE_BEGIN Page_SMenu
 		IntOp $InstFeatures $InstFeatures | 8
-		CreateDirectory "$SMPROGRAMS\$StartMenuLocation"
-		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk" "$INSTDIR\${UNINST_NAME}" "/$MultiUser.InstallMode"
-		CreateShortcut "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk" "$INSTDIR\HotkeySuite.exe" "/a user"
+		CreateDirectory "$SMPROGRAMS\$StartMenu.Location"
+		CreateShortcut "$SMPROGRAMS\$StartMenu.Location\Uninstall.lnk" "$INSTDIR\${UNINST_NAME}" "/$MultiUser.InstallMode"
+		CreateShortcut "$SMPROGRAMS\$StartMenu.Location\HotkeySuite.lnk" "$INSTDIR\HotkeySuite.exe" "/a user"
 	!insertmacro MUI_STARTMENU_WRITE_END
 	
 	WriteRegDWORD SHCTX "${UNINST_KEY}" "${INST_FEATURES}" "$InstFeatures"
@@ -229,10 +231,10 @@ Section "Uninstall"
 	;Try to kill HotkeySuite using it's own SnK
 	Call un.killInstalledSnK
 
-	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenuLocation
-	Delete "$SMPROGRAMS\$StartMenuLocation\HotkeySuite.lnk"
-	Delete "$SMPROGRAMS\$StartMenuLocation\Uninstall.lnk"
-	RMDir "$SMPROGRAMS\$StartMenuLocation"
+	!insertmacro MUI_STARTMENU_GETFOLDER Page_SMenu $StartMenu.Location
+	Delete "$SMPROGRAMS\$StartMenu.Location\HotkeySuite.lnk"
+	Delete "$SMPROGRAMS\$StartMenu.Location\Uninstall.lnk"
+	RMDir "$SMPROGRAMS\$StartMenu.Location"
   
 	DeleteRegKey SHCTX "${UNINST_KEY}"
 	
@@ -323,10 +325,9 @@ Function .onInit
 	
 	!insertmacro MULTIUSER_INIT
 
-	;Initialize upgrade page variables
-	ClearErrors
-	ReadRegStr $R0 SHCTX "${UNINST_KEY}" "InstallLocation"
-	${if} ${Errors}
+	;Initialize Upgrade page variables
+	ReadRegStr $R0 SHCTX "${MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY}" "${MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME}"
+	${if} $R0 == ""
 	${orif} "$D_INSTDIR" != ""
 		StrCpy $UpgDialog.Status "Skip"
 	${else}
@@ -335,6 +336,17 @@ Function .onInit
 		StrCpy $UpgDialog.OrigMode $MultiUser.InstallMode
 	${endif}
 	StrCpy $InstFeatures 0
+	
+	;Initialize StartMenu page variables
+	StrCpy $StartMenu.Location ""	;If not changed by StartMenu page, forces MUI_STARTMENU_WRITE macros to get StartMenu path from registry
+	ReadRegStr $R0 HKLM "${UNINST_KEY}" "${STARTMENU_LOC}"
+	ReadRegStr $R1 HKCU "${UNINST_KEY}" "${STARTMENU_LOC}"
+	${if} $R0 == ""
+	${andif} $R1 == ""
+		StrCpy $StartMenu.PrevMode ""	;Prevent MultiIser awareness if StartMenuLocation not set for both installation modes
+	${else}
+		StrCpy $StartMenu.PrevMode $MultiUser.InstallMode
+	${endif}
 	
 	;On silent install make silent upgrade
 	${if} $UpgDialog.Status == ""
@@ -359,10 +371,8 @@ Function .onInit
 		${else}
 			SectionSetFlags ${Sec_PATH} 0x0
 		${endif}
-		${if} $R8 == 8
-			StrCpy $StartMenuLocation ""	;This forces MUI_STARTMENU_WRITE macros to get StartMenu path from registry
-		${else}
-			StrCpy $StartMenuLocation ">"	;This will prevent MUI_STARTMENU_WRITE macros from creating StartMenu
+		${if} $R8 != 8
+			StrCpy $StartMenu.Location ">"	;This will prevent MUI_STARTMENU_WRITE macros from creating StartMenu
 		${endif}
 		;If during installation default script was installed, installer won't offer to reinstall it - section will be already disabled during upgrade
 		;If default script wasn't installed, silent upgrade shoudn't install it either
@@ -461,8 +471,8 @@ Function upgradePageLeave
 		${endif}
 		${if} $R8 == 8
 			;This resets MUI_PAGE_STARTMENU to default (enabled) state with path taken from registry
-			;Lock is achieved by skipping page with skipStartmenuIfUpgrade function
-			StrCpy $StartMenuLocation ""
+			;Lock is achieved by skipping page in customStartMenuPageIni function
+			StrCpy $StartMenu.Location ""
 		${endif}
 	${elseif} $R1 == ${BST_CHECKED}
 		StrCpy $UpgDialog.Status "Uninstall"
@@ -492,7 +502,7 @@ Function upgradePageLeave
 				SectionSetFlags ${Sec_PATH} 0x0
 			${endif}
 			${if} $R8 == 8
-				StrCpy $StartMenuLocation ""	;This resets MUI_PAGE_STARTMENU to default (enabled) state with path taken from registry
+				StrCpy $StartMenu.Location ""	;This resets MUI_PAGE_STARTMENU to default (enabled) state with path taken from registry
 			${endif}
 			StrCpy $InstFeatures 0
 		${endif}
@@ -513,10 +523,24 @@ Function changeNextToInstOnUpgrade
 	${endif}
 FunctionEnd
 
-Function skipStartmenuIfUpgrade
+Function customStartMenuPageIni
 	IntOp $R0 $InstFeatures & 8
 	${if} $R0 == 8
 		Abort
+	${else}
+		${if} $StartMenu.PrevMode != ""
+			;If installation mode switched - set default StartMenu path but keep checkbox state
+			${if} $StartMenu.PrevMode != $MultiUser.InstallMode
+				ReadRegStr $R0 SHCTX "${UNINST_KEY}" "${STARTMENU_LOC}"
+				StrCpy $R1 $StartMenu.Location 1
+				${if} $R1 == ">"
+					StrCpy $StartMenu.Location "$R1$R0"
+				${else}
+					StrCpy $StartMenu.Location "$R0"
+				${endif}
+			${endif}
+			StrCpy $StartMenu.PrevMode $MultiUser.InstallMode
+		${endif}
 	${endif}
 FunctionEnd
 

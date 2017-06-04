@@ -29,7 +29,11 @@ bool SuiteExtRel::LaunchSnkOpenDialog(std::wstring &fpath)
 	wchar_t buf[MAX_PATH]=L"";
 
 	OPENFILENAME ofn={
+#ifdef _WIN64
 		sizeof(OPENFILENAME),							//lStructSize
+#else
+		OPENFILENAME_SIZE_VERSION_400,					//lStructSize
+#endif
 		NULL,											//hwndOwner
 		NULL,											//hInstance
 		L"Windowless SnK\0SnKh.exe\0All Files\0*.*\0",	//lpstrFilter

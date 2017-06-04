@@ -185,11 +185,15 @@ INT_PTR CALLBACK AboutDialog::HyperlinkProc(HWND hwndCtl, UINT uMsg, WPARAM wPar
 			ShellExecute(NULL, L"open", L"https://github.com/lcferrum/snk_hotkeysuite", NULL, NULL, SW_SHOWNORMAL);
 			break;
 		case WM_SETCURSOR:
+#ifdef _WIN64
+			SetCursor(LoadCursor(NULL, IDC_HAND));
+#else
 			//If IDC_HAND is not available - load custom hand cursor
 			if (HCURSOR hCursor=LoadCursor(NULL, IDC_HAND))
 				SetCursor(hCursor);
 			else
 				SetCursor(LoadCursor(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HANDCUR)));
+#endif
 			//Don't need anyone else to change cursor here so returning TRUE
 			return TRUE;
 	}

@@ -24,7 +24,7 @@ endif
 RM=rm -f
 UPX=upx
 CFLAGS=-std=c++11 -D_WIN32_WINNT=0x0600 -DUNICODE -D_UNICODE
-LDFLAGS=-static-libgcc -static-libstdc++ -lole32 -loleaut32 -lgdi32 -Wl,--enable-stdcall-fixup
+LDFLAGS=-static-libgcc -static-libstdc++ -lole32 -loleaut32 -lgdi32 -lcomdlg32 -Wl,--enable-stdcall-fixup
 UPSTREAM_INC=/c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/
 SRC=Suite.cpp SuiteCommon.cpp SuiteExterns.cpp SuiteExternalRelations.cpp SuiteMain.cpp TaskbarNotificationAreaIcon.cpp HotkeyEngine.cpp SuiteHotkeyFunctions.cpp AsmHotkeyFunctions.S SuiteSettings.cpp SuiteAboutDialog.cpp SuiteBindingDialog.cpp Res.rc
 OBJ=$(patsubst %.S,%.o,$(patsubst %.cpp,%.o,$(patsubst %.rc,%.o,$(SRC))))

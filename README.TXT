@@ -35,11 +35,11 @@ You can compile SnK HotkeySuite by yourself (refer to COMPILE.TXT that comes
 with the sources) or download binary distribution (in the form of installer or
 ZIP archive) from Sourceforge:
 
-    https://sourceforge.net/projects/sandk/files/SnK%20HotkeySuite/
-    
+	https://sourceforge.net/projects/sandk/files/SnK%20HotkeySuite/
+
 Main project homepage is at GitHub:
 
-    https://github.com/lcferrum/snk_hotkeysuite
+	https://github.com/lcferrum/snk_hotkeysuite
 
 4. Installation
 ---------------
@@ -127,8 +127,8 @@ Open SnK script (HotkeySuite "On single press..." menu item), comment current
 script by placing number sign (#) exactly at the beginning of the line where
 actual script starts (like all the comments above), add new line and type:
 
-    +v /pth="calc.exe"
-	
+	+v /pth="calc.exe"
+
 This will instruct SnK to kill Windows Calculator when launched. Save and close
 the script, launch Calculator, press Ctrl+Alt+Backspace, and voila! Calculator
 is killed. Once again, it is shown that SnK doesn't care if app was really

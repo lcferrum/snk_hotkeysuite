@@ -139,12 +139,12 @@ SectionGroup /e "HotkeySuite" Grp_HS
 	Section "Default SnK Script" Sec_DEF_SCRIPT
 		SetOverwrite on
 		SetOutPath "$USER_APPDATA\${APPNAME}"
-		File /oname=on_hotkey.txt "snk_default_script.txt"
+		File "on_hotkey.txt"
 	SectionEnd
 	Section /o "" Sec_DEF_SCRIPT2
 		SetOverwrite on
 		SetOutPath "$USER_APPDATA\${APPNAME}"
-		File /oname=on_hotkey.txt "snk_default_script.txt"
+		File "on_hotkey.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
 		IntOp $InstFeatures $InstFeatures | 1

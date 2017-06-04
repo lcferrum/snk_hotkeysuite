@@ -41,11 +41,11 @@
 
 !ifdef INST64
 	!include x64.nsh
-	OutFile "HotkeySuiteSetup64.exe"
+	OutFile "SnKHotkeySuiteSetup64.exe"
 	Caption "${APPNAME} v${APPVER_1}.${APPVER_2}${HS_DEV_BUILD} Setup (x64)"
 	UninstallCaption "${APPNAME} v${APPVER_1}.${APPVER_2}${HS_DEV_BUILD} Uninstall (x64)"
 !else
-	OutFile "HotkeySuiteSetup32.exe"
+	OutFile "SnKHotkeySuiteSetup32.exe"
 	Caption "${APPNAME} v${APPVER_1}.${APPVER_2}${HS_DEV_BUILD} Setup"
 	UninstallCaption "${APPNAME} v${APPVER_1}.${APPVER_2}${HS_DEV_BUILD} Uninstall"
 !endif

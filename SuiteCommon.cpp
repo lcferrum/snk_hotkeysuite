@@ -8,6 +8,7 @@
 #include <commctrl.h>
 
 extern pTaskDialog fnTaskDialog;
+extern pSHCreateDirectoryEx fnSHCreateDirectoryEx;
 
 #ifdef __clang__
 //Obscure clang++ bug - it reports "multiple definition" of std::setfill() and std::wstring() when statically linking with libstdc++
@@ -85,7 +86,7 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 	if (ret_len&&ret_len<MAX_PATH) {
 		//GetModuleFileName always returns module's full path (not some relative-to-something-path even if it was passed to CreateProcess in first place)
 		//So instead of using _wsplitpath/_makepath or PathRemoveFileSpec, which have additional code to deal with relative paths, just use wcsrchr to find last backslash occurrence
-		//Also PathRemoveFileSpec doesn't strip trailing slash if file is at drive's root which isn't the thing we want in environment variable
+		//Also PathRemoveFileSpec doesn't strip trailing backslash if file is at drive's root which isn't the thing we want in environment variable
 		if (replace_fname) {
 			if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\')) {
 				*last_backslash=L'\0';
@@ -98,31 +99,46 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 	return L"";
 }
 
-bool CreateDirTree(const std::wstring trg_pth) 
+std::wstring GetDirPath(const std::wstring &trg_pth)
 {
-	//Recursively creating directory tree for trg_pth by searching for backslashes in path
-	//For this function to work trg_pth should hold only absolute path to file or empty string
-	//Target path can be UNC one
-	//So we skipping first two characters from backslash search that are either leading double-backslash of UNC path or drive name of normal path
-	//If we get npos with wstring.find_first_of - string was empty or we have reached file name
-	//That's why we should check empty paths separately so not to get false-positive
-	if (!trg_pth.length())
+	size_t last_backslash;
+	if ((last_backslash=trg_pth.find_last_of(L'\\'))!=std::wstring::npos)
+		return trg_pth.substr(0, last_backslash);
+	else
+		return std::wstring();
+}
+
+bool CreateDirTreeForFile(const std::wstring trg_pth) 
+{
+	//Starting from shell32 v5.0 (Win 2000) we can use SHCreateDirectoryEx to build directory tree
+	//Intresting thing is that there is SHCreateDirectory that does the same: it is exported as ordinal (165) from v4.0 and by name from v6.0
+	//But on v4.0-v5.0 (TODO: check Win 2000) it is ANSI function, while starting from v6.0 it became Unicode
+	//So exporting it as ordinal is not a good idea - instead we will use SHCreateDirectoryEx where it is available and it's re-implementation otherwise
+
+	if (trg_pth.empty())
 		return false;
 	
-	size_t prev_backslash=2;
-	DWORD dw_err;
-	while ((prev_backslash=trg_pth.find_first_of(L'\\', prev_backslash))!=std::wstring::npos) {
-		//Only ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signals that everything ok and we can continue creating directories
-		//ERROR_BAD_PATHNAME occurs instead of ERROR_ALREADY_EXISTS when we try to create directory in place of server name in UNC path
-		//When path is totally wrong (e.g. drive doesn't exist or we have file in place of one of the directories) ERROR_PATH_NOT_FOUND returned instead
-		//When path has invalid symbols ERROR_INVALID_NAME returned
-		//We can also have ERROR_ACCESS_DENIED in case we dosen't have sufficient rights to create directory
-		//All errors besides ERROR_ALREADY_EXISTS and ERROR_BAD_PATHNAME signal that continuing the loop is fruitless - we already failed to create directory tree
-		if (!CreateDirectory(trg_pth.substr(0, prev_backslash++).c_str(), NULL)&&(dw_err=GetLastError(), dw_err!=ERROR_ALREADY_EXISTS&&dw_err!=ERROR_BAD_PATHNAME))
-			return false;
-	}
+	if (fnSHCreateDirectoryEx)
+		return ERROR_SUCCESS==fnSHCreateDirectoryEx(NULL, GetDirPath(trg_pth).c_str(), NULL);
 	
-	return true;
+	//First try to create directory as is
+	//On success return positive result, fail on specific errors and continue with directory tree creation on all other errors
+	if (CreateDirectory(GetDirPath(trg_pth).c_str(), NULL)) {
+		return true;
+	} else {
+		DWORD dw_err=GetLastError();
+		bool ret=false;
+		
+		if (dw_err!=ERROR_FILE_EXISTS&&dw_err!=ERROR_ALREADY_EXISTS&&dw_err!=ERROR_FILENAME_EXCED_RANGE) {
+			//Starting backslash search from the 4-th caracter ensures that we won't try to re-create disk root and will skip leading double backslashes in UNC path
+			//Return result based on the last CreateDirectory call
+			size_t prev_backslash=3;
+			while ((prev_backslash=trg_pth.find_first_of(L'\\', prev_backslash))!=std::wstring::npos)
+				ret=CreateDirectory(trg_pth.substr(0, prev_backslash++).c_str(), NULL);
+		}
+		
+		return ret;
+	}
 }
 
 std::wstring DwordToHexString(DWORD dw, int hex_width)

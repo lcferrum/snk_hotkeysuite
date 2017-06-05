@@ -6,6 +6,7 @@ pSHGetSpecialFolderPath fnSHGetSpecialFolderPath=NULL;
 pTaskDialog fnTaskDialog=NULL;
 pGetUserNameEx fnGetUserNameEx=NULL;
 pChangeWindowMessageFilter fnChangeWindowMessageFilter=NULL;
+pSHCreateDirectoryEx fnSHCreateDirectoryEx=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
@@ -48,6 +49,7 @@ void SuiteExterns::LoadFunctions()
 			//Try to export by ordinal
 			//WARNING: on Win 9x/Me version of shell32.dll this will export SHGetSpecialFolderPathA (ANSI version) instead
 			fnSHGetSpecialFolderPath=(pSHGetSpecialFolderPath)GetProcAddress(hShell32, (char*)175);
+		fnSHCreateDirectoryEx=(pSHCreateDirectoryEx)GetProcAddress(hShell32, "SHCreateDirectoryExW");
 	}
 	
 	if (hComctl32) {

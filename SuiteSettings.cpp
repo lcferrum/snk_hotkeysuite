@@ -167,15 +167,11 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	if (ini_path.empty()||ini_section.empty())
 		return;
 	
-	//Actually this branch should always work because, once again, passed path should be absolute file path or empty string
-	size_t last_backslash;
-	if ((last_backslash=ini_path.find_last_of(L'\\'))!=std::wstring::npos) {
-		SetEnvironmentVariable(L"HS_INI_PATH", ini_path.substr(0, last_backslash).c_str());
+	SetEnvironmentVariable(L"HS_INI_PATH", GetDirPath(ini_path).c_str());
 #ifdef DEBUG
-		std::wcerr<<L"SET HS_INI_PATH="<<ini_path.substr(0, last_backslash).c_str()<<std::endl;
+	std::wcerr<<L"SET HS_INI_PATH="<<GetDirPath(ini_path).c_str()<<std::endl;
 #endif
-	}
-	
+
 	//Leave default values and mark all settings as changed if settings are not stored in ini file
 	if (!CheckIfIniStored(ini_path, ini_section)) {
 		changed=CHG_ALLKEYS;
@@ -452,7 +448,7 @@ bool SuiteSettingsAppData::SaveSettings()
 {
 	//Don't bother creating directory tree if settings are alredy stored
 	if (!stored) {
-		if (!CreateDirTree(ini_path))	//SaveSettings fails if directory tree wasn't created
+		if (!CreateDirTreeForFile(ini_path))	//SaveSettings fails if directory tree wasn't created
 			return false;
 	}
 	

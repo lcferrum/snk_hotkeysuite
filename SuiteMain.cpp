@@ -173,7 +173,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 						create_file=MessageBox(NULL, msg_text.c_str(), SNK_HS_TITLE, MB_ICONASTERISK|MB_YESNO|MB_DEFBUTTON1)==IDYES;
 					}
 					
-					if (create_file&&CreateDirTree(cfg_path)) {
+					if (create_file&&CreateDirTreeForFile(cfg_path)) {
 						CloseHandle(CreateFile(cfg_path.c_str(), GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL));
 					} else
 						return true;

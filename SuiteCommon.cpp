@@ -9,6 +9,7 @@
 
 extern pTaskDialog fnTaskDialog;
 extern pSHCreateDirectoryEx fnSHCreateDirectoryEx;
+extern pSHCreateDirectory fnSHCreateDirectory;
 
 #ifdef __clang__
 //Obscure clang++ bug - it reports "multiple definition" of std::setfill() and std::wstring() when statically linking with libstdc++
@@ -112,32 +113,23 @@ bool CreateDirTreeForFile(const std::wstring trg_pth)
 {
 	//Starting from shell32 v5.0 (Win 2000) we can use SHCreateDirectoryEx to build directory tree
 	//Intresting thing is that there is SHCreateDirectory that does the same: it is exported as ordinal (165) from v4.0 and by name from v6.0
-	//But on v4.0-v5.0 (TODO: check Win 2000) it is ANSI function, while starting from v6.0 it became Unicode
-	//So exporting it as ordinal is not a good idea - instead we will use SHCreateDirectoryEx where it is available and it's re-implementation otherwise
+	//So we'll use SHCreateDirectoryEx where it is available and SHCreateDirectory otherwise
 
 	if (trg_pth.empty())
 		return false;
 	
-	if (fnSHCreateDirectoryEx)
-		return ERROR_SUCCESS==fnSHCreateDirectoryEx(NULL, GetDirPath(trg_pth).c_str(), NULL);
-	
-	//First try to create directory as is
-	//On success return positive result, fail on specific errors and continue with directory tree creation on all other errors
-	if (CreateDirectory(GetDirPath(trg_pth).c_str(), NULL)) {
-		return true;
+	std::wstring dir=GetDirPath(trg_pth);
+	DWORD dir_attr=GetFileAttributes(dir.c_str());
+ 
+	if (dir_attr==INVALID_FILE_ATTRIBUTES) {
+		if (fnSHCreateDirectoryEx)
+			return ERROR_SUCCESS==fnSHCreateDirectoryEx(NULL, dir.c_str(), NULL);
+		else if (fnSHCreateDirectory)
+			return ERROR_SUCCESS==fnSHCreateDirectory(NULL, dir.c_str());
+		else
+			return false;
 	} else {
-		DWORD dw_err=GetLastError();
-		bool ret=false;
-		
-		if (dw_err!=ERROR_FILE_EXISTS&&dw_err!=ERROR_ALREADY_EXISTS&&dw_err!=ERROR_FILENAME_EXCED_RANGE) {
-			//Starting backslash search from the 4-th caracter ensures that we won't try to re-create disk root and will skip leading double backslashes in UNC path
-			//Return result based on the last CreateDirectory call
-			size_t prev_backslash=3;
-			while ((prev_backslash=trg_pth.find_first_of(L'\\', prev_backslash))!=std::wstring::npos)
-				ret=CreateDirectory(trg_pth.substr(0, prev_backslash++).c_str(), NULL);
-		}
-		
-		return ret;
+		return dir_attr&FILE_ATTRIBUTE_DIRECTORY;
 	}
 }
 

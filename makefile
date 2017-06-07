@@ -32,7 +32,7 @@ TARGET=HotkeySuite.exe
 
 MAKENSIS=makensis.exe /V2
 NSISSRC=SuiteInstaller.nsi
-NSISTARGET=HotkeySuiteSetup*.exe
+NSISTARGET=SnKHotkeySuiteSetup*.exe
 
 # Debug specific common section
 ifdef DEBUG
@@ -58,12 +58,12 @@ ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
-	NSISTARGET=HotkeySuiteSetup64.exe
+	NSISTARGET=SnKHotkeySuiteSetup64.exe
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
 	WINDRES=i686-w64-mingw32-windres
-	NSISTARGET=HotkeySuiteSetup32.exe
+	NSISTARGET=SnKHotkeySuiteSetup32.exe
 endif
 endif
 
@@ -76,12 +76,12 @@ ifeq ($(HOST),x86-64)
 	CC=x86_64-w64-mingw32-g++
 	WINDRES=x86_64-w64-mingw32-windres
 	MAKENSISFLAGS=/DINST64
-	NSISTARGET=HotkeySuiteSetup64.exe
+	NSISTARGET=SnKHotkeySuiteSetup64.exe
 endif
 ifeq ($(HOST),x86)
 	CC=i686-w64-mingw32-g++
 	WINDRES=i686-w64-mingw32-windres
-	NSISTARGET=HotkeySuiteSetup32.exe
+	NSISTARGET=SnKHotkeySuiteSetup32.exe
 endif
 endif
 
@@ -102,7 +102,7 @@ ifeq ($(HOST),x86-64)
 $(error not implemented)
 endif
 ifeq ($(HOST),x86)
-	NSISTARGET=HotkeySuiteSetup32.exe
+	NSISTARGET=SnKHotkeySuiteSetup32.exe
 endif
 endif
 

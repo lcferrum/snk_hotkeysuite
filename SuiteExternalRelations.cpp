@@ -118,6 +118,41 @@ int SuiteExtRel::RemoveFromAutorun(bool current_user)
 	return ret;
 }
 
+std::wstring SuiteExtRel::GetUserNameForTaskScheduler()
+{
+	std::wstring uname;
+	
+	HANDLE hToken;
+	if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+		DWORD dwSize;
+		if(!GetTokenInformation(hToken, TokenUser, NULL, 0, &dwSize)&&GetLastError()==ERROR_INSUFFICIENT_BUFFER) {
+			PTOKEN_USER ptu=(PTOKEN_USER)new BYTE[dwSize];
+			if (GetTokenInformation(hToken, TokenUser, (PVOID)ptu, dwSize, &dwSize)) {
+				DWORD account_len=0;
+				DWORD domain_len=0;
+				SID_NAME_USE sid_type;
+				if (LookupAccountSid(NULL, ptu->User.Sid, NULL, &account_len, NULL, &domain_len, &sid_type)==FALSE&&account_len&&domain_len) {
+					wchar_t account[account_len];
+					wchar_t domain[domain_len];
+					if (LookupAccountSid(NULL, ptu->User.Sid, account, &account_len, domain, &domain_len, &sid_type)) {
+						uname=account;
+						if (wcslen(domain)) {
+							uname.push_back(L',');
+							uname.append(domain);
+						}
+					}
+				}
+			}
+			
+			delete[] (BYTE*)ptu;
+		}
+		
+		CloseHandle(hToken);
+	}
+	
+	return uname;
+}
+
 bool SuiteExtRel::GetUserNameWrapper(std::wstring &sname, std::wstring &fname)
 {
 	wchar_t uname[UNLEN+1];

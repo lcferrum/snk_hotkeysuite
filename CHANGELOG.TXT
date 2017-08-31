@@ -1,3 +1,9 @@
+2017-08-31  Lcferrum <lcferrum@yandex.com>
+	
+	* Release 1.1
+	* Changed:
+		- Changed task naming scheme when scheduling task for current user (tasks created by version 1.0 can't be deleted by 1.1 - delete them manually via Task Scheduler)
+
 2017-06-04  Lcferrum <lcferrum@yandex.com>
 	
 	* Release 1.0

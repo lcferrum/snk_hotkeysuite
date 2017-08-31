@@ -32,7 +32,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmd
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 #endif
-	MessageBox(NULL, SuiteExtRel::GetUserNameForTaskScheduler().c_str(), L"GetUserNameForTaskScheduler", MB_OK);
 	SuiteExterns::MakeInstance();
 	std::unique_ptr<SuiteSettings> Settings;
 	

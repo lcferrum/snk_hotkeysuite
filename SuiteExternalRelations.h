@@ -12,7 +12,6 @@ namespace SuiteExtRel {
 	int AddToAutorun(bool current_user, wchar_t** argv, int argc);
 	int RemoveFromAutorun(bool current_user);
 	bool LaunchSnkOpenDialog(std::wstring &fpath);
-	std::wstring GetUserNameForTaskScheduler();
 }
 
 #endif //SUITEEXTERNALRELATIONS_H

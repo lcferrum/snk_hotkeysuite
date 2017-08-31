@@ -19,8 +19,8 @@ namespace SuiteExtRel {
 	int Schedule20(bool &na, bool current_user, const wchar_t* params);
 	int Unschedule10(bool &na);
 	int Unschedule20(bool &na, bool current_user);
-	bool GetUserNameWrapper(std::wstring &sname, std::wstring &fname);
 	bool EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &key_value, DWORD &key_type);
+	std::wstring GetUserNameForTaskScheduler(std::wstring &xname);
 	size_t FindInPath(const std::wstring &path, const wchar_t* dir, size_t *ret_len);
 }
 
@@ -118,7 +118,7 @@ int SuiteExtRel::RemoveFromAutorun(bool current_user)
 	return ret;
 }
 
-std::wstring SuiteExtRel::GetUserNameForTaskScheduler()
+std::wstring SuiteExtRel::GetUserNameForTaskScheduler(std::wstring &xname)
 {
 	std::wstring uname;
 	
@@ -135,11 +135,12 @@ std::wstring SuiteExtRel::GetUserNameForTaskScheduler()
 					wchar_t account[account_len];
 					wchar_t domain[domain_len];
 					if (LookupAccountSid(NULL, ptu->User.Sid, account, &account_len, domain, &domain_len, &sid_type)) {
-						uname=account;
-						if (wcslen(domain)) {
-							uname.push_back(L',');
-							uname.append(domain);
-						}
+						uname=domain;
+						uname.push_back(L'\\');
+						uname.append(account);
+						xname.append(account);
+						xname.push_back(L',');
+						xname.append(domain);
 					}
 				}
 			}
@@ -151,34 +152,6 @@ std::wstring SuiteExtRel::GetUserNameForTaskScheduler()
 	}
 	
 	return uname;
-}
-
-bool SuiteExtRel::GetUserNameWrapper(std::wstring &sname, std::wstring &fname)
-{
-	wchar_t uname[UNLEN+1];
-	DWORD uname_len=UNLEN+1;
-	
-	if (!GetUserName(uname, &uname_len))
-		return false;
-	
-	sname=uname;
-	if (fnGetUserNameEx) {
-		uname_len=UNLEN+1;
-		if (fnGetUserNameEx(NameSamCompatible, uname, &uname_len)) {
-			fname=uname;
-		} else if (GetLastError()==ERROR_MORE_DATA) {
-			wchar_t uname_ex[uname_len];
-			if (fnGetUserNameEx(NameSamCompatible, uname_ex, &uname_len))
-				fname=uname_ex;
-			else
-				return false;
-		} else
-			return false;
-	} else {
-		fname=uname;
-	}
-
-	return true;
 }
 
 int SuiteExtRel::Unschedule(bool current_user)
@@ -209,31 +182,28 @@ int SuiteExtRel::Unschedule10(bool &na)
 	
 	CoInitialize(NULL);
 	
-	wchar_t uname[UNLEN+1];
-	DWORD uname_len=UNLEN+1;
-	if (!GetUserName(uname, &uname_len))
-		CoUninitialize();
 #ifdef _WIN64
 	std::wstring tname(L"SnK HotkeySuite (x64) [");
 #else
 	std::wstring tname(L"SnK HotkeySuite [");
 #endif
-	tname.append(uname);
-	tname.push_back(L']');
-	
-	ITaskScheduler *pITS;
-	if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
+	if (!GetUserNameForTaskScheduler(tname).empty()) {
+		tname.push_back(L']');
+		
+		ITaskScheduler *pITS;
+		if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
 #ifdef DEBUG
-		std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
+			std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
 #endif
-		//If task doesn't exists - ignore it, but don't ignore other errors
-		HRESULT hr=pITS->Delete(tname.c_str());
-		if (SUCCEEDED(hr)||hr==HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) ret=0;
+			//If task doesn't exists - ignore it, but don't ignore other errors
+			HRESULT hr=pITS->Delete(tname.c_str());
+			if (SUCCEEDED(hr)||hr==HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) ret=0;
 
-		pITS->Release();
-	} else {
-		na=true;
-		ret=0;
+			pITS->Release();
+		} else {
+			na=true;
+			ret=0;
+		}
 	}
 	
 	CoUninitialize();
@@ -254,12 +224,13 @@ int SuiteExtRel::Unschedule20(bool &na, bool current_user)
 	std::wstring tname(L"SnK HotkeySuite");
 #endif
 	if (current_user) {
-		wchar_t uname[UNLEN+1];
-		DWORD uname_len=UNLEN+1;
-		if (!GetUserName(uname, &uname_len))
-			CoUninitialize();
 		tname.append({L' ', L'['});
-		tname.append(uname);
+		
+		if (GetUserNameForTaskScheduler(tname).empty()) {
+			CoUninitialize();
+			return ret;
+		}
+		
 		tname.push_back(L']');
 	}
 	
@@ -330,58 +301,55 @@ int SuiteExtRel::Schedule10(bool &na, const wchar_t* params)
 	
 	CoInitialize(NULL);
 	
-	wchar_t uname[UNLEN+1];
-	DWORD uname_len=UNLEN+1;
-	if (!GetUserName(uname, &uname_len))
-		CoUninitialize();
 #ifdef _WIN64
 	std::wstring tname(L"SnK HotkeySuite (x64) [");
 #else
 	std::wstring tname(L"SnK HotkeySuite [");
-#endif
-	tname.append(uname);
-	tname.push_back(L']');
-	
-	ITaskScheduler *pITS;
-	if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
+#endif	
+	std::wstring uname(GetUserNameForTaskScheduler(tname));
+	if (!uname.empty()) {
+		tname.push_back(L']');
+		ITaskScheduler *pITS;
+		if (SUCCEEDED(CoCreateInstance(CLSID_CTaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (void**)&pITS))) {
 #ifdef DEBUG
-		std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
+			std::wcerr<<L"SCHEDULE: Task Scheduler 1.0 available"<<std::endl;
 #endif
-		ITask *pITask;
-		//ITask->Delete w/ ITask->NewWorkItem: if task exists - we are silently recreating it
-		pITS->Delete(tname.c_str());
-		if (SUCCEEDED(pITS->NewWorkItem(tname.c_str(), CLSID_CTask, IID_ITask, (IUnknown**)&pITask))) {
-			ITaskTrigger *pITaskTrigger;
-			WORD piNewTrigger;
-			if (SUCCEEDED(pITask->SetApplicationName(GetExecutableFileName().c_str()))&&
-				SUCCEEDED(pITask->SetWorkingDirectory(GetExecutableFileName(L"").c_str()))&&
-				SUCCEEDED(pITask->SetParameters(params))&&
-				SUCCEEDED(pITask->SetMaxRunTime(INFINITE))&&
-				SUCCEEDED(pITask->SetFlags(TASK_FLAG_RUN_ONLY_IF_LOGGED_ON))&&		//TASK_FLAG_RUN_ONLY_IF_LOGGED_ON required if pwszPassword in SetAccountInformation is NULL
-				SUCCEEDED(pITask->SetAccountInformation(uname, NULL))&&				//Required
-				SUCCEEDED(pITask->CreateTrigger(&piNewTrigger, &pITaskTrigger))) {
-				TASK_TRIGGER trigger={};
-				trigger.wBeginDay=1;		//Required
-				trigger.wBeginMonth=1;		//Required
-				trigger.wBeginYear=1970;	//Required
-				trigger.cbTriggerSize=sizeof(TASK_TRIGGER);
-				trigger.TriggerType=TASK_EVENT_TRIGGER_AT_LOGON;
-				
-				if (SUCCEEDED(pITaskTrigger->SetTrigger(&trigger))) {
-					IPersistFile *pIPersistFile;
-					if (SUCCEEDED(pITask->QueryInterface(IID_PPV_ARGS(&pIPersistFile)))) {
-						if (SUCCEEDED(pIPersistFile->Save(NULL, TRUE))) ret=0;
-						pIPersistFile->Release();
+			ITask *pITask;
+			//ITask->Delete w/ ITask->NewWorkItem: if task exists - we are silently recreating it
+			pITS->Delete(tname.c_str());
+			if (SUCCEEDED(pITS->NewWorkItem(tname.c_str(), CLSID_CTask, IID_ITask, (IUnknown**)&pITask))) {
+				ITaskTrigger *pITaskTrigger;
+				WORD piNewTrigger;
+				if (SUCCEEDED(pITask->SetApplicationName(GetExecutableFileName().c_str()))&&
+					SUCCEEDED(pITask->SetWorkingDirectory(GetExecutableFileName(L"").c_str()))&&
+					SUCCEEDED(pITask->SetParameters(params))&&
+					SUCCEEDED(pITask->SetMaxRunTime(INFINITE))&&
+					SUCCEEDED(pITask->SetFlags(TASK_FLAG_RUN_ONLY_IF_LOGGED_ON))&&		//TASK_FLAG_RUN_ONLY_IF_LOGGED_ON required if pwszPassword in SetAccountInformation is NULL
+					SUCCEEDED(pITask->SetAccountInformation(uname.c_str(), NULL))&&		//Required
+					SUCCEEDED(pITask->CreateTrigger(&piNewTrigger, &pITaskTrigger))) {
+					TASK_TRIGGER trigger={};
+					trigger.wBeginDay=1;		//Required
+					trigger.wBeginMonth=1;		//Required
+					trigger.wBeginYear=1970;	//Required
+					trigger.cbTriggerSize=sizeof(TASK_TRIGGER);
+					trigger.TriggerType=TASK_EVENT_TRIGGER_AT_LOGON;
+					
+					if (SUCCEEDED(pITaskTrigger->SetTrigger(&trigger))) {
+						IPersistFile *pIPersistFile;
+						if (SUCCEEDED(pITask->QueryInterface(IID_PPV_ARGS(&pIPersistFile)))) {
+							if (SUCCEEDED(pIPersistFile->Save(NULL, TRUE))) ret=0;
+							pIPersistFile->Release();
+						}
 					}
+					pITaskTrigger->Release();
 				}
-				pITaskTrigger->Release();
+				pITask->Release();
 			}
-			pITask->Release();
+			pITS->Release();
+		} else {
+			na=true;
+			ret=0;
 		}
-		pITS->Release();
-	} else {
-		na=true;
-		ret=0;
 	}
 	
 	CoUninitialize();
@@ -402,12 +370,15 @@ int SuiteExtRel::Schedule20(bool &na, bool current_user, const wchar_t* params)
 	std::wstring tname(L"SnK HotkeySuite");
 #endif
 	std::wstring uname;	
-	if (current_user) {		
-		std::wstring sname;
-		if (!GetUserNameWrapper(sname, uname))
-			CoUninitialize();
+	if (current_user) {
 		tname.append({L' ', L'['});
-		tname.append(sname);
+		uname=GetUserNameForTaskScheduler(tname);
+
+		if (uname.empty()) {
+			CoUninitialize();
+			return ret;
+		}
+
 		tname.push_back(L']');
 	} else {
 		uname=L"Users";

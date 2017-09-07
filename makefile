@@ -5,10 +5,13 @@
 #	Cleans directory of executables
 # make upx
 #	Pack executables with upx
+# make install
+#	Makes installer, requires compiled SnK binary residing in adjacent directory (../snk)
+#	Under MSYS 1.0 fails because of posix path conversion - use mingw32-make for this target 
 # make UPSTREAM_INC=PATH
 #	Change include path for clang++ 3.6.2 and g++ 4.7.2 (default is /c/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/)
 # make DEBUG=LEVEL
-#	Makes debug build
+#	Makes debug build (currently only level 1 supported)
 
 # Conditionals
 ifeq (,$(if $(filter-out upx install clean,$(MAKECMDGOALS)),,$(MAKECMDGOALS)))

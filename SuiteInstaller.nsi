@@ -573,6 +573,7 @@ Function killExistingSnK
 			StrCpy $R0 "SnKh.exe"
 		${endif}
 		ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
+		ClearErrors
 	${endif}
 FunctionEnd
 
@@ -594,6 +595,7 @@ Function un.killInstalledSnK
 		StrCpy $R0 "SnKh.exe"
 	${endif}
 	ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
+	ClearErrors
 FunctionEnd
 
 Function patchInstdir

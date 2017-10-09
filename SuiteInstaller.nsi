@@ -569,9 +569,10 @@ Function killExistingSnK
 				${endif}
 			${endif}
 		${endif}
-		${if} "$R0" != ""
-			ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
+		${if} "$R0" == ""
+			StrCpy $R0 "SnKh.exe"
 		${endif}
+		ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
 	${endif}
 FunctionEnd
 
@@ -589,9 +590,10 @@ Function un.killInstalledSnK
 			${endif}
 		${endif}
 	${endif}
-	${if} "$R0" != ""
-		ExecWait '"$R0" +alc /pth:full="$INSTDIR\HotkeySuite.exe"'
+	${if} "$R0" == ""
+		StrCpy $R0 "SnKh.exe"
 	${endif}
+	ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
 FunctionEnd
 
 Function patchInstdir

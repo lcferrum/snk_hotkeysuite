@@ -164,6 +164,14 @@ void TskbrNtfAreaIcon::CloseAndQuit(int exit_code)
 	PostQuitMessage(exit_code);
 }
 
+BOOL TskbrNtfAreaIcon::RemoveIconMenu(UINT uPosition, UINT uFlags)
+{
+	if (!valid)
+		return FALSE;
+	
+	return RemoveMenu(icon_menu, uPosition, uFlags);
+}
+
 BOOL TskbrNtfAreaIcon::ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCWSTR lpNewItem)
 {
 	if (!valid)
@@ -194,6 +202,14 @@ BOOL TskbrNtfAreaIcon::CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT id
 		return FALSE;
 	
 	return CheckMenuRadioItem(icon_menu, idFirst, idLast, idCheck, uFlags);
+}
+
+BOOL TskbrNtfAreaIcon::SetIconMenuItemInfo(UINT uItem, BOOL fByPosition, LPMENUITEMINFO lpmii)
+{
+	if (!valid)
+		return FALSE;
+	
+	return SetMenuItemInfo(icon_menu, uItem, fByPosition, lpmii);
 }
 
 UINT TskbrNtfAreaIcon::GetIconMenuState(UINT uId, UINT uFlags)

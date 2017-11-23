@@ -47,6 +47,8 @@ CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "HotkeySuite.manifest"
 
 IDI_HSTNAICO ICON "hs.ico"
 IDI_HSSTOPICO ICON "hs_stop.ico"
+IDI_HSLTNAICO ICON "hsl.ico"
+IDI_HSLSTOPICO ICON "hsl_stop.ico"
 #ifndef _WIN64
 IDI_HANDCUR CURSOR "hand.cur"
 #endif
@@ -58,7 +60,7 @@ BEGIN
 		//Don't set any options for MENUITEMs - this is initializing code responsibility
 		MENUITEM "Stop", IDM_STOP_START
 		MENUITEM SEPARATOR
-		POPUP "Settings"	//If menu items are added or deleted above - modify this popup position (POS_SETTINGS) in Res.h accordingly
+		POPUP "SETTINGS"	//If menu items are added or deleted above - modify this popup position (POS_SETTINGS) in Res.h accordingly (caption will be changed in the code)
 		BEGIN
 			MENUITEM "Long press", IDM_SET_EN_LHK
 			MENUITEM SEPARATOR
@@ -66,7 +68,7 @@ BEGIN
 			MENUITEM "Shift+Alt", IDM_SET_SHIFT_ALT
 			MENUITEM "Ctrl+Shift", IDM_SET_CTRL_SHIFT
 			MENUITEM SEPARATOR
-			MENUITEM "Change hotkey combination...", IDM_SET_CUSTOM
+			MENUITEM "REBIND", IDM_SET_CUSTOM	//Caption will be changed in the code
 		END
 		MENUITEM "On single press...", IDM_EDIT_SHK
 		MENUITEM "On long press...", IDM_EDIT_LHK
@@ -76,6 +78,7 @@ BEGIN
 		MENUITEM SEPARATOR
 #endif
 		MENUITEM "About...", IDM_ABOUT
+		MENUITEM "Run as administrator", IDM_ELEVATE
 		MENUITEM "Exit", IDM_EXIT
 	END
 END
@@ -84,7 +87,7 @@ IDD_BINDINGDLG DIALOGEX 10, 10, 262, 61
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | DS_SHELLFONT | DS_3DLOOK | DS_NOIDLEMSG | WS_CLIPSIBLINGS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg"
 EXSTYLE WS_EX_TOPMOST | WS_EX_APPWINDOW
-CAPTION "Rebind []"
+CAPTION ""	//Caption will be set in the code
 BEGIN
 	DEFPUSHBUTTON	"&Confirm", IDC_CONFIRM_SC, 70, 39, 57, 16, WS_DISABLED
 	PUSHBUTTON		"&Retry", IDC_RETRY_SC, 134, 39, 57, 16, WS_DISABLED

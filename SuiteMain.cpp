@@ -11,13 +11,17 @@
 #include "Res.h"
 #include <string>
 #include <functional>
+#include <initguid.h>
+#include <wincodec.h>
 
 extern pTaskDialog fnTaskDialog;
 
-bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam);
+bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, bool elev_req, TskbrNtfAreaIcon *sender, WPARAM wParam, LPARAM lParam);
 
-void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender);
-void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical);
+void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
+void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
+bool CheckIfElevationRequired();
+HBITMAP GetUacShieldBitmap();
 
 #ifdef __clang__
 //Obscure clang++ bug - it reports "multiple definition" of std::operator+() when statically linking with libstdc++
@@ -48,7 +52,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 			return ERR_SUITEMAIN+1;
 		}
 	}	
-	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +mb /pid:parent -mb /cmd=";
+	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +p /cmd=";
 	std::wstring snk_cmdline_l=snk_cmdline_s;
 	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
 	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
@@ -65,11 +69,15 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//So it's safe to drop const qualifier
 	KeyTriplet OnKeyTriplet(const_cast<wchar_t*>(snk_cmdline_s.c_str()), const_cast<wchar_t*>(snk_cmdline_l.c_str()));
 	
+	//Check if we elevated rights may be required
+	HBITMAP uac_bitmap=NULL;
+	bool elev_req=CheckIfElevationRequired();
+	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START, 
-		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", elev_req?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
+		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_req, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(CloseEventHandler, settings, std::placeholders::_1),
 		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
 	if (!SnkIcon->IsValid()) {
@@ -99,7 +107,15 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 			break;
 	}
 	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(settings->GetBindedKey(), L"Rebind ", L"...").c_str());
-	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str()); 
+	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str());
+	if (!elev_req) SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
+	if (elev_req&&(uac_bitmap=GetUacShieldBitmap())) {	
+		//ModifyMenu doesn't work here - it justs replaces text with bitmap
+		MENUITEMINFO mii={sizeof(MENUITEMINFO)};
+		mii.fMask=MIIM_BITMAP;
+		mii.hbmpItem=uac_bitmap;
+		SnkIcon->SetIconMenuItemInfo(IDM_ELEVATE, FALSE, &mii);
+	}
 
 	//It is possible to set initial stack commit size for hotkey hook thread
 	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4 KB for MinGW/Clang)
@@ -127,32 +143,34 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//Manually uninitializing some components to make sure right unintialization order
 	SnkHotkey->Stop();			//This way HotkeyEngine is deinitialized right after TskbrNtfAreaIcon
 	settings->SaveSettings();	//Main parts of HotkeySuite are deinitialized and now it's time to save settings
+	if (uac_bitmap) DeleteObject(uac_bitmap);	//If UAC shield bitmap was created - free it
 	
 	return msg.wParam;
 }
 
-bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, TskbrNtfAreaIcon* sender, WPARAM wParam, LPARAM lParam)
+bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, bool elev_req, TskbrNtfAreaIcon *sender, WPARAM wParam, LPARAM lParam)
 {
 	//Not checking if hk_engine is NULL in menu handlers - handlers won't be called until message loop is fired which happens after creation of hk_engine
 	bool hk_was_running=false;
 	switch (LOWORD(wParam)) {
 		case IDM_EXIT:
+		case IDM_ELEVATE:
 			//We can just use PostQuitMessage() and wait for TskbrNtfAreaIcon destructor to destroy icon at the end of the program
 			//But in this case icon will be briefly present after the end of message loop till the end of WinMain, though being unresponsive
 			//It will be better to destroy the icon right away and then exit message loop
 			//And after that do all other uninitialization without icon being visible for unknown purpose
-			sender->CloseAndQuit();	//Sets WM_QUIT's wParam to 0
+			sender->CloseAndQuit(LOWORD(wParam)==IDM_ELEVATE?ERR_ELEVATE:0);	//Set WM_QUIT's wParam to 0 if normal exit and ERR_ELEVATE if requesting elevated rights
 			return true;
 		case IDM_STOP_START:
 			if (hk_engine->IsRunning()) {
 				hk_engine->Stop();
 				sender->ChangeIconTooltip(SNK_HS_TITLE L": Stopped");
-				sender->ChangeIcon(IDI_HSSTOPICO);
+				sender->ChangeIcon(elev_req?IDI_HSLSTOPICO:IDI_HSSTOPICO);
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Start"); 
 			} else {
 				if (!hk_engine->Start()) break;
 				sender->ChangeIconTooltip(SNK_HS_TITLE L": Running");
-				sender->ChangeIcon(IDI_HSTNAICO);
+				sender->ChangeIcon(elev_req?IDI_HSLTNAICO:IDI_HSTNAICO);
 				sender->ModifyIconMenu(IDM_STOP_START, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_STOP_START, L"Stop"); 
 			}
 			return true;
@@ -302,15 +320,75 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 	return true;
 }
 
-void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender)
+void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender)
 {
 	//Settings will be saved after message loop exits
 	sender->CloseAndQuit();	//Sets WM_QUIT's wParam to 0
 }
 
-void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon* sender, bool critical)
+void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical)
 {
 	//Session is about to end - there is a chance that process will be terminated right after this event handler exits, abandoning all the code after mesage loop
 	//So saving settings now but not exiting app - it will be terminated anyway
 	settings->SaveSettings();
+}
+
+bool CheckIfElevationRequired()
+{
+	HANDLE hOwnToken;
+	bool required=false;
+	if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hOwnToken)) {
+		TOKEN_ELEVATION elevation; 
+		DWORD ret_len; 
+		if (GetTokenInformation(hOwnToken, TokenElevation, &elevation, sizeof(elevation), &ret_len)) {
+			required=!elevation.TokenIsElevated;
+		}
+		CloseHandle(hOwnToken);
+	}
+	return required;
+}
+
+HBITMAP GetUacShieldBitmap()
+{
+	HBITMAP uac_bitmap=NULL;
+	
+	CoInitialize(NULL);
+
+	IWICImagingFactory *pIWICIF;
+	if (SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICIF)))) {
+		IWICBitmap *pIWICB;
+		SHSTOCKICONINFO sii={sizeof(sii)};
+		//TODO: dynamically load SHGetStockIconInfo
+		if (SUCCEEDED(SHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))) {
+			UINT cx, cy;
+			if (SUCCEEDED(pIWICB->GetSize(&cx, &cy))) {
+				if (HDC hdc=GetDC(NULL)) {
+					BYTE *dib_buf;	//Memory area pointed to by this variable will be freed when HBITMAP, returned by CreateDIBSection(hSection=NULL), will be freed with DeleteObject
+					BITMAPINFO bmi={{
+						sizeof(BITMAPINFOHEADER),	//BITMAPINFO.BITMAPINFOHEADER.biSize
+						(int)cx,					//BITMAPINFO.BITMAPINFOHEADER.biWidth
+						-(int)cy,					//BITMAPINFO.BITMAPINFOHEADER.biHeight
+						1,							//BITMAPINFO.BITMAPINFOHEADER.biPlanes
+						32,							//BITMAPINFO.BITMAPINFOHEADER.biBitCount
+						BI_RGB						//BITMAPINFO.BITMAPINFOHEADER.biCompression (rest of BITMAPINFO.BITMAPINFOHEADER members are initialized with NULLs)
+					}};								//BITMAPINFO.RGBQUAD members are initialized with NULLs (this is required when biBitCount is 32 and biCompression is BI_RGB)
+					if ((uac_bitmap=CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, (void**)&dib_buf, NULL, 0))) {
+						UINT stride=cx*sizeof(DWORD);
+						UINT buf_sz=cy*stride;
+						if (FAILED(pIWICB->CopyPixels(NULL, stride, buf_sz, dib_buf))) {
+							DeleteObject(uac_bitmap);
+							uac_bitmap=NULL;
+						}
+					}
+					ReleaseDC(NULL, hdc);
+				}
+			}
+			pIWICB->Release();
+		}
+		pIWICIF->Release();
+	}
+
+	CoUninitialize();
+	
+	return uac_bitmap;
 }

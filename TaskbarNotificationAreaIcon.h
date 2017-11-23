@@ -47,7 +47,9 @@ public:
 	bool IsEnabled() { return enabled; }
 	HMENU GetIconMenu();
 	HWND GetIconWindow();
+	BOOL RemoveIconMenu(UINT uPosition, UINT uFlags);
 	BOOL ModifyIconMenu(UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCTSTR lpNewItem);
+	BOOL SetIconMenuItemInfo(UINT uItem, BOOL fByPosition, LPMENUITEMINFO lpmii);
 	BOOL EnableIconMenuItem(UINT uIDEnableItem, UINT uEnable);
 	DWORD CheckIconMenuItem(UINT uIDCheckItem, UINT uCheck);
 	BOOL CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT idCheck, UINT uFlags);

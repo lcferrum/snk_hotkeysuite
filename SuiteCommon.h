@@ -14,6 +14,7 @@
 #define ERR_SUITE			0x0100
 #define ERR_SUITEMAIN		0x0200
 #define ERR_SUITEEXTREL		0x0300
+#define ERR_ELEVATE			0x1000
 
 #define WM_HSTNAICO			(WM_USER+1)
 #define WM_BINDSC			(WM_USER+2)

@@ -242,6 +242,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	if (!Settings->SaveSettings()) {
 		ErrorMessage(L"Failed to load settings!");
 		return ERR_SUITE+1;
-	} else
-		return SuiteMain(hInstance, Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
+	} else {
+		int suite_main_err=SuiteMain(hInstance, Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
+		if (suite_main_err==ERR_ELEVATE) {
+			std::wstring hs_path=GetExecutableFileName();
+			SHELLEXECUTEINFO sei={sizeof(sei)}; 
+			sei.lpVerb=L"runas"; 
+			sei.lpFile=hs_path.c_str(); 
+			sei.hwnd=NULL; 
+			sei.nShow=SW_NORMAL;
+			if (!ShellExecuteEx(&sei)) {
+				if (GetLastError()==ERROR_CANCELLED) { 
+					sei.lpVerb=L"open";
+					if (!ShellExecuteEx(&sei))
+						ErrorMessage(L"Failed to restart application!");
+				} else { 
+					ErrorMessage(L"Failed to restart application as administrator!");
+				} 
+			}
+		}
+		return suite_main_err;
+	}
 }

@@ -8,11 +8,14 @@ pGetUserNameEx fnGetUserNameEx=NULL;
 pChangeWindowMessageFilter fnChangeWindowMessageFilter=NULL;
 pSHCreateDirectoryEx fnSHCreateDirectoryEx=NULL;
 pSHCreateDirectory fnSHCreateDirectory=NULL;
+pWICConvertBitmapSource fnWICConvertBitmapSource=NULL;
+pSHGetStockIconInfo fnSHGetStockIconInfo=NULL;
+pSetMenuInfo fnSetMenuInfo=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
 SuiteExterns::SuiteExterns(): 
-	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL), hUser32(NULL)
+	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL), hUser32(NULL), hWincodec(NULL)
 {
 	LoadFunctions();
 }
@@ -39,6 +42,7 @@ void SuiteExterns::LoadFunctions()
 	hSecur32=LoadLibrary(L"secur32.dll");
 	hShfolder=LoadLibrary(L"shfolder.dll");
 	hUser32=LoadLibrary(L"user32.dll");
+	hWincodec=LoadLibrary(L"windowscodecs.dll");
 	
 	if (hShfolder) {
 		fnSHGetFolderPathShfolder=(pSHGetFolderPath)GetProcAddress(hShfolder, "SHGetFolderPathW");
@@ -53,6 +57,7 @@ void SuiteExterns::LoadFunctions()
 		fnSHCreateDirectoryEx=(pSHCreateDirectoryEx)GetProcAddress(hShell32, "SHCreateDirectoryExW");
 		//WARNING: on Win 9x/Me version of shell32.dll SHCreateDirectory is ANSI function
 		fnSHCreateDirectory=(pSHCreateDirectory)GetProcAddress(hShell32, (char*)165);
+		fnSHGetStockIconInfo=(pSHGetStockIconInfo)GetProcAddress(hShell32, "SHGetStockIconInfo");
 	}
 	
 	if (hComctl32) {
@@ -65,12 +70,18 @@ void SuiteExterns::LoadFunctions()
 	
 	if (hUser32) {
 		fnChangeWindowMessageFilter=(pChangeWindowMessageFilter)GetProcAddress(hUser32, "ChangeWindowMessageFilter");
+		fnSetMenuInfo=(pSetMenuInfo)GetProcAddress(hUser32, "SetMenuInfo");
+	}
+	
+	if (hWincodec) {
+		fnWICConvertBitmapSource=(pWICConvertBitmapSource)GetProcAddress(hWincodec, "WICConvertBitmapSource");
 	}
 }
 
 //And here we are testing for NULLs because LoadLibrary can fail in method above
 void SuiteExterns::UnloadFunctions() 
 {
+	if (hWincodec) FreeLibrary(hWincodec);
 	if (hUser32) FreeLibrary(hUser32);
 	if (hShfolder) FreeLibrary(hShfolder);
 	if (hSecur32) FreeLibrary(hSecur32);

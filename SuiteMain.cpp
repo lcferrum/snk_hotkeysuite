@@ -11,10 +11,10 @@
 #include "Res.h"
 #include <string>
 #include <functional>
-#include <initguid.h>
-#include <wincodec.h>
 
 extern pTaskDialog fnTaskDialog;
+extern pWICConvertBitmapSource fnWICConvertBitmapSource;
+extern pSHGetStockIconInfo fnSHGetStockIconInfo;
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, bool elev_req, TskbrNtfAreaIcon *sender, WPARAM wParam, LPARAM lParam);
 
@@ -70,7 +70,6 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	KeyTriplet OnKeyTriplet(const_cast<wchar_t*>(snk_cmdline_s.c_str()), const_cast<wchar_t*>(snk_cmdline_l.c_str()));
 	
 	//Check if we elevated rights may be required
-	HBITMAP uac_bitmap=NULL;
 	bool elev_req=CheckIfElevationRequired();
 	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
@@ -109,8 +108,10 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(settings->GetBindedKey(), L"Rebind ", L"...").c_str());
 	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str());
 	if (!elev_req) SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
-	if (elev_req&&(uac_bitmap=GetUacShieldBitmap())) {	
-		//ModifyMenu doesn't work here - it justs replaces text with bitmap
+	HBITMAP uac_bitmap=NULL;
+	if (elev_req&&(uac_bitmap=GetUacShieldBitmap())) {
+		//SnkIcon->SetIconMenuInfo(MNS_CHECKORBMP);
+		//ModifyMenu doesn't work here - it just replaces text with bitmap
 		MENUITEMINFO mii={sizeof(MENUITEMINFO)};
 		mii.fMask=MIIM_BITMAP;
 		mii.hbmpItem=uac_bitmap;
@@ -352,16 +353,21 @@ HBITMAP GetUacShieldBitmap()
 {
 	HBITMAP uac_bitmap=NULL;
 	
+	if (!fnWICConvertBitmapSource||!fnSHGetStockIconInfo)
+		return NULL;
+	
 	CoInitialize(NULL);
 
 	IWICImagingFactory *pIWICIF;
 	if (SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICIF)))) {
 		IWICBitmap *pIWICB;
+		IWICBitmapSource *pIWICBS;
 		SHSTOCKICONINFO sii={sizeof(sii)};
-		//TODO: dynamically load SHGetStockIconInfo
-		if (SUCCEEDED(SHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))) {
+		if (SUCCEEDED(fnSHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&
+			SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))&&
+			SUCCEEDED(fnWICConvertBitmapSource(GUID_WICPixelFormat32bppPBGRA, pIWICB, &pIWICBS))) {
 			UINT cx, cy;
-			if (SUCCEEDED(pIWICB->GetSize(&cx, &cy))) {
+			if (SUCCEEDED(pIWICBS->GetSize(&cx, &cy))) {
 				if (HDC hdc=GetDC(NULL)) {
 					BYTE *dib_buf;	//Memory area pointed to by this variable will be freed when HBITMAP, returned by CreateDIBSection(hSection=NULL), will be freed with DeleteObject
 					BITMAPINFO bmi={{
@@ -375,7 +381,7 @@ HBITMAP GetUacShieldBitmap()
 					if ((uac_bitmap=CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, (void**)&dib_buf, NULL, 0))) {
 						UINT stride=cx*sizeof(DWORD);
 						UINT buf_sz=cy*stride;
-						if (FAILED(pIWICB->CopyPixels(NULL, stride, buf_sz, dib_buf))) {
+						if (FAILED(pIWICBS->CopyPixels(NULL, stride, buf_sz, dib_buf))) {
 							DeleteObject(uac_bitmap);
 							uac_bitmap=NULL;
 						}

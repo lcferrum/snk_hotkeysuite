@@ -10,6 +10,7 @@ TskbrNtfAreaIcon::WmCloseFn TskbrNtfAreaIcon::OnWmClose;
 TskbrNtfAreaIcon::WmEndsessionTrueFn TskbrNtfAreaIcon::OnWmEndsessionTrue;
 
 extern pChangeWindowMessageFilter fnChangeWindowMessageFilter;
+extern pSetMenuInfo fnSetMenuInfo;
 
 TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue)
 {
@@ -218,6 +219,14 @@ UINT TskbrNtfAreaIcon::GetIconMenuState(UINT uId, UINT uFlags)
 		return -1;
 	
 	return GetMenuState(icon_menu, uId, uFlags);
+}
+
+BOOL TskbrNtfAreaIcon::SetIconMenuInfo(LPCMENUINFO lpcmi)
+{
+	if (!valid||!fnSetMenuInfo)
+		return FALSE;
+	
+	return fnSetMenuInfo(icon_menu, lpcmi);
 }
 
 HWND TskbrNtfAreaIcon::GetIconWindow()

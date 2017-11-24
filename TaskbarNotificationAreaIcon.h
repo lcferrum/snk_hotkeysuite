@@ -54,6 +54,7 @@ public:
 	DWORD CheckIconMenuItem(UINT uIDCheckItem, UINT uCheck);
 	BOOL CheckIconMenuRadioItem(UINT idFirst, UINT idLast, UINT idCheck, UINT uFlags);
 	UINT GetIconMenuState(UINT uId, UINT uFlags);
+	BOOL SetIconMenuInfo(LPCMENUINFO lpcmi);
 	
 	~TskbrNtfAreaIcon();
 	TskbrNtfAreaIcon(const TskbrNtfAreaIcon&)=delete;				//Get rid of default copy constructor

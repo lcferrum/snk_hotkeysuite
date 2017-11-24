@@ -6,6 +6,8 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <commctrl.h>
+#include <initguid.h>
+#include <wincodec.h>
 
 class SuiteExterns {
 private:
@@ -16,6 +18,7 @@ private:
 	HMODULE hSecur32;
 	HMODULE hShfolder;
 	HMODULE hUser32;
+	HMODULE hWincodec;
 	
 	void LoadFunctions();
 	void UnloadFunctions();
@@ -37,6 +40,10 @@ typedef HRESULT (WINAPI *pTaskDialog)(HWND hWndParent, HINSTANCE hInstance, PCWS
 typedef BOOLEAN (WINAPI *pGetUserNameEx)(EXTENDED_NAME_FORMAT NameFormat, LPTSTR lpNameBuffer, PULONG lpnSize);
 typedef int (WINAPI *pSHCreateDirectoryEx)(HWND hwnd, LPCWSTR pszPath, const SECURITY_ATTRIBUTES *psa);
 typedef int (WINAPI *pSHCreateDirectory)(HWND hwnd, LPCWSTR pszPath);
-typedef BOOL (WINAPI *pChangeWindowMessageFilter)(UINT  message, DWORD dwFlag);
+typedef HRESULT (WINAPI *pSHGetStockIconInfo)(SHSTOCKICONID siid, UINT uFlags, SHSTOCKICONINFO *psii);
+typedef BOOL (WINAPI *pChangeWindowMessageFilter)(UINT message, DWORD dwFlag);
+typedef HRESULT (WINAPI *pWICConvertBitmapSource)(REFWICPixelFormatGUID dstFormat, IWICBitmapSource *pISrc, IWICBitmapSource **ppIDst);
+typedef BOOL (WINAPI *pSetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
+
 
 #endif //SUITEEXTERNS_H

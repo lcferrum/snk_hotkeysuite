@@ -11,6 +11,8 @@
 #include "Res.h"
 #include <string>
 #include <functional>
+#include <initguid.h>
+#include <wincodec.h>
 
 extern pTaskDialog fnTaskDialog;
 extern pWICConvertBitmapSource fnWICConvertBitmapSource;
@@ -20,6 +22,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
+void DisabledFallbackHandler(TskbrNtfAreaIcon *sender);
 bool CheckIfElevationRequired();
 HBITMAP GetUacShieldBitmap();
 
@@ -107,24 +110,26 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	}
 	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(settings->GetBindedKey(), L"Rebind ", L"...").c_str());
 	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str());
-	if (!elev_req) SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
 	HBITMAP uac_bitmap=NULL;
-	if (elev_req&&(uac_bitmap=GetUacShieldBitmap())) {
-		MENUINFO mi={sizeof(MENUINFO), MIM_STYLE};
-		if (SnkIcon->GetIconMenuInfo(&mi)) {
-			mi.dwStyle|=MNS_CHECKORBMP;
-			SnkIcon->SetIconMenuInfo(&mi);
+	if (elev_req) {
+		if ((uac_bitmap=GetUacShieldBitmap())) {
+			MENUINFO mi={sizeof(MENUINFO), MIM_STYLE};
+			if (SnkIcon->GetIconMenuInfo(&mi)) {
+				mi.dwStyle|=MNS_CHECKORBMP;
+				SnkIcon->SetIconMenuInfo(&mi);
+			}
+			//ModifyMenu doesn't work here - it just replaces text with bitmap
+			MENUITEMINFO mii={sizeof(MENUITEMINFO)};
+			mii.fMask=MIIM_BITMAP;
+			mii.hbmpItem=uac_bitmap;
+			SnkIcon->SetIconMenuItemInfo(IDM_ELEVATE, FALSE, &mii);
 		}
-		//ModifyMenu doesn't work here - it just replaces text with bitmap
-		MENUITEMINFO mii={sizeof(MENUITEMINFO)};
-		mii.fMask=MIIM_BITMAP;
-		mii.hbmpItem=uac_bitmap;
-		SnkIcon->SetIconMenuItemInfo(IDM_ELEVATE, FALSE, &mii);
-	}
+	} else
+		SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
 
 	//It is possible to set initial stack commit size for hotkey hook thread
 	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4 KB for MinGW/Clang)
-	//It was observed (on Win Server 2012 R2 x64 test machine) that hotkey hook thread consumes around 2 KB of stack at it's peak usage when not triggered (i.e. no hotkey press actually happens)
+	//It was observed (on Win Server 2012 R2 x64 test machine for v1.1) that hotkey hook thread consumes around 2 KB of stack at it's peak usage when not triggered (i.e. no hotkey press actually happens)
 	//When hotkey press happens, stack peak usage jumps to around 9 KB (thanks to CreateProcess call)
 	//Because most of the time hook thread stays in it's untriggered state, we keep default initial commit size value from PE header (i.e. 4 KB)
 	//Commit size will grow automatically if more stack space is needed by the thread
@@ -259,7 +264,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				//All in all, it's better disable icon completely so binding dialog won't be called second time and no other menu items can be clicked
 				sender->Disable();
 				hk_was_running=hk_engine->Stop();
-				BINDING_DLGPRC_PARAM bd_dlgprc_param={hk_engine, settings, {0, 0, false}, NULL};
+				BINDING_DLGPRC_PARAM bd_dlgprc_param={sender, hk_engine, settings, {0, 0, false}, NULL};
 				//Several words on InitCommonControls() and InitCommonControlsEx()
 				//"Common" name is somewhat misleading
 				//Even though controls like "static", "edit" and "button" are common (like in common sence) they are actually "standard" controls
@@ -279,6 +284,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 					case BD_DLGPRC_CANCEL:
 						hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 						if (hk_was_running&&!hk_engine->Start()) break;
+						sender->SetModalWnd(NULL);
 						sender->Enable();
 						return true;
 				}
@@ -299,17 +305,22 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			if (hk_was_running&&!hk_engine->Start()) break;
 			return true;
 #endif
+		case IDM_CMDPRMPT:
+			SuiteExtRel::LaunchCommandPrompt(GetDirPath(GetFullPathNameWrapper(settings->GetSnkPath())).c_str());
+			return true;
 		case IDM_ABOUT:
 			{
 				//Blah blah blah... see comments on IDM_SET_CUSTOM
 				sender->Disable();
 				hk_was_running=hk_engine->Stop();
-				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, (LPARAM)settings)) {
+				ABOUT_DLGPRC_PARAM ad_dlgprc_param={sender, settings};
+				switch (DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_ABOUTDLG), sender->GetIconWindow(), AboutDialog::DialogProc, (LPARAM)&ad_dlgprc_param)) {
 					case DLGBX_FN_INV_PARAM:
 					case DLGBX_FN_FAILED:
 						break;
 					case AD_DLGPRC_WHATEVER:
 						if (hk_was_running&&!hk_engine->Start()) break;
+						sender->SetModalWnd(NULL);
 						sender->Enable();
 						return true;
 				}
@@ -367,31 +378,32 @@ HBITMAP GetUacShieldBitmap()
 		IWICBitmap *pIWICB;
 		IWICBitmapSource *pIWICBS;
 		SHSTOCKICONINFO sii={sizeof(sii)};
-		if (SUCCEEDED(fnSHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&
-			SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))&&
-			SUCCEEDED(fnWICConvertBitmapSource(GUID_WICPixelFormat32bppPBGRA, pIWICB, &pIWICBS))) {
-			UINT cx, cy;
-			if (SUCCEEDED(pIWICBS->GetSize(&cx, &cy))) {
-				if (HDC hdc=GetDC(NULL)) {
-					BYTE *dib_buf;	//Memory area pointed to by this variable will be freed when HBITMAP, returned by CreateDIBSection(hSection=NULL), will be freed with DeleteObject
-					BITMAPINFO bmi={{
-						sizeof(BITMAPINFOHEADER),	//BITMAPINFO.BITMAPINFOHEADER.biSize
-						(int)cx,					//BITMAPINFO.BITMAPINFOHEADER.biWidth
-						-(int)cy,					//BITMAPINFO.BITMAPINFOHEADER.biHeight
-						1,							//BITMAPINFO.BITMAPINFOHEADER.biPlanes
-						32,							//BITMAPINFO.BITMAPINFOHEADER.biBitCount
-						BI_RGB						//BITMAPINFO.BITMAPINFOHEADER.biCompression (rest of BITMAPINFO.BITMAPINFOHEADER members are initialized with NULLs)
-					}};								//BITMAPINFO.RGBQUAD members are initialized with NULLs (this is required when biBitCount is 32 and biCompression is BI_RGB)
-					if ((uac_bitmap=CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, (void**)&dib_buf, NULL, 0))) {
-						UINT stride=cx*sizeof(DWORD);
-						UINT buf_sz=cy*stride;
-						if (FAILED(pIWICBS->CopyPixels(NULL, stride, buf_sz, dib_buf))) {
-							DeleteObject(uac_bitmap);
-							uac_bitmap=NULL;
+		if (SUCCEEDED(fnSHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))) {
+			if (SUCCEEDED(fnWICConvertBitmapSource(GUID_WICPixelFormat32bppPBGRA, pIWICB, &pIWICBS))) {
+				UINT cx, cy;
+				if (SUCCEEDED(pIWICBS->GetSize(&cx, &cy))) {
+					if (HDC hdc=GetDC(NULL)) {
+						void *dib_buf;	//Memory area pointed to by this variable will be freed when HBITMAP, returned by CreateDIBSection(hSection=NULL), will be freed with DeleteObject
+						BITMAPINFO bmi={{
+							sizeof(BITMAPINFOHEADER),	//BITMAPINFO.BITMAPINFOHEADER.biSize
+							(int)cx,					//BITMAPINFO.BITMAPINFOHEADER.biWidth
+							-(int)cy,					//BITMAPINFO.BITMAPINFOHEADER.biHeight
+							1,							//BITMAPINFO.BITMAPINFOHEADER.biPlanes
+							32,							//BITMAPINFO.BITMAPINFOHEADER.biBitCount
+							BI_RGB						//BITMAPINFO.BITMAPINFOHEADER.biCompression (rest of BITMAPINFO.BITMAPINFOHEADER members are initialized with NULLs)
+						}};								//BITMAPINFO.RGBQUAD members are initialized with NULLs (this is required when biBitCount is 32 and biCompression is BI_RGB)
+						if ((uac_bitmap=CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &dib_buf, NULL, 0))) {
+							UINT stride=cx*sizeof(DWORD);
+							UINT buf_sz=cy*stride;
+							if (FAILED(pIWICBS->CopyPixels(NULL, stride, buf_sz, (BYTE*)dib_buf))) {
+								DeleteObject(uac_bitmap);
+								uac_bitmap=NULL;
+							}
 						}
+						ReleaseDC(NULL, hdc);
 					}
-					ReleaseDC(NULL, hdc);
 				}
+				pIWICBS->Release();
 			}
 			pIWICB->Release();
 		}

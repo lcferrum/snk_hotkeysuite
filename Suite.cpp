@@ -18,16 +18,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR, int nCmd
 {
 	LPWSTR lpCmdLine=GetCommandLineW();
 	//We should drop first argument which is executable path
+	//And it's more of a convention that most programmers adhere to than strict requirement
+	//Because actually you can call CreateProcess explicitly passing application name and omitting it from command line, which is a separate argument (not the case with ShellExecuteEx)
 	bool inside_quotes=false;
-    if (lpCmdLine) {
-		while (*lpCmdLine>L' '||(*lpCmdLine&&inside_quotes)) {
-			if (*lpCmdLine==L'\"')
-				inside_quotes=!inside_quotes;
-			lpCmdLine++;
-		}
-		while (*lpCmdLine&&(*lpCmdLine<=L' '))
-			lpCmdLine++;
+	while (*lpCmdLine>L' '||(*lpCmdLine&&inside_quotes)) {
+		if (*lpCmdLine==L'\"')
+			inside_quotes=!inside_quotes;
+		lpCmdLine++;
 	}
+	while (*lpCmdLine&&(*lpCmdLine<=L' '))
+		lpCmdLine++;
 #else
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -244,23 +244,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 		return ERR_SUITE+1;
 	} else {
 		int suite_main_err=SuiteMain(hInstance, Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
-		if (suite_main_err==ERR_ELEVATE) {
-			std::wstring hs_path=GetExecutableFileName();
-			SHELLEXECUTEINFO sei={sizeof(sei)}; 
-			sei.lpVerb=L"runas"; 
-			sei.lpFile=hs_path.c_str(); 
-			sei.hwnd=NULL; 
-			sei.nShow=SW_NORMAL;
-			if (!ShellExecuteEx(&sei)) {
-				if (GetLastError()==ERROR_CANCELLED) { 
-					sei.lpVerb=L"open";
-					if (!ShellExecuteEx(&sei))
-						ErrorMessage(L"Failed to restart application!");
-				} else { 
-					ErrorMessage(L"Failed to restart application as administrator!");
-				} 
-			}
-		}
+		if (suite_main_err==ERR_ELEVATE)
+			SuiteExtRel::RestartApplication(lpCmdLine, true);
+		else if (suite_main_err==ERR_RESTART)
+			SuiteExtRel::RestartApplication(lpCmdLine, false);
 		return suite_main_err;
 	}
 }

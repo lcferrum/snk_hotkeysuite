@@ -12,6 +12,7 @@ TskbrNtfAreaIcon::WmEndsessionTrueFn TskbrNtfAreaIcon::OnWmEndsessionTrue;
 extern pChangeWindowMessageFilter fnChangeWindowMessageFilter;
 extern pSetMenuInfo fnSetMenuInfo;
 extern pGetMenuInfo fnGetMenuInfo;
+extern pFlashWindowEx fnFlashWindowEx;
 
 TskbrNtfAreaIcon* TskbrNtfAreaIcon::MakeInstance(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid, WmCommandFn OnWmCommand, WmCloseFn OnWmClose, WmEndsessionTrueFn OnWmEndsessionTrue)
 {
@@ -30,7 +31,7 @@ TskbrNtfAreaIcon::~TskbrNtfAreaIcon()
 
 //Using first version of NOTIFYICONDATA to be compatible with pre-Win2000 OS versions
 TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wchar_t* icon_tooltip, UINT icon_resid, const wchar_t* icon_class, UINT icon_menuid, UINT default_menuid):
-	valid(false), enabled(true), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_atom(0), icon_ntfdata{
+	valid(false), enabled(true), modal_wnd(NULL), app_instance(hInstance), icon_menu(NULL), default_menuid(default_menuid), icon_atom(0), icon_ntfdata{
 		NOTIFYICONDATA_V1_SIZE, 							//cbSize
 		NULL, 												//hWnd (will set it later)
 		ICON_UID, 											//uID
@@ -88,7 +89,7 @@ TskbrNtfAreaIcon::TskbrNtfAreaIcon(HINSTANCE hInstance, UINT icon_wm, const wcha
 	//But apps from Task Scheduler are run at unspecified moment because services (including Task Scheduler itself) are launched before Explorer
 	//So apps launched by task using logon event may try to create notification area icon even before taskbar's "Shell_TrayWnd" window is created
 	//But if Shell_NotifyIcon fails for that reason, icon window (which should be created anyway before calling Shell_NotifyIcon) will still receive WM_TASKBARCREATED at some point in future indicating that taskbar has been finally created
-	//WM_TASKBARCREATED is absent on NT4, mush less Task Scheduler itself (we have AT here instead, that is unusable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
+	//WM_TASKBARCREATED is absent on NT4, much less Task Scheduler itself (we have AT here instead, that is unusable to run apps at logon event), so it is of no concern here (at least in the scope of calling Shell_NotifyIcon prematurely)
 	//WM_TASKBARCREATED is also absent on 95 but Task Scheduler is present here, so the best way here is just not using it to launch apps that use notification area icon
 	//Kind of substitute for WM_TASKBARCREATED on 95/NT4 is WM_SETTINGCHANGE w/ wParam=SPI_SETWORKAREA - this message is sent to all top-level windows when size of the screen work area changes (e.g. when taskbar is created)
 	//Oldschool way of keeping notification area icon visible, in case of Explorer is not ready or crashed, is spamming (like every several seconds) NIM_MODIFY and calling NIM_ADD after NIM_MODIFY failed (see RefreshIcon method)
@@ -258,11 +259,11 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 					Shell_NotifyIcon(NIM_ADD, &instance->icon_ntfdata);
 				return 0;
 			case WM_CLOSE:			//Though icon window has no (X) button, WM_CLOSE is sent when opening menu and pressing Alt+F4, by Task Scheduler to GUI apps in response to stopping task and by OS to GUI apps when it is ending user session
-				if (OnWmCommand)
+				if (OnWmClose) 
 					OnWmClose(instance.get());
 				return 0;
 			case WM_ENDSESSION:		//WM_ENDSESSION w/ wParam=TRUE is sent to apps when user session is about to end - after this message is answered, app can be terminated at any moment (even before exiting message loop)
-				if (wParam==TRUE&&OnWmEndsessionTrue)
+				if (wParam==TRUE&&OnWmEndsessionTrue) 
 					OnWmEndsessionTrue(instance.get(), lParam&ENDSESSION_CRITICAL);
 				return 0;
 			case WM_COMMAND:
@@ -271,21 +272,29 @@ LRESULT CALLBACK TskbrNtfAreaIcon::WindowProc(HWND hWnd, UINT message, WPARAM wP
 				break;	//Let DefWindowProc handle the rest of WM_COMMAND variations if OnWmCommand returned FALSE
 			default:
 				//Non-const cases goes here
-				if (instance->enabled&&message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon
+				if (message==instance->icon_ntfdata.uCallbackMessage) {	//Messages that are sent to taskbar icon
 					//For the first version of NOTIFYICONDATA lParam (as a whole, not just LOWORD) holds the mouse or keyboard messages and wParam holds icon ID
 					if (wParam==ICON_UID) {
-						switch (lParam) {
-							case WM_RBUTTONUP:
-								POINT cur_mouse_pt;
-								GetCursorPos(&cur_mouse_pt);
-								SetForegroundWindow(hWnd);
-								TrackPopupMenu(instance->icon_menu, TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
-								PostMessage(hWnd, WM_NULL, 0, 0);
-								return 0;
-							case WM_LBUTTONDBLCLK:
-								if (OnWmCommand)
-									OnWmCommand(instance.get(), instance->default_menuid, 0);
-								return 0;
+						if (instance->enabled) {
+							switch (lParam) {
+								case WM_RBUTTONUP:
+									POINT cur_mouse_pt;
+									GetCursorPos(&cur_mouse_pt);
+									SetForegroundWindow(hWnd);
+									TrackPopupMenu(instance->icon_menu, TPM_LEFTBUTTON|TPM_LEFTALIGN, cur_mouse_pt.x, cur_mouse_pt.y, 0, hWnd, NULL);
+									PostMessage(hWnd, WM_NULL, 0, 0);
+									return 0;
+								case WM_LBUTTONDBLCLK:
+									if (OnWmCommand)
+										OnWmCommand(instance.get(), instance->default_menuid, 0);
+									return 0;
+							}
+						} else if (instance->modal_wnd&&(lParam==WM_RBUTTONUP||lParam==WM_LBUTTONUP)) {
+							FLASHWINFO fwi={sizeof(FLASHWINFO), instance->modal_wnd, FLASHW_CAPTION, 3, 64};
+							SetForegroundWindow(instance->modal_wnd);
+							MessageBeep(MB_OK);
+							if (fnFlashWindowEx) fnFlashWindowEx(&fwi);
+							return 0;
 						}
 					}
 					//Let DefWindowProc handle the rest of uCallbackMessage variations

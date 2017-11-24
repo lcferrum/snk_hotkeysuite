@@ -1,5 +1,4 @@
 #include "SuiteAboutDialog.h"
-#include "SuiteSettings.h"
 #include "Res.h"
 #include <typeinfo>
 
@@ -9,7 +8,7 @@ namespace AboutDialog {
 
 INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	SuiteSettings *settings=(SuiteSettings*)GetWindowLongPtr(hwndDlg, DWLP_USER);
+	ABOUT_DLGPRC_PARAM *ad_dlgprc_param=(ABOUT_DLGPRC_PARAM*)GetWindowLongPtr(hwndDlg, DWLP_USER);
 
 	//If DialogProc returns FALSE then message is passed to dialog box default window procedure
 	//DialogProc return result is nor message return value - message return value should be set explicitly with SetWindowLongPtr(hwndDlg, DWLP_MSGRESULT, LONG_PTR)
@@ -19,11 +18,14 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 		case WM_INITDIALOG:
 			{
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
-				settings=(SuiteSettings*)lParam;
+				ad_dlgprc_param=(ABOUT_DLGPRC_PARAM*)lParam;
+				
+				//Set current window as fallback window for TskbrNtfAreaIcon
+				ad_dlgprc_param->icon->SetModalWnd(hwndDlg);
 				
 				SetDlgItemText(hwndDlg, IDC_EXE_LOC, GetExecutableFileName().c_str());
-				SetDlgItemText(hwndDlg, IDC_SNK_LOC, settings->GetSnkPath().c_str());
-				SetDlgItemText(hwndDlg, IDC_CFG_LOC, settings->GetStoredLocation().c_str());
+				SetDlgItemText(hwndDlg, IDC_SNK_LOC, ad_dlgprc_param->settings->GetSnkPath().c_str());
+				SetDlgItemText(hwndDlg, IDC_CFG_LOC, ad_dlgprc_param->settings->GetStoredLocation().c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
@@ -106,7 +108,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_SNK_OPEN:
 						{
 							//SnK path can be relative
-							ShellExecute(NULL, L"open", GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(settings->GetSnkPath()):settings->GetStoredLocation()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							ShellExecute(NULL, L"open", GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), NULL, NULL, SW_SHOWNORMAL);
 							
 							return TRUE;
 						}

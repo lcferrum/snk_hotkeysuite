@@ -12,6 +12,7 @@ pWICConvertBitmapSource fnWICConvertBitmapSource=NULL;
 pSHGetStockIconInfo fnSHGetStockIconInfo=NULL;
 pSetMenuInfo fnSetMenuInfo=NULL;
 pGetMenuInfo fnGetMenuInfo=NULL;
+pFlashWindowEx fnFlashWindowEx=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
@@ -73,6 +74,7 @@ void SuiteExterns::LoadFunctions()
 		fnChangeWindowMessageFilter=(pChangeWindowMessageFilter)GetProcAddress(hUser32, "ChangeWindowMessageFilter");
 		fnSetMenuInfo=(pSetMenuInfo)GetProcAddress(hUser32, "SetMenuInfo");
 		fnGetMenuInfo=(pGetMenuInfo)GetProcAddress(hUser32, "GetMenuInfo");
+		fnFlashWindowEx=(pFlashWindowEx)GetProcAddress(hUser32, "FlashWindowEx");
 	}
 	
 	if (hWincodec) {

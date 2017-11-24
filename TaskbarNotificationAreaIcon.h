@@ -26,6 +26,7 @@ private:
 	
 	bool valid;
 	bool enabled;
+	HWND modal_wnd;
 	HINSTANCE app_instance;
 	HMENU icon_menu;
 	UINT default_menuid;
@@ -45,6 +46,8 @@ public:
 	void Enable() { enabled=true; }
 	void Disable() { enabled=false; }
 	bool IsEnabled() { return enabled; }
+	void SetModalWnd(HWND hwnd) { modal_wnd=hwnd; }
+	HWND GetModalWnd() { return modal_wnd; }
 	HMENU GetIconMenu();
 	HWND GetIconWindow();
 	BOOL RemoveIconMenu(UINT uPosition, UINT uFlags);

@@ -18,6 +18,9 @@ INT_PTR CALLBACK BindingDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPara
 				SetWindowLongPtr(hwndDlg, DWLP_USER, lParam);
 				bd_dlgprc_param=(BINDING_DLGPRC_PARAM*)lParam;
 				
+				//Set current window as fallback window for TskbrNtfAreaIcon
+				bd_dlgprc_param->icon->SetModalWnd(hwndDlg);
+				
 				SetWindowText(hwndDlg, GetHotkeyString(bd_dlgprc_param->settings->GetBindedKey(), L"Rebind ").c_str());
 				
 				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed

@@ -12,6 +12,8 @@ namespace SuiteExtRel {
 	int AddToAutorun(bool current_user, wchar_t** argv, int argc);
 	int RemoveFromAutorun(bool current_user);
 	bool LaunchSnkOpenDialog(std::wstring &fpath);
+	void RestartApplication(const wchar_t* cmdline, bool elevate);
+	void LaunchCommandPrompt(const wchar_t* dir);
 }
 
 #endif //SUITEEXTERNALRELATIONS_H

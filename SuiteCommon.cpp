@@ -90,8 +90,15 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 		//Also PathRemoveFileSpec doesn't strip trailing backslash if file is at drive's root which isn't the thing we want in environment variable
 		if (replace_fname) {
 			if (wchar_t* last_backslash=wcsrchr(exe_path, L'\\')) {
-				*last_backslash=L'\0';
-				return std::wstring(exe_path)+replace_fname;
+				ptrdiff_t bspos=last_backslash-exe_path;
+				if (wcslen(replace_fname)) {
+					return std::wstring(exe_path, bspos)+replace_fname;
+				} else {
+					if (bspos==2&&exe_path[1]==L':')
+						return std::wstring(exe_path, 3);
+					else
+						return std::wstring(exe_path, bspos);
+				}
 			}
 		} else
 			return exe_path;
@@ -103,9 +110,12 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 std::wstring GetDirPath(const std::wstring &trg_pth)
 {
 	size_t last_backslash;
-	if ((last_backslash=trg_pth.find_last_of(L'\\'))!=std::wstring::npos)
-		return trg_pth.substr(0, last_backslash);
-	else
+	if ((last_backslash=trg_pth.find_last_of(L'\\'))!=std::wstring::npos) {
+		if (last_backslash==2&&trg_pth[1]==L':')
+			return trg_pth.substr(0, 3);
+		else
+			return trg_pth.substr(0, last_backslash);
+	} else
 		return std::wstring();
 }
 

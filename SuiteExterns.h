@@ -6,8 +6,10 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <commctrl.h>
-#include <initguid.h>
-#include <wincodec.h>
+
+//Tydefing few things here for WICConvertBitmapSource so not to include whole wincodec.h with all it's GUIDs
+typedef interface IWICBitmapSource IWICBitmapSource;
+typedef REFGUID REFWICPixelFormatGUID;
 
 class SuiteExterns {
 private:
@@ -45,6 +47,6 @@ typedef BOOL (WINAPI *pChangeWindowMessageFilter)(UINT message, DWORD dwFlag);
 typedef HRESULT (WINAPI *pWICConvertBitmapSource)(REFWICPixelFormatGUID dstFormat, IWICBitmapSource *pISrc, IWICBitmapSource **ppIDst);
 typedef BOOL (WINAPI *pSetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
 typedef BOOL (WINAPI *pGetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
-
+typedef BOOL (WINAPI *pFlashWindowEx)(PFLASHWINFO pfwi);
 
 #endif //SUITEEXTERNS_H

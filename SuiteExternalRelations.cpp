@@ -634,3 +634,52 @@ int SuiteExtRel::RemoveFromPath(bool current_user)
 
 	return ret;
 }
+
+void SuiteExtRel::RestartApplication(const wchar_t* cmdline, bool elevate)
+{
+	//RestartApplication expects cmdline to point to actual string (empty string is ok) w/o executable path
+	//Just command line arguments as passed to WinMain
+	const wchar_t RUNAS[]=L"runas";
+	const wchar_t OPEN[]=L"open";
+	
+	std::wstring path=GetExecutableFileName();
+	SHELLEXECUTEINFO sei={sizeof(sei)}; 
+	sei.lpVerb=elevate?RUNAS:OPEN; 
+	sei.lpFile=path.c_str(); 
+	sei.lpParameters=cmdline; 
+	sei.hwnd=NULL; 
+	sei.nShow=SW_NORMAL;
+	
+	if (!ShellExecuteEx(&sei)) {
+		if (elevate) {
+			if (GetLastError()==ERROR_CANCELLED) { 
+				sei.lpVerb=OPEN;
+				if (ShellExecuteEx(&sei)) return;
+			} else { 
+				ErrorMessage(L"Failed to restart application as administrator!");
+				return;
+			}
+		}
+		ErrorMessage(L"Failed to restart application!");
+	}
+}
+
+void SuiteExtRel::LaunchCommandPrompt(const wchar_t* dir)
+{
+	if (DWORD env_len=GetEnvironmentVariable(L"ComSpec", NULL, 0)) {
+		wchar_t env_buf[env_len];
+		if (GetEnvironmentVariable(L"ComSpec", env_buf, env_len)) {
+			std::wstring cd_cmd=L"/s /k title SnK Shell && set Path=";
+			cd_cmd.append(QuoteArgument(dir));
+			cd_cmd.append(L";%Path% && pushd ");
+			cd_cmd.append(QuoteArgument(dir));
+			SHELLEXECUTEINFO sei={sizeof(sei)}; 
+			sei.lpVerb=L"open"; 
+			sei.lpFile=env_buf; 
+			sei.lpParameters=cd_cmd.c_str(); 
+			sei.hwnd=NULL; 
+			sei.nShow=SW_NORMAL;
+			ShellExecuteEx(&sei);
+		}
+	}
+}

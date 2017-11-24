@@ -13,8 +13,9 @@
 
 #define ERR_SUITE			0x0100
 #define ERR_SUITEMAIN		0x0200
-#define ERR_SUITEEXTREL		0x0300
-#define ERR_ELEVATE			0x1000
+#define ERR_SUITEEXTREL		0x0400
+#define ERR_RESTART			0x8001
+#define ERR_ELEVATE			0x8002
 
 #define WM_HSTNAICO			(WM_USER+1)
 #define WM_BINDSC			(WM_USER+2)
@@ -48,7 +49,7 @@ std::wstring GetHotkeyString(BINDED_KEY key, const wchar_t* prefix=NULL, const w
 std::wstring GetHotkeyString(ModKeyType mod_key, BINDED_KEY key, const wchar_t* prefix=NULL, const wchar_t* postfix=NULL);
 std::wstring GetExecutableFileName(const wchar_t* replace_fname=NULL);	//If replace_fname is not NULL - replaces file name (including preceding backslash) in returned path with replace_fname
 std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
-std::wstring GetDirPath(const std::wstring &trg_pth);	//Returned path doesn't contain trailing backslash
+std::wstring GetDirPath(const std::wstring &trg_pth);	//Returned path doesn't contain trailing backslash (if it's not a disc root)
 std::wstring QuoteArgument(const wchar_t* arg);
 bool CreateDirTreeForFile(const std::wstring trg_pth);	//Allowed trg_pth: absolute file path, absolute directory path w/ trailing backslash or empty string
 void ErrorMessage(const wchar_t* err_msg);

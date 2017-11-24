@@ -73,12 +73,13 @@ BEGIN
 		MENUITEM "On single press...", IDM_EDIT_SHK
 		MENUITEM "On long press...", IDM_EDIT_LHK
 		MENUITEM SEPARATOR
+		MENUITEM "Launch SnK shell", IDM_CMDPRMPT
 #ifdef DEBUG
 		MENUITEM "Keyboard monitor", IDM_DEBUG
-		MENUITEM SEPARATOR
 #endif
 		MENUITEM "About...", IDM_ABOUT
-		MENUITEM "Run as administrator", IDM_ELEVATE
+		MENUITEM SEPARATOR
+		MENUITEM "Restart as admin", IDM_ELEVATE
 		MENUITEM "Exit", IDM_EXIT
 	END
 END

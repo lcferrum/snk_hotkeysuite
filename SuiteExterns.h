@@ -44,6 +44,7 @@ typedef HRESULT (WINAPI *pSHGetStockIconInfo)(SHSTOCKICONID siid, UINT uFlags, S
 typedef BOOL (WINAPI *pChangeWindowMessageFilter)(UINT message, DWORD dwFlag);
 typedef HRESULT (WINAPI *pWICConvertBitmapSource)(REFWICPixelFormatGUID dstFormat, IWICBitmapSource *pISrc, IWICBitmapSource **ppIDst);
 typedef BOOL (WINAPI *pSetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
+typedef BOOL (WINAPI *pGetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
 
 
 #endif //SUITEEXTERNS_H

@@ -110,7 +110,11 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	if (!elev_req) SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
 	HBITMAP uac_bitmap=NULL;
 	if (elev_req&&(uac_bitmap=GetUacShieldBitmap())) {
-		//SnkIcon->SetIconMenuInfo(MNS_CHECKORBMP);
+		MENUINFO mi={sizeof(MENUINFO), MIM_STYLE};
+		if (SnkIcon->GetIconMenuInfo(&mi)) {
+			mi.dwStyle|=MNS_CHECKORBMP;
+			SnkIcon->SetIconMenuInfo(&mi);
+		}
 		//ModifyMenu doesn't work here - it just replaces text with bitmap
 		MENUITEMINFO mii={sizeof(MENUITEMINFO)};
 		mii.fMask=MIIM_BITMAP;

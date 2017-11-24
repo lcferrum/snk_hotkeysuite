@@ -11,6 +11,7 @@ pSHCreateDirectory fnSHCreateDirectory=NULL;
 pWICConvertBitmapSource fnWICConvertBitmapSource=NULL;
 pSHGetStockIconInfo fnSHGetStockIconInfo=NULL;
 pSetMenuInfo fnSetMenuInfo=NULL;
+pGetMenuInfo fnGetMenuInfo=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
@@ -71,6 +72,7 @@ void SuiteExterns::LoadFunctions()
 	if (hUser32) {
 		fnChangeWindowMessageFilter=(pChangeWindowMessageFilter)GetProcAddress(hUser32, "ChangeWindowMessageFilter");
 		fnSetMenuInfo=(pSetMenuInfo)GetProcAddress(hUser32, "SetMenuInfo");
+		fnGetMenuInfo=(pGetMenuInfo)GetProcAddress(hUser32, "GetMenuInfo");
 	}
 	
 	if (hWincodec) {

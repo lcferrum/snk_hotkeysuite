@@ -26,6 +26,8 @@ protected:
 	std::wstring shk_cfg_path;
 	std::wstring lhk_cfg_path;
 	std::wstring snk_path;
+	std::wstring custom_shk;
+	std::wstring custom_lhk;
 	
 	bool MapVkToSc(DWORD src_vk, BINDED_KEY &dst_key) const;
 	bool MapScToVk(DWORD src_sc, BINDED_KEY &dst_key) const;
@@ -42,6 +44,8 @@ public:
 	std::wstring GetShkCfgPath() const { return ExpandEnvironmentStringsWrapper(shk_cfg_path); }
 	std::wstring GetLhkCfgPath() const { return ExpandEnvironmentStringsWrapper(lhk_cfg_path); }
 	std::wstring GetSnkPath() const { return ExpandEnvironmentStringsWrapper(snk_path); }
+	std::wstring GetCustomShk() const { return ExpandEnvironmentStringsWrapper(custom_shk); }
+	std::wstring GetCustomLhk() const { return ExpandEnvironmentStringsWrapper(custom_lhk); }
 	void SetSnkPath(const std::wstring &snk_path);
 	bool IsStored() const { return stored; }
 	
@@ -49,22 +53,6 @@ public:
 	virtual bool SaveSettings() { return true; }	//Load should be in constructor and suppresses all erors
 	
 	SuiteSettings();
-};
-
-class SuiteSettingsReg: public SuiteSettings {
-private:
-	enum class Hive:char {AUTO, CURRENT_USER, LOCAL_MACHINE};
-	bool RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var) const;
-	bool RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name, DWORD &var) const;
-	SuiteSettingsReg(Hive hive);
-protected:
-	Hive hive;
-public:
-	virtual std::wstring GetStoredLocation() const;
-	virtual bool SaveSettings();
-	
-	SuiteSettingsReg();						//Auto chooses hive - depending on what registry path is available (defaults to CURRENT_USER)
-	SuiteSettingsReg(bool current_user);	//Forces hive - CURRENT_USER or LOCAL_MACHINE
 };
 
 class SuiteSettingsIni: public SuiteSettings {

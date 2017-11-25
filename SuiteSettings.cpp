@@ -18,6 +18,9 @@
 #define CHG_HOTKEYVIRTUALKEY			(1<<4)
 #define CHG_HOTKEYMODIFIERKEY			(1<<5)
 #define CHG_LONGPRESSENABLED			(1<<6)
+#define CHG_CUSTOMONHOTKEY				(1<<7)
+#define CHG_CUSTOMONHOTKEYLONGPRESS		(1<<8)
+//Note that CHG_ALLKEYS doesn't include CHG_CUSTOMONHOTKEY and CHG_CUSTOMONHOTKEYLONGPRESS - these are "hidden" settings
 #define CHG_ALLKEYS	(CHG_ONHOTKEYCFGPATH|CHG_ONHOTKEYLONGPRESSCFGPATH|CHG_SNKPATH|CHG_HOTKEYSCANCODE|CHG_HOTKEYVIRTUALKEY|CHG_HOTKEYMODIFIERKEY|CHG_LONGPRESSENABLED)
 
 #define KEY_ONHOTKEYCFGPATH				L"OnHotkeyCfgPath"
@@ -27,6 +30,8 @@
 #define KEY_HOTKEYVIRTUALKEY			L"HotkeyVirtualKey"
 #define KEY_HOTKEYMODIFIERKEY			L"HotkeyModifierKey"
 #define KEY_LONGPRESSENABLED			L"LongPressEnabled"
+#define KEY_CUSTOMONHOTKEY				L"CustomOnHotkey"
+#define KEY_CUSTOMONHOTKEYLONGPRESS		L"CustomOnHotkeyLongPress"
 #define VAL_CTRLALT						L"CtrlAlt"
 #define VAL_SHIFTALT					L"ShiftAlt"
 #define VAL_CTRLSHIFT					L"CtrlShift"
@@ -39,7 +44,6 @@
 #define DEFAULT_INI_PATH		L"HotkeySuite.ini"
 #define DEFAULT_SNK_PATH		L"SnKh.exe"
 
-#define SUITE_REG_PATH			L"Software\\SnK HotkeySuite"	//Registry key path passed as lpSubKey param to functions like RegOpenKeyEx, hive-independent
 #define SUITE_INI_SECTION		L"HotkeySuite"					//Section name in ini file, no restrictions
 #define SUITE_APPDATA_DIR		L"SnK HotkeySuite\\"			//Shouldn't start with backslash, but should end with backslash, can have any number of subdirectories, will be prepedned with APPDATA path
 
@@ -49,7 +53,7 @@ extern pSHGetFolderPath fnSHGetFolderPathShfolder;
 
 SuiteSettings::SuiteSettings(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &snk_path):
 	long_press(false), mod_key(ModKeyType::CTRL_ALT), binded_key{DEFAULT_VK /* vk */, DEFAULT_SC /* sc */, DEFAULT_EXT /* ext */}, initial_hkl(GetKeyboardLayout(0)), stored(false), changed(0),
-	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path)
+	shk_cfg_path(shk_cfg_path), lhk_cfg_path(lhk_cfg_path), snk_path(snk_path), custom_shk(), custom_lhk()
 {
 	SetEnvironmentVariable(L"HS_EXE_PATH", GetExecutableFileName(L"").c_str());
 #ifdef DEBUG
@@ -161,7 +165,7 @@ bool SuiteSettings::MapScToVk(DWORD src_sc, BINDED_KEY &dst_key) const
 SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::wstring &lhk_cfg_path, const std::wstring &abs_ini_path, const std::wstring &ini_section):
 	SuiteSettings(shk_cfg_path, lhk_cfg_path, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), ini_path(abs_ini_path), ini_section(ini_section)
 {
-	//We don't check if path is absolute because this constructor is protected and and it is by design that passed path should be absolute file path or empty string
+	//We don't check if path is absolute because this constructor is protected and it is by design that passed path should be absolute file path or empty string
 	
 	//Empty paths and sections are not allowed
 	if (ini_path.empty()||ini_section.empty())
@@ -183,6 +187,8 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	IniSzQueryValue(KEY_ONHOTKEYCFGPATH, this->shk_cfg_path);
 	IniSzQueryValue(KEY_ONHOTKEYLONGPRESSCFGPATH, this->lhk_cfg_path);
 	IniSzQueryValue(KEY_SNKPATH, snk_path);
+	IniSzQueryValue(KEY_CUSTOMONHOTKEY, custom_shk);
+	IniSzQueryValue(KEY_CUSTOMONHOTKEYLONGPRESS, custom_lhk);
 	
 	DWORD binded_sc;
 	DWORD binded_vk;
@@ -310,7 +316,7 @@ bool SuiteSettingsIni::SaveSettings()
 
 	if (changed&CHG_SNKPATH&&!WritePrivateProfileString(ini_section.c_str(), KEY_SNKPATH, snk_path.c_str(), ini_path.c_str()))
 		save_succeeded=false;
-
+	
 	if (changed&CHG_HOTKEYSCANCODE&&!WritePrivateProfileString(ini_section.c_str(), KEY_HOTKEYSCANCODE, DwordToHexString((binded_key.ext?0xE000:0x0)|binded_key.sc, 2).c_str(), ini_path.c_str()))
 		save_succeeded=false;
 
@@ -337,6 +343,8 @@ bool SuiteSettingsIni::SaveSettings()
 		if (!WritePrivateProfileString(ini_section.c_str(), KEY_LONGPRESSENABLED, to_wstring_wrapper(long_press).c_str(), ini_path.c_str()))
 			save_succeeded=false;
 	}
+	
+	//No save procedure implemented for KEY_CUSTOMONHOTKEY and KEY_CUSTOMONHOTKEYLONGPRESS - these are "hidden" settings
 	
 	if (save_succeeded) {
 		stored=true;
@@ -453,205 +461,4 @@ bool SuiteSettingsAppData::SaveSettings()
 	}
 	
 	return SuiteSettingsIni::SaveSettings();
-}
-
-//------------------------------ REGISTRY -------------------------------
-
-SuiteSettingsReg::SuiteSettingsReg(Hive hive):
-	SuiteSettings(L"%HS_EXE_PATH%\\" DEFAULT_SHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_LHK_CFG_PATH, L"%HS_EXE_PATH%\\" DEFAULT_SNK_PATH), hive(hive)
-{
-	HKEY reg_key;
-	
-	//Leave default values and mark all settings as changed if reg key wasn't found in both HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE
-	switch (hive) {
-		case Hive::LOCAL_MACHINE:
-		case Hive::CURRENT_USER:
-			if (RegOpenKeyEx(hive==Hive::CURRENT_USER?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS)
-				stored=true;
-			else {
-				changed=CHG_ALLKEYS;
-				return;
-			}
-			break;
-		case Hive::AUTO:
-			hive=Hive::CURRENT_USER;
-			if (RegOpenKeyEx(HKEY_CURRENT_USER, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
-				stored=true;
-			} else {
-				if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, KEY_READ, &reg_key)==ERROR_SUCCESS) {
-					hive=Hive::LOCAL_MACHINE;
-					stored=true;
-				} else {
-					changed=CHG_ALLKEYS;
-					return;
-				}
-			}
-			break;
-	}
-	
-	RegSzQueryValue(reg_key, KEY_ONHOTKEYCFGPATH, shk_cfg_path);
-	RegSzQueryValue(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, lhk_cfg_path);
-	RegSzQueryValue(reg_key, KEY_SNKPATH, snk_path);
-	
-	DWORD binded_sc;
-	DWORD binded_vk;
-	bool sc_found=RegDwordQueryValue(reg_key, KEY_HOTKEYSCANCODE, binded_sc);
-	bool vk_found=RegDwordQueryValue(reg_key, KEY_HOTKEYVIRTUALKEY, binded_vk);
-	if (sc_found) {
-		if (HIBYTE(binded_sc)==0xE0||HIBYTE(binded_sc)==0xE1) 
-			binded_key.ext=true;
-		else
-			binded_key.ext=false;	
-		binded_key.sc=LOBYTE(binded_sc);
-		//If SC was in registry but VK wasn't - make VK from SC
-		if (!vk_found) MapScToVk(binded_sc, binded_key);
-	}
-	if (vk_found) {
-		binded_key.vk=LOBYTE(binded_vk);
-		//If VK was in registry but SC wasn't - make SC from VK
-		if (!sc_found) MapVkToSc(binded_vk, binded_key);
-	}
-	//In case if both VK and SC wern't found - default values will be kept
-	
-	std::wstring mod_key_str;
-	RegSzQueryValue(reg_key, KEY_HOTKEYMODIFIERKEY, mod_key_str);
-	std::transform(mod_key_str.begin(), mod_key_str.end(), mod_key_str.begin(), tolower);
-	if (!mod_key_str.compare(VAL_LC_CTRLALT)) {
-		mod_key=ModKeyType::CTRL_ALT;
-	} else if (!mod_key_str.compare(VAL_LC_SHIFTALT)) {
-		mod_key=ModKeyType::SHIFT_ALT;
-	} else if (!mod_key_str.compare(VAL_LC_CTRLSHIFT)) {
-		mod_key=ModKeyType::CTRL_SHIFT;
-	}
-	
-	DWORD long_press_dw;
-	if (RegDwordQueryValue(reg_key, KEY_LONGPRESSENABLED, long_press_dw)) {
-		long_press=long_press_dw;
-	}
-		
-	RegCloseKey(reg_key);
-}
-
-SuiteSettingsReg::SuiteSettingsReg():
-	SuiteSettingsReg(Hive::AUTO)
-{}
-
-SuiteSettingsReg::SuiteSettingsReg(bool current_user):
-	SuiteSettingsReg(current_user?Hive::CURRENT_USER:Hive::LOCAL_MACHINE)
-{}
-
-bool SuiteSettingsReg::RegSzQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstring &var) const
-{
-	DWORD buf_len;
-	DWORD key_type;
-	
-	//If key not found or some other error occured - return to keep default var value
-	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, NULL, &buf_len)!=ERROR_SUCCESS)
-		return false;
-	
-	//Returned buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
-	wchar_t data_buf[buf_len/sizeof(wchar_t)];
-	
-	//If for some reason we get read error - return to keep default var value
-	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)data_buf, &buf_len)!=ERROR_SUCCESS)
-		return false;
-	
-	//If key is not of REG_EXPAND_SZ type or returned data is not NULL-terminated - return to keep default var value 
-	if (key_type!=REG_EXPAND_SZ||data_buf[buf_len/sizeof(wchar_t)-1]!=L'\0')
-		return false;
-	
-	var=data_buf;
-#ifdef DEBUG
-	std::wcerr<<key_name<<L"="<<data_buf<<std::endl;
-#endif
-	return true;
-}
-
-bool SuiteSettingsReg::RegDwordQueryValue(HKEY reg_key, const wchar_t* key_name, DWORD &var) const
-{
-	DWORD buf_len=sizeof(DWORD);
-	DWORD key_type;
-	DWORD data_buf;
-	
-	//If key not found or some other error occured - return to keep default var value
-	if (RegQueryValueEx(reg_key, key_name, NULL, &key_type, (LPBYTE)&data_buf, &buf_len)!=ERROR_SUCCESS)
-		return false;
-	
-	//If key is not of REG_DWORD type or returned len is not of DWORD size - return to keep default var value 
-	if (key_type!=REG_DWORD||buf_len!=sizeof(DWORD))
-		return false;
-	
-	var=data_buf;
-#ifdef DEBUG
-	std::wcerr<<key_name<<L"="<<std::hex<<DwordToHexString(data_buf, 8)<<std::endl;
-#endif
-	return true;
-}
-
-std::wstring SuiteSettingsReg::GetStoredLocation() const
-{
-	return std::wstring(hive!=Hive::LOCAL_MACHINE?L"HKEY_CURRENT_USER":L"HKEY_LOCAL_MACHINE")+L"\\" SUITE_REG_PATH;
-}
-
-bool SuiteSettingsReg::SaveSettings()
-{
-	HKEY reg_key;
-	
-	//Not checking if settings are already stored - RegCreateKeyEx will just open the key it already exists
-	if (RegCreateKeyEx(hive!=Hive::LOCAL_MACHINE?HKEY_CURRENT_USER:HKEY_LOCAL_MACHINE, SUITE_REG_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &reg_key, NULL)!=ERROR_SUCCESS)
-		return false;
-	
-	bool save_succeeded=true;
-	
-	if (changed&CHG_ONHOTKEYCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYCFGPATH, 0, REG_EXPAND_SZ, (BYTE*)shk_cfg_path.c_str(), (shk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
-		save_succeeded=false;
-	
-	if (changed&CHG_ONHOTKEYLONGPRESSCFGPATH&&RegSetValueEx(reg_key, KEY_ONHOTKEYLONGPRESSCFGPATH, 0, REG_EXPAND_SZ, (BYTE*)lhk_cfg_path.c_str(), (lhk_cfg_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
-		save_succeeded=false;
-	
-	if (changed&CHG_SNKPATH&&RegSetValueEx(reg_key, KEY_SNKPATH, 0, REG_EXPAND_SZ, (BYTE*)snk_path.c_str(), (snk_path.length()+1)*sizeof(wchar_t))!=ERROR_SUCCESS)
-		save_succeeded=false;
-	
-	if (changed&CHG_HOTKEYSCANCODE) {
-		DWORD binded_sc=(binded_key.ext?0xE000:0x0)|binded_key.sc;
-		if (RegSetValueEx(reg_key, KEY_HOTKEYSCANCODE, 0, REG_DWORD, (BYTE*)&binded_sc, sizeof(DWORD))!=ERROR_SUCCESS)
-			save_succeeded=false;
-	}
-	
-	if (changed&CHG_HOTKEYVIRTUALKEY) {
-		DWORD binded_vk=binded_key.vk;
-		if (RegSetValueEx(reg_key, KEY_HOTKEYVIRTUALKEY, 0, REG_DWORD, (BYTE*)&binded_vk, sizeof(DWORD))!=ERROR_SUCCESS)
-			save_succeeded=false;
-	}
-	
-	if (changed&CHG_HOTKEYMODIFIERKEY)
-		switch (mod_key) {
-			case ModKeyType::CTRL_ALT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_CTRLALT, sizeof(VAL_CTRLALT))!=ERROR_SUCCESS)
-					save_succeeded=false;
-				break;
-			case ModKeyType::SHIFT_ALT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_SHIFTALT, sizeof(VAL_SHIFTALT))!=ERROR_SUCCESS)
-					save_succeeded=false;
-				break;
-			case ModKeyType::CTRL_SHIFT:
-				if (RegSetValueEx(reg_key, KEY_HOTKEYMODIFIERKEY, 0, REG_EXPAND_SZ, (BYTE*)VAL_CTRLSHIFT, sizeof(VAL_CTRLSHIFT))!=ERROR_SUCCESS)
-					save_succeeded=false;
-				break;
-		}
-	
-	if (changed&CHG_LONGPRESSENABLED) {
-		DWORD long_press_dw=long_press;
-		if (RegSetValueEx(reg_key, KEY_LONGPRESSENABLED, 0, REG_DWORD, (BYTE*)&long_press_dw, sizeof(DWORD))!=ERROR_SUCCESS)
-			save_succeeded=false;
-	}
-	
-	RegCloseKey(reg_key);
-	
-	if (save_succeeded) {
-		stored=true;
-		changed=0;
-	}
-	
-	return save_succeeded;
 }

@@ -40,6 +40,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//While storing settings in the registry seems to be useful, it's also controversial: SnK scripts can't be stored in the registry and should be stored elsewhere
 	//Currently SnK scripts are stored with binary for registry settings, so they can't be used out of the box for per-user (in contrast with per-machine) use
 
+	//Command line options:
+	//	/S machine|user [ARG1] [ARG2]   - schedule application with Task Scheduler (run w/ highest privileges), arguments will be passed as command line options
+	//	/A machine|user [ARG1] [ARG2]   - add application to Autorun, arguments will be passed as command line options
+	//	/U machine|user                 - delete scheduled application from Task Scheduler
+	//	/R machine|user                 - remove application from Autorun
+	//	/P machine|user                 - add application directory to Path environment variable
+	//	/C machine|user                 - remove application directory to Path environment variable
+	//	/i [INI_PATH]                   - launch application and store settings in ini file pointed by INI_PATH argument or, if absent, in HotkeySuite.ini located in application directory
+	//	/a [machine|user]               - launch application and store settings in ini file located in per-user (user) or all-user (machine) AppData directory (automatically selected if argument is absent)
+	//	NO ARGUMENTS GIVEN              - launch application and automatically select ini file location
+	//	/s ...                          - immidiately run sungle press event and exit (used with /i and /a options or w/o arguments)
+	//	/l ...                          - immidiately run long press event and exit (used with /i and /a options or w/o arguments)
+	
 	CmdRes cmd_res=CmdRes::DEFAULT;
 	int ext_res;
 	const wchar_t ARG_ALL[]=L"machine";

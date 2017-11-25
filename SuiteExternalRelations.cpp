@@ -639,12 +639,10 @@ void SuiteExtRel::RestartApplication(const wchar_t* cmdline, bool elevate)
 {
 	//RestartApplication expects cmdline to point to actual string (empty string is ok) w/o executable path
 	//Just command line arguments as passed to WinMain
-	const wchar_t RUNAS[]=L"runas";
-	const wchar_t OPEN[]=L"open";
-	
+
 	std::wstring path=GetExecutableFileName();
 	SHELLEXECUTEINFO sei={sizeof(sei)}; 
-	sei.lpVerb=elevate?RUNAS:OPEN; 
+	sei.lpVerb=elevate?L"runas":L"open"; 
 	sei.lpFile=path.c_str(); 
 	sei.lpParameters=cmdline; 
 	sei.hwnd=NULL; 
@@ -653,7 +651,7 @@ void SuiteExtRel::RestartApplication(const wchar_t* cmdline, bool elevate)
 	if (!ShellExecuteEx(&sei)) {
 		if (elevate) {
 			if (GetLastError()==ERROR_CANCELLED) { 
-				sei.lpVerb=OPEN;
+				sei.lpVerb=L"open";
 				if (ShellExecuteEx(&sei)) return;
 			} else { 
 				ErrorMessage(L"Failed to restart application as administrator!");
@@ -682,4 +680,32 @@ void SuiteExtRel::LaunchCommandPrompt(const wchar_t* dir)
 			ShellExecuteEx(&sei);
 		}
 	}
+}
+
+int SuiteExtRel::FireEvent(bool long_press, SuiteSettings *settings)
+{
+	std::wstring snk_path=settings->GetSnkPath();
+	DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
+	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		ErrorMessage(L"Path to SnK is not valid!");
+		return ERR_SUITEEXTREL+9;
+	}
+	
+	std::wstring snk_cmdline=QuoteArgument(snk_path.c_str());
+	snk_cmdline.append(L" /sec /bpp +p /cmd=");
+	if (long_press)
+		snk_cmdline.append(QuoteArgument(settings->GetLhkCfgPath().c_str()));
+	else
+		snk_cmdline.append(QuoteArgument(settings->GetShkCfgPath().c_str()));
+	
+	PROCESS_INFORMATION pi={};
+	STARTUPINFO si={sizeof(STARTUPINFO), NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, STARTF_USESHOWWINDOW, SW_SHOWNORMAL};
+	if (CreateProcess(NULL, const_cast<wchar_t*>(snk_cmdline.c_str()), NULL, NULL, FALSE, HIGH_PRIORITY_CLASS, NULL, NULL, &si, &pi)) {
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+		return 0;
+	}
+	
+	ErrorMessage(L"Failed to launch SnK!");
+	return ERR_SUITEEXTREL+10;	
 }

@@ -4,6 +4,6 @@
 #include "SuiteSettings.h"
 #include <windows.h>
 
-int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings);
+int SuiteMain(SuiteSettings *settings);
 
 #endif //SUITEMAIN_H

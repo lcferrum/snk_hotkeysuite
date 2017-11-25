@@ -14,14 +14,14 @@ HotkeyEngine::KeyPressFn HotkeyEngine::OnKeyPress=NULL;
 //	1 - indicates that thread exited due to error
 //	2 - indicates that thread was forcefully terminated because it failed to respond in specified time
 
-HotkeyEngine* HotkeyEngine::MakeInstance(HINSTANCE hInstance)
+HotkeyEngine* HotkeyEngine::MakeInstance()
 {
-	instance.reset(new HotkeyEngine(hInstance));
+	instance.reset(new HotkeyEngine());
 	return instance.get();
 }
 
-HotkeyEngine::HotkeyEngine(HINSTANCE hInstance):
-	running(false), hook_thread_handle(NULL), hook_thread_id(0), app_instance(hInstance), stack_commit(0)
+HotkeyEngine::HotkeyEngine():
+	running(false), hook_thread_handle(NULL), hook_thread_id(0), stack_commit(0)
 {}
 
 HotkeyEngine::~HotkeyEngine() 
@@ -103,7 +103,7 @@ DWORD WINAPI HotkeyEngine::ThreadProc(LPVOID lpParameter)
 {
 	HHOOK kb_hook;
 
-	if ((kb_hook=SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, instance->app_instance, 0))) {
+	if ((kb_hook=SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0))) {
 		SetEvent((HANDLE)lpParameter);	//Signal success event and continue
 	} else {
 		return 1;	//Exit (exit code = 1)

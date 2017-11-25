@@ -26,12 +26,11 @@ private:
 	bool running;
 	HANDLE hook_thread_handle;
 	DWORD hook_thread_id;
-	HINSTANCE app_instance;
 	size_t stack_commit;
 	
-	HotkeyEngine(HINSTANCE hInstance);
+	HotkeyEngine();
 public:
-	static HotkeyEngine* MakeInstance(HINSTANCE hInstance);	
+	static HotkeyEngine* MakeInstance();	
 	bool IsRunning();
 	bool Stop();
 	bool Start();

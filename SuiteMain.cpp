@@ -33,7 +33,7 @@ HBITMAP GetUacShieldBitmap();
 extern template std::wstring std::operator+(wchar_t const*, std::wstring const&);	//caused by use of std::operator+(wchar_t const*, std::wstring const&)
 #endif
 
-int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
+int SuiteMain(SuiteSettings *settings)
 {
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
@@ -78,7 +78,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(hInstance, WM_HSTNAICO, SNK_HS_TITLE L": Running", elev_req?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(GetModuleHandle(NULL), WM_HSTNAICO, SNK_HS_TITLE L": Running", elev_req?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
 		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_req, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(CloseEventHandler, settings, std::placeholders::_1),
 		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
@@ -89,7 +89,7 @@ int SuiteMain(HINSTANCE hInstance, SuiteSettings *settings)
 	
 	//At this point taskbar icon is already visible but unusable - it doesn't respond to any clicks and can't show popup menu
 	//So it's ok to customize menu here and initialize everything else
-	SnkHotkey=HotkeyEngine::MakeInstance(hInstance);
+	SnkHotkey=HotkeyEngine::MakeInstance();
 	//By default IDM_EDIT_LHK menu item is enabled and IDM_SET_EN_LHK is unchecked (see Res.rc)
 	if (settings->GetLongPress()) {
 		SnkIcon->CheckIconMenuItem(IDM_SET_EN_LHK, MF_BYCOMMAND|MF_CHECKED); 

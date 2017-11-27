@@ -378,6 +378,7 @@ HBITMAP GetUacShieldBitmap()
 		IWICBitmap *pIWICB;
 		IWICBitmapSource *pIWICBS;
 		SHSTOCKICONINFO sii={sizeof(sii)};
+		//LoadIcon(IDI_SHIELD) doesn't work here because it loads large version of UAC shield icon, same as SHGetStockIconInfo(SHGSI_LARGEICON)
 		if (SUCCEEDED(fnSHGetStockIconInfo(SIID_SHIELD, SHGSI_ICON|SHGSI_SMALLICON, &sii))&&SUCCEEDED(pIWICIF->CreateBitmapFromHICON(sii.hIcon, &pIWICB))) {
 			if (SUCCEEDED(fnWICConvertBitmapSource(GUID_WICPixelFormat32bppPBGRA, pIWICB, &pIWICBS))) {
 				UINT cx, cy;

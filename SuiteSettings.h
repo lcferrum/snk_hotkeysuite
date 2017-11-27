@@ -46,6 +46,8 @@ public:
 	std::wstring GetSnkPath() const { return ExpandEnvironmentStringsWrapper(snk_path); }
 	std::wstring GetCustomShk() const { return ExpandEnvironmentStringsWrapper(custom_shk); }
 	std::wstring GetCustomLhk() const { return ExpandEnvironmentStringsWrapper(custom_lhk); }
+	bool IsCustomShk() const { return custom_shk.length(); }
+	bool IsCustomLhk() const { return custom_lhk.length(); }
 	void SetSnkPath(const std::wstring &snk_path);
 	bool IsStored() const { return stored; }
 	

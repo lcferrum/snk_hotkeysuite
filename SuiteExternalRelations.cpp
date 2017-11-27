@@ -684,19 +684,25 @@ void SuiteExtRel::LaunchCommandPrompt(const wchar_t* dir)
 
 int SuiteExtRel::FireEvent(bool long_press, SuiteSettings *settings)
 {
-	std::wstring snk_path=settings->GetSnkPath();
-	DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		ErrorMessage(L"Path to SnK is not valid!");
-		return ERR_SUITEEXTREL+9;
+	std::wstring snk_cmdline;
+	if (long_press?settings->IsCustomLhk():settings->IsCustomShk()) {
+		if (long_press)
+			snk_cmdline=settings->GetCustomLhk();
+		else
+			snk_cmdline=settings->GetCustomShk();
+	} else {
+		snk_cmdline=settings->GetSnkPath();
+		DWORD dwAttrib=GetFileAttributes(snk_cmdline.c_str());
+		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+			ErrorMessage(L"Path to SnK is not valid!");
+			return ERR_SUITEEXTREL+9;
+		}
+		snk_cmdline=QuoteArgument(snk_cmdline.c_str())+L" /sec /bpp +p /cmd=";
+		if (long_press)
+			snk_cmdline.append(QuoteArgument(settings->GetLhkCfgPath().c_str()));
+		else
+			snk_cmdline.append(QuoteArgument(settings->GetShkCfgPath().c_str()));
 	}
-	
-	std::wstring snk_cmdline=QuoteArgument(snk_path.c_str());
-	snk_cmdline.append(L" /sec /bpp +p /cmd=");
-	if (long_press)
-		snk_cmdline.append(QuoteArgument(settings->GetLhkCfgPath().c_str()));
-	else
-		snk_cmdline.append(QuoteArgument(settings->GetShkCfgPath().c_str()));
 	
 	PROCESS_INFORMATION pi={};
 	STARTUPINFO si={sizeof(STARTUPINFO), NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, STARTF_USESHOWWINDOW, SW_SHOWNORMAL};

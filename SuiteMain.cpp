@@ -22,7 +22,6 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
-void DisabledFallbackHandler(TskbrNtfAreaIcon *sender);
 bool CheckIfElevationRequired();
 HBITMAP GetUacShieldBitmap();
 
@@ -38,27 +37,37 @@ int SuiteMain(SuiteSettings *settings)
 	TskbrNtfAreaIcon* SnkIcon=NULL;
 	HotkeyEngine* SnkHotkey=NULL;
 	
-	std::wstring snk_path=settings->GetSnkPath();
-	DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-		const wchar_t *wrn_msg=L"Path to SnK is not valid!\n\nPlease choose valid SnK path.";
-		if (fnTaskDialog) {
-			int btn_clicked;
-			fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, wrn_msg, TDCBF_OK_BUTTON, TD_WARNING_ICON, &btn_clicked);
-		} else {
-			MessageBox(NULL, wrn_msg, SNK_HS_TITLE, MB_ICONWARNING|MB_OK);
+	std::wstring snk_path;
+	if (!settings->IsCustomShk()||!settings->IsCustomLhk()) {
+		snk_path=settings->GetSnkPath();
+		DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
+		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+			const wchar_t *wrn_msg=L"Path to SnK is not valid!\n\nPlease choose valid SnK path.";
+			if (fnTaskDialog) {
+				int btn_clicked;
+				fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, wrn_msg, TDCBF_OK_BUTTON, TD_WARNING_ICON, &btn_clicked);
+			} else {
+				MessageBox(NULL, wrn_msg, SNK_HS_TITLE, MB_ICONWARNING|MB_OK);
+			}
+			if (SuiteExtRel::LaunchSnkOpenDialog(snk_path))
+				settings->SetSnkPath(snk_path);
+			else {
+				ErrorMessage(L"Path to SnK is not valid!");
+				return ERR_SUITEMAIN+1;
+			}
 		}
-		if (SuiteExtRel::LaunchSnkOpenDialog(snk_path))
-			settings->SetSnkPath(snk_path);
-		else {
-			ErrorMessage(L"Path to SnK is not valid!");
-			return ERR_SUITEMAIN+1;
-		}
-	}	
-	std::wstring snk_cmdline_s=QuoteArgument(snk_path.c_str())+L" /sec /bpp +p /cmd=";
-	std::wstring snk_cmdline_l=snk_cmdline_s;
-	snk_cmdline_s+=QuoteArgument(settings->GetShkCfgPath().c_str());
-	snk_cmdline_l+=QuoteArgument(settings->GetLhkCfgPath().c_str());
+		snk_path=QuoteArgument(snk_path.c_str())+L" /sec /bpp +p /cmd=";
+	}
+	std::wstring snk_cmdline_s;
+	std::wstring snk_cmdline_l;
+	if (settings->IsCustomShk())
+		snk_cmdline_s=settings->GetCustomShk();
+	else
+		snk_cmdline_s=snk_path+QuoteArgument(settings->GetShkCfgPath().c_str());		
+	if (settings->IsCustomLhk())
+		snk_cmdline_l=settings->GetCustomLhk();
+	else
+		snk_cmdline_l=snk_path+QuoteArgument(settings->GetLhkCfgPath().c_str());
 	
 	//CreateProcessW requires lpCommandLine to be non-const string because it may edit it
 	//MSDN doesn't provide details on why it may happen, but actually it will occur when lpApplicationName is not provided
@@ -187,6 +196,18 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 		case IDM_EDIT_SHK:
 		case IDM_EDIT_LHK:
 			{
+				if (LOWORD(wParam)==IDM_EDIT_SHK?settings->IsCustomShk():settings->IsCustomLhk()) {
+					bool create_file=false;
+					const wchar_t* MSG_TEXT=L"Custom action is set in config.\n\nPlease edit config file instead.";
+					if (fnTaskDialog) {
+						int btn_clicked;
+						fnTaskDialog(NULL, NULL, SNK_HS_TITLE, NULL, MSG_TEXT, TDCBF_OK_BUTTON, TD_INFORMATION_ICON, &btn_clicked);
+					} else {
+						MessageBox(NULL, MSG_TEXT, SNK_HS_TITLE, MB_ICONASTERISK|MB_OK);
+					}
+					return true;
+				}
+				
 				std::wstring cfg_path=LOWORD(wParam)==IDM_EDIT_SHK?settings->GetShkCfgPath():settings->GetLhkCfgPath();
 				
 				DWORD dwAttrib=GetFileAttributes(cfg_path.c_str());

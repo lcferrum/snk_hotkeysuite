@@ -5,7 +5,8 @@
 #include "SuiteSettings.h"
 #include <windows.h>
 
-#define AD_DLGPRC_WHATEVER	1
+#define AD_DLGPRC_OK		1
+#define AD_DLGPRC_RESTART	2
 
 typedef struct {
 	TskbrNtfAreaIcon* icon;

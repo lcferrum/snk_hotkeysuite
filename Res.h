@@ -35,6 +35,7 @@
 #define IDC_CFG_OPEN		30011
 #define IDC_EXE_LOC			30012
 #define IDC_EXE_OPEN		30013
+#define IDC_RESTART_APP		30014
 
 #define POS_SETTINGS		2
 

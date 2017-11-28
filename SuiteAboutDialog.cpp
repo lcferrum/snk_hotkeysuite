@@ -27,7 +27,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				SetDlgItemText(hwndDlg, IDC_SNK_LOC, ad_dlgprc_param->settings->GetSnkPath().c_str());
 				SetDlgItemText(hwndDlg, IDC_CFG_LOC, ad_dlgprc_param->settings->GetStoredLocation().c_str());
 				
-				//Using LR_SHARED to not bother with destroying icon when dialog is destroyed
+				//Using LR_SHARED so not to bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
 				if (hIcon) {
 					SendMessage(hwndDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
@@ -83,7 +83,7 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				return FALSE;
 		case WM_CLOSE:
 			//Even if dialog doesn't have close (X) button, this message is still received on Alt+F4
-			EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
+			EndDialog(hwndDlg, AD_DLGPRC_OK);
 			return TRUE;
 		case WM_SYSCOMMAND:
 			//Dialog doesn't have menu so trap SC_KEYMENU
@@ -112,13 +112,14 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 							
 							return TRUE;
 						}
+					case IDC_RESTART_APP:
 					case IDC_CLOSE_ABOUT:
-						EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
+						EndDialog(hwndDlg, LOWORD(wParam)==IDC_CLOSE_ABOUT?AD_DLGPRC_OK:AD_DLGPRC_RESTART);
 						return TRUE;
 				}
 			}
 			if (wParam==IDCANCEL) {	//Handler for ESC
-				EndDialog(hwndDlg, AD_DLGPRC_WHATEVER);
+				EndDialog(hwndDlg, AD_DLGPRC_OK);
 				return TRUE;
 			}
 			return FALSE;

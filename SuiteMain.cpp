@@ -339,10 +339,14 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 					case DLGBX_FN_INV_PARAM:
 					case DLGBX_FN_FAILED:
 						break;
-					case AD_DLGPRC_WHATEVER:
+					case AD_DLGPRC_OK:
 						if (hk_was_running&&!hk_engine->Start()) break;
 						sender->SetModalWnd(NULL);
 						sender->Enable();
+						return true;
+					case AD_DLGPRC_RESTART:
+						sender->SetModalWnd(NULL);
+						sender->CloseAndQuit(ERR_RESTART);
 						return true;
 				}
 				break;

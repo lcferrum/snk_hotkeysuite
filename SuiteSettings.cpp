@@ -184,9 +184,13 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 	
 	stored=true;
 		
-	IniSzQueryValue(KEY_ONHOTKEYCFGPATH, this->shk_cfg_path);
-	IniSzQueryValue(KEY_ONHOTKEYLONGPRESSCFGPATH, this->lhk_cfg_path);
-	IniSzQueryValue(KEY_SNKPATH, snk_path);
+	if (!IniSzQueryValue(KEY_ONHOTKEYCFGPATH, this->shk_cfg_path))
+		changed|=CHG_ONHOTKEYCFGPATH;
+	if (!IniSzQueryValue(KEY_ONHOTKEYLONGPRESSCFGPATH, this->lhk_cfg_path))
+		changed|=CHG_ONHOTKEYLONGPRESSCFGPATH;
+	if (!IniSzQueryValue(KEY_SNKPATH, snk_path))
+		changed|=CHG_SNKPATH;
+	
 	IniSzQueryValue(KEY_CUSTOMONHOTKEY, custom_shk);
 	IniSzQueryValue(KEY_CUSTOMONHOTKEYLONGPRESS, custom_lhk);
 	
@@ -201,14 +205,23 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 			binded_key.ext=false;	
 		binded_key.sc=LOBYTE(binded_sc);
 		//If SC was in ini file but VK wasn't - make VK from SC
-		if (!vk_found) MapScToVk(binded_sc, binded_key);
+		if (!vk_found) {
+			MapScToVk(binded_sc, binded_key);
+			changed|=CHG_HOTKEYVIRTUALKEY;
+		}
 	}
 	if (vk_found) {
 		binded_key.vk=LOBYTE(binded_vk);
 		//If VK was in ini file but SC wasn't - make SC from VK
-		if (!sc_found) MapVkToSc(binded_vk, binded_key);
+		if (!sc_found) {
+			MapVkToSc(binded_vk, binded_key);
+			changed|=CHG_HOTKEYSCANCODE;
+		}
 	}
-	//In case if both VK and SC wern't found - default values will be kept
+	if (!sc_found&&!vk_found) {
+		//In case if both VK and SC wern't found - default values will be kept
+		changed|=CHG_HOTKEYVIRTUALKEY|CHG_HOTKEYSCANCODE;
+	}
 	
 	std::wstring mod_key_str;
 	IniSzQueryValue(KEY_HOTKEYMODIFIERKEY, mod_key_str);
@@ -219,11 +232,15 @@ SuiteSettingsIni::SuiteSettingsIni(const std::wstring &shk_cfg_path, const std::
 		mod_key=ModKeyType::SHIFT_ALT;
 	} else if (!mod_key_str.compare(VAL_LC_CTRLSHIFT)) {
 		mod_key=ModKeyType::CTRL_SHIFT;
+	} else {
+		changed|=CHG_HOTKEYMODIFIERKEY;
 	}
 	
 	DWORD long_press_dw;
 	if (IniDwordQueryValue(KEY_LONGPRESSENABLED, long_press_dw)) {
 		long_press=long_press_dw;
+	} else {
+		changed|=CHG_LONGPRESSENABLED;
 	}
 }
 

@@ -160,8 +160,7 @@ int SuiteMain(SuiteSettings *settings)
 	}
 	
 	//Manually uninitializing some components to make sure right unintialization order
-	SnkHotkey->Stop();			//This way HotkeyEngine is deinitialized right after TskbrNtfAreaIcon
-	settings->SaveSettings();	//Main parts of HotkeySuite are deinitialized and now it's time to save settings
+	SnkHotkey->Stop();							//This way HotkeyEngine is deinitialized right after TskbrNtfAreaIcon
 	if (uac_bitmap) DeleteObject(uac_bitmap);	//If UAC shield bitmap was created - free it
 	
 	return msg.wParam;
@@ -244,6 +243,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			}
 			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
+			settings->SaveSettings();
 			return true;
 		case IDM_SET_CTRL_ALT:
 			hk_was_running=hk_engine->Stop();
@@ -252,6 +252,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_ALT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
+			settings->SaveSettings();
 			return true;
 		case IDM_SET_SHIFT_ALT:
 			hk_was_running=hk_engine->Stop();
@@ -260,6 +261,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::SHIFT_ALT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
+			settings->SaveSettings();
 			return true;
 		case IDM_SET_CTRL_SHIFT:
 			hk_was_running=hk_engine->Stop();
@@ -268,6 +270,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			sender->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(sender->GetIconMenu(), POS_SETTINGS), GetHotkeyString(ModKeyType::CTRL_SHIFT, settings->GetBindedKey()).c_str()); 
 			hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 			if (hk_was_running&&!hk_engine->Start()) break;
+			settings->SaveSettings();
 			return true;
 		case IDM_SET_CUSTOM:
 			{
@@ -305,6 +308,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 					case BD_DLGPRC_CANCEL:
 						hk_engine->Set((LPARAM)hk_triplet, hk_triplet->CreateEventHandler(settings));
 						if (hk_was_running&&!hk_engine->Start()) break;
+						settings->SaveSettings();
 						sender->SetModalWnd(NULL);
 						sender->Enable();
 						return true;
@@ -368,11 +372,7 @@ void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender)
 }
 
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical)
-{
-	//Session is about to end - there is a chance that process will be terminated right after this event handler exits, abandoning all the code after mesage loop
-	//So saving settings now but not exiting app - it will be terminated anyway
-	settings->SaveSettings();
-}
+{}
 
 bool CheckIfElevationRequired()
 {

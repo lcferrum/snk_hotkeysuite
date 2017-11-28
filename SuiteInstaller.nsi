@@ -140,11 +140,13 @@ SectionGroup /e "HotkeySuite" Grp_HS
 		SetOverwrite on
 		SetOutPath "$USER_APPDATA\${APPNAME}"
 		File "on_hotkey.txt"
+		File "on_hotkey_long_press.txt"
 	SectionEnd
 	Section /o "" Sec_DEF_SCRIPT2
 		SetOverwrite on
 		SetOutPath "$USER_APPDATA\${APPNAME}"
 		File "on_hotkey.txt"
+		File "on_hotkey_long_press.txt"
 	SectionEnd
 	Section "Add to Autorun" Sec_AUTORUN
 		IntOp $InstFeatures $InstFeatures | 1
@@ -572,7 +574,7 @@ Function killExistingSnK
 		${if} "$R0" == ""
 			StrCpy $R0 "SnKh.exe"
 		${endif}
-		ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
+		ExecWait '"$R0" +alcf /pth:full="$INSTDIR\HotkeySuite.exe"'
 		ClearErrors
 	${endif}
 FunctionEnd
@@ -594,7 +596,7 @@ Function un.killInstalledSnK
 	${if} "$R0" == ""
 		StrCpy $R0 "SnKh.exe"
 	${endif}
-	ExecWait '"$R0" +alc /lst:ffwd /pth:full="$INSTDIR\HotkeySuite.exe"'
+	ExecWait '"$R0" +alcf /pth:full="$INSTDIR\HotkeySuite.exe"'
 	ClearErrors
 FunctionEnd
 

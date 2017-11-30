@@ -331,7 +331,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 			return true;
 #endif
 		case IDM_CMDPRMPT:
-			SuiteExtRel::LaunchCommandPrompt(GetDirPath(GetFullPathNameWrapper(settings->GetSnkPath())).c_str());
+			SuiteExtRel::LaunchCommandPrompt(settings);
 			return true;
 		case IDM_ABOUT:
 			{

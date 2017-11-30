@@ -662,15 +662,26 @@ void SuiteExtRel::RestartApplication(const wchar_t* cmdline, bool elevate)
 	}
 }
 
-void SuiteExtRel::LaunchCommandPrompt(const wchar_t* dir)
+int SuiteExtRel::LaunchCommandPrompt(const SuiteSettings *settings, bool check_snk)
 {
+	std::wstring snk_path=settings->GetSnkPath();
+
+	if (check_snk) {
+		DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
+		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+			ErrorMessage(L"Path to SnK is not valid!");
+			return ERR_SUITEEXTREL+9;
+		}
+	}
+
 	if (DWORD env_len=GetEnvironmentVariable(L"ComSpec", NULL, 0)) {
+		std::wstring dir=QuoteArgument(GetDirPath(GetFullPathNameWrapper(snk_path)).c_str());
 		wchar_t env_buf[env_len];
 		if (GetEnvironmentVariable(L"ComSpec", env_buf, env_len)) {
 			std::wstring cd_cmd=L"/s /k title SnK Shell && set Path=";
-			cd_cmd.append(QuoteArgument(dir));
+			cd_cmd.append(dir);
 			cd_cmd.append(L";%Path% && pushd ");
-			cd_cmd.append(QuoteArgument(dir));
+			cd_cmd.append(dir);
 			SHELLEXECUTEINFO sei={sizeof(sei)}; 
 			sei.lpVerb=L"open"; 
 			sei.lpFile=env_buf; 
@@ -680,9 +691,11 @@ void SuiteExtRel::LaunchCommandPrompt(const wchar_t* dir)
 			ShellExecuteEx(&sei);
 		}
 	}
+	
+	return 0;
 }
 
-int SuiteExtRel::FireEvent(bool long_press, SuiteSettings *settings)
+int SuiteExtRel::FireEvent(bool long_press, const SuiteSettings *settings)
 {
 	std::wstring snk_cmdline;
 	if (long_press?settings->IsCustomLhk():settings->IsCustomShk()) {
@@ -713,5 +726,5 @@ int SuiteExtRel::FireEvent(bool long_press, SuiteSettings *settings)
 	}
 	
 	ErrorMessage(L"Failed to launch SnK!");
-	return ERR_SUITEEXTREL+10;	
+	return ERR_SUITEEXTREL+10;
 }

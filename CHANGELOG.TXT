@@ -11,6 +11,7 @@
 		- 'Restart' option to 'About' dialog
 		- CustomOnHotkey and CustomOnHotkeyLongPress options to config
 		- /s and /l command line switches (fire short or long press events immediately)
+		- /p command line switch (launch SnK shell immediately)
 	* Removed:
 	* Required SnK version: 2.4+
 

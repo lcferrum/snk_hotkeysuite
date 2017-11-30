@@ -14,8 +14,8 @@ namespace SuiteExtRel {
 	int RemoveFromAutorun(bool current_user);
 	bool LaunchSnkOpenDialog(std::wstring &fpath);
 	void RestartApplication(const wchar_t* cmdline, bool elevate);
-	void LaunchCommandPrompt(const wchar_t* dir);
-	int FireEvent(bool long_press, SuiteSettings *settings);
+	int LaunchCommandPrompt(const SuiteSettings *settings, bool check_snk=false);
+	int FireEvent(bool long_press, const SuiteSettings *settings);
 }
 
 #endif //SUITEEXTERNALRELATIONS_H

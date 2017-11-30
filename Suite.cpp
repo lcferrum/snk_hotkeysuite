@@ -12,7 +12,7 @@
 #endif
 
 enum class CmdRes:char {DEFAULT, SETTINGS_SET, EXTERNAL_CALLED, ERR_MANY_ARGS, ERR_FEW_ARGS, ERR_UNKNOWN, ERR_NOT_IMPLEMENTED};
-enum class FstCmd:char {DEFAULT, LONG_PRESS, SHORT_PRESS};
+enum class FstCmd:char {DEFAULT, LONG_PRESS, SHORT_PRESS, SHELL};
 
 CmdRes ProcessSettingsOptions(std::unique_ptr<SuiteSettings> &Settings, int cmd_argc, wchar_t** cmd_argv, int cmd_shift);
 
@@ -58,6 +58,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//	NO ARGUMENTS GIVEN              - launch application and automatically select ini file location
 	//	/s ...                          - immidiately run sungle press event and exit (used with /i and /a options or w/o arguments)
 	//	/l ...                          - immidiately run long press event and exit (used with /i and /a options or w/o arguments)
+	//	/p ...                          - launch SnK shell and exit (used with /i and /a options or w/o arguments)
 	
 	CmdRes cmd_res=CmdRes::DEFAULT;
 	FstCmd fst_cmd=FstCmd::DEFAULT;
@@ -79,6 +80,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 					fst_cmd=FstCmd::SHORT_PRESS;
 				else if (!wcscmp(cmd_argv[0], L"/l"))
 					fst_cmd=FstCmd::LONG_PRESS;
+				else if (!wcscmp(cmd_argv[0], L"/p"))
+					fst_cmd=FstCmd::SHELL;
 				
 				if (fst_cmd!=FstCmd::DEFAULT) {
 					if (cmd_argc>1) cmd_res=ProcessSettingsOptions(Settings, cmd_argc, cmd_argv, 1);
@@ -227,15 +230,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	if (!Settings->SaveSettings()) {
 		ErrorMessage(L"Failed to load settings!");
 		return ERR_SUITE+1;
-	} else if (fst_cmd!=FstCmd::DEFAULT) {
-		return SuiteExtRel::FireEvent(fst_cmd==FstCmd::LONG_PRESS, Settings.get());
-	} else {
-		int suite_main_err=SuiteMain(Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
-		if (suite_main_err==ERR_ELEVATE)
-			SuiteExtRel::RestartApplication(lpCmdLine, true);
-		else if (suite_main_err==ERR_RESTART)
-			SuiteExtRel::RestartApplication(lpCmdLine, false);
-		return suite_main_err;
+	}
+	
+	switch (fst_cmd) {
+		case FstCmd::SHELL:
+			return SuiteExtRel::LaunchCommandPrompt(Settings.get(), true);
+		case FstCmd::LONG_PRESS:
+		case FstCmd::SHORT_PRESS:
+			return SuiteExtRel::FireEvent(fst_cmd==FstCmd::LONG_PRESS, Settings.get());
+		default:
+			{
+				int suite_main_err=SuiteMain(Settings.get());	//Generates it's own error messages and sets (returns) exit code accordingly
+				if (suite_main_err==ERR_ELEVATE)
+					SuiteExtRel::RestartApplication(lpCmdLine, true);
+				else if (suite_main_err==ERR_RESTART)
+					SuiteExtRel::RestartApplication(lpCmdLine, false);
+				return suite_main_err;
+			}
 	}
 }
 

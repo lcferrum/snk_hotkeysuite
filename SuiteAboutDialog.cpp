@@ -108,7 +108,9 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 					case IDC_SNK_OPEN:
 						{
 							//SnK path can be relative
-							ShellExecute(NULL, L"open", GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							MessageBox(NULL, GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), L"EXPLORE", MB_OK);
+							//ShellExecute(NULL, L"explore", GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+							ShellExecute(NULL, L"open", L"explorer.exe", QuoteArgument(GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str()).c_str(), NULL, SW_SHOWNORMAL);
 							
 							return TRUE;
 						}

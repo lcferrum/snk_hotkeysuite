@@ -24,7 +24,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
 bool CheckIfElevationRequired();
-BOOL CheckIfAdmin();
+bool CheckIfAdmin();
 HBITMAP GetUacShieldBitmap();
 
 #ifdef __clang__
@@ -393,41 +393,35 @@ bool CheckIfElevationRequired()
 	return required;
 }
 
-BOOL CheckIfAdmin()
+bool CheckIfAdmin()
 {
 	//Doesn't work on Win 9x/ME and Win NT4
 	//But, for current purpose, we actually need it to work only on systems where UAC is present
 
-	BOOL admin_group=FALSE;
+	BOOL ctm_res=FALSE;
 	
 	if (fnCheckTokenMembership) {
-		HANDLE admin_token=NULL;
-		
-		HANDLE hOwnToken;
-		if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hOwnToken)) {
-			TOKEN_LINKED_TOKEN tlt; 
-			DWORD ret_len; 
-			if (GetTokenInformation(hOwnToken, TokenLinkedToken, &tlt, sizeof(tlt), &ret_len)) {
-				MessageBox(NULL, L"OK", L"TOKEN_LINKED_TOKEN", MB_OK);
-				admin_token=tlt.LinkedToken;
-			}
-			CloseHandle(hOwnToken);
-		}
-
 		PSID asid;
 		SID_IDENTIFIER_AUTHORITY sia_nt=SECURITY_NT_AUTHORITY;
-		if (AllocateAndInitializeSid(&sia_nt, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &asid)) {
-			if (fnCheckTokenMembership(admin_token, asid, &admin_group))
-				MessageBox(NULL, L"OK", L"CheckTokenMembership", MB_OK);
+		if (AllocateAndInitializeSid(&sia_nt, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &asid)) {			
+			HANDLE hOwnToken;
+			if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hOwnToken)) {
+				TOKEN_LINKED_TOKEN tlt; 
+				DWORD ret_len; 
+				if (GetTokenInformation(hOwnToken, TokenLinkedToken, &tlt, sizeof(tlt), &ret_len)) {
+					fnCheckTokenMembership(tlt.LinkedToken, asid, &ctm_res);
+					CloseHandle(tlt.LinkedToken);
+				}
+				CloseHandle(hOwnToken);
+			}
+			
+			if (!ctm_res) fnCheckTokenMembership(NULL, asid, &ctm_res);
+
 			FreeSid(asid);
 		}
-		
-		if (admin_token) CloseHandle(admin_token);
 	}
 	
-	if (admin_group) MessageBox(NULL, L"ADMIN", L"ADMIN", MB_OK);
-	
-	return admin_group;
+	return ctm_res;
 }
 
 HBITMAP GetUacShieldBitmap()

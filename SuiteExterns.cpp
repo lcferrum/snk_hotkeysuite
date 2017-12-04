@@ -13,11 +13,12 @@ pSHGetStockIconInfo fnSHGetStockIconInfo=NULL;
 pSetMenuInfo fnSetMenuInfo=NULL;
 pGetMenuInfo fnGetMenuInfo=NULL;
 pFlashWindowEx fnFlashWindowEx=NULL;
+pCheckTokenMembership fnCheckTokenMembership=NULL;
 
 std::unique_ptr<SuiteExterns> SuiteExterns::instance;
 
 SuiteExterns::SuiteExterns(): 
-	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL), hUser32(NULL), hWincodec(NULL)
+	hShell32(NULL), hComctl32(NULL), hSecur32(NULL), hShfolder(NULL), hUser32(NULL), hWincodec(NULL), hAdvapi32(NULL)
 {
 	LoadFunctions();
 }
@@ -45,6 +46,7 @@ void SuiteExterns::LoadFunctions()
 	hShfolder=LoadLibrary(L"shfolder.dll");
 	hUser32=LoadLibrary(L"user32.dll");
 	hWincodec=LoadLibrary(L"windowscodecs.dll");
+	hAdvapi32=LoadLibrary(L"advapi32.dll");
 	
 	if (hShfolder) {
 		fnSHGetFolderPathShfolder=(pSHGetFolderPath)GetProcAddress(hShfolder, "SHGetFolderPathW");
@@ -80,11 +82,16 @@ void SuiteExterns::LoadFunctions()
 	if (hWincodec) {
 		fnWICConvertBitmapSource=(pWICConvertBitmapSource)GetProcAddress(hWincodec, "WICConvertBitmapSource");
 	}
+	
+	if (hAdvapi32) {
+		fnCheckTokenMembership=(pCheckTokenMembership)GetProcAddress(hAdvapi32, "CheckTokenMembership");
+	}
 }
 
 //And here we are testing for NULLs because LoadLibrary can fail in method above
 void SuiteExterns::UnloadFunctions() 
 {
+	if (hAdvapi32) FreeLibrary(hAdvapi32);
 	if (hWincodec) FreeLibrary(hWincodec);
 	if (hUser32) FreeLibrary(hUser32);
 	if (hShfolder) FreeLibrary(hShfolder);

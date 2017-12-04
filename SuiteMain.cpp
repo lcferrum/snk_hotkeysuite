@@ -17,12 +17,14 @@
 extern pTaskDialog fnTaskDialog;
 extern pWICConvertBitmapSource fnWICConvertBitmapSource;
 extern pSHGetStockIconInfo fnSHGetStockIconInfo;
+extern pCheckTokenMembership fnCheckTokenMembership;
 
 bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet *hk_triplet, bool elev_req, TskbrNtfAreaIcon *sender, WPARAM wParam, LPARAM lParam);
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
 bool CheckIfElevationRequired();
+BOOL CheckIfAdmin();
 HBITMAP GetUacShieldBitmap();
 
 #ifdef __clang__
@@ -49,9 +51,10 @@ int SuiteMain(SuiteSettings *settings)
 			} else {
 				MessageBox(NULL, wrn_msg, SNK_HS_TITLE, MB_ICONWARNING|MB_OK);
 			}
-			if (SuiteExtRel::LaunchSnkOpenDialog(snk_path))
+			if (SuiteExtRel::LaunchSnkOpenDialog(snk_path)) {
 				settings->SetSnkPath(snk_path);
-			else {
+				settings->SaveSettings();
+			} else {
 				ErrorMessage(L"Path to SnK is not valid!");
 				return ERR_SUITEMAIN+1;
 			}
@@ -83,12 +86,13 @@ int SuiteMain(SuiteSettings *settings)
 	
 	//Check if we elevated rights may be required
 	bool elev_req=CheckIfElevationRequired();
+	bool is_admin=CheckIfAdmin();
 	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(GetModuleHandle(NULL), WM_HSTNAICO, SNK_HS_TITLE L": Running", elev_req?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
-		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_req, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(GetModuleHandle(NULL), WM_HSTNAICO, SNK_HS_TITLE L": Running", (elev_req&&is_admin)?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
+		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_req&&is_admin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(CloseEventHandler, settings, std::placeholders::_1),
 		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
 	if (!SnkIcon->IsValid()) {
@@ -387,6 +391,43 @@ bool CheckIfElevationRequired()
 		CloseHandle(hOwnToken);
 	}
 	return required;
+}
+
+BOOL CheckIfAdmin()
+{
+	//Doesn't work on Win 9x/ME and Win NT4
+	//But, for current purpose, we actually need it to work only on systems where UAC is present
+
+	BOOL admin_group=FALSE;
+	
+	if (fnCheckTokenMembership) {
+		HANDLE admin_token=NULL;
+		
+		HANDLE hOwnToken;
+		if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hOwnToken)) {
+			TOKEN_LINKED_TOKEN tlt; 
+			DWORD ret_len; 
+			if (GetTokenInformation(hOwnToken, TokenLinkedToken, &tlt, sizeof(tlt), &ret_len)) {
+				MessageBox(NULL, L"OK", L"TOKEN_LINKED_TOKEN", MB_OK);
+				admin_token=tlt.LinkedToken;
+			}
+			CloseHandle(hOwnToken);
+		}
+
+		PSID asid;
+		SID_IDENTIFIER_AUTHORITY sia_nt=SECURITY_NT_AUTHORITY;
+		if (AllocateAndInitializeSid(&sia_nt, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &asid)) {
+			if (fnCheckTokenMembership(admin_token, asid, &admin_group))
+				MessageBox(NULL, L"OK", L"CheckTokenMembership", MB_OK);
+			FreeSid(asid);
+		}
+		
+		if (admin_token) CloseHandle(admin_token);
+	}
+	
+	if (admin_group) MessageBox(NULL, L"ADMIN", L"ADMIN", MB_OK);
+	
+	return admin_group;
 }
 
 HBITMAP GetUacShieldBitmap()

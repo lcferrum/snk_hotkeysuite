@@ -21,6 +21,7 @@ private:
 	HMODULE hShfolder;
 	HMODULE hUser32;
 	HMODULE hWincodec;
+	HMODULE hAdvapi32;
 	
 	void LoadFunctions();
 	void UnloadFunctions();
@@ -48,5 +49,6 @@ typedef HRESULT (WINAPI *pWICConvertBitmapSource)(REFWICPixelFormatGUID dstForma
 typedef BOOL (WINAPI *pSetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
 typedef BOOL (WINAPI *pGetMenuInfo)(HMENU hmenu, LPCMENUINFO lpcmi);
 typedef BOOL (WINAPI *pFlashWindowEx)(PFLASHWINFO pfwi);
+typedef BOOL (WINAPI *pCheckTokenMembership)(HANDLE TokenHandle, PSID SidToCheck, PBOOL IsMember);
 
 #endif //SUITEEXTERNS_H

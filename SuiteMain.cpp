@@ -23,7 +23,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 
 void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender);
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical);
-bool CheckIfElevationRequired();
+bool CheckIfElevationAvailable();
 bool CheckIfAdmin();
 HBITMAP GetUacShieldBitmap();
 
@@ -41,9 +41,9 @@ int SuiteMain(SuiteSettings *settings)
 	
 	std::wstring snk_path;
 	if (!settings->IsCustomShk()||!settings->IsCustomLhk()) {
-		snk_path=settings->GetSnkPath();
-		DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
-		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		//SnK path can be relative
+		snk_path=GetFullPathNameWrapper(settings->GetSnkPath());
+		if (!CheckIfFileExists(snk_path)) {
 			const wchar_t *wrn_msg=L"Path to SnK is not valid!\n\nPlease choose valid SnK path.";
 			if (fnTaskDialog) {
 				int btn_clicked;
@@ -85,14 +85,14 @@ int SuiteMain(SuiteSettings *settings)
 	KeyTriplet OnKeyTriplet(const_cast<wchar_t*>(snk_cmdline_s.c_str()), const_cast<wchar_t*>(snk_cmdline_l.c_str()));
 	
 	//Check if we elevated rights may be required
-	bool elev_req=CheckIfElevationRequired();
+	bool elev_avail=CheckIfElevationAvailable();
 	bool is_admin=CheckIfAdmin();
 	
 	//It's ok to pass reference to NULL HotkeyEngine to OnWmCommand - see IconMenuProc comments
 	//std::bind differs from lamda captures in that you can't pass references by normal means - object will be copied anyway
 	//To pass a reference you should wrap referenced object in std::ref
-	SnkIcon=TskbrNtfAreaIcon::MakeInstance(GetModuleHandle(NULL), WM_HSTNAICO, SNK_HS_TITLE L": Running", (elev_req&&is_admin)?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
-		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_req&&is_admin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+	SnkIcon=TskbrNtfAreaIcon::MakeInstance(GetModuleHandle(NULL), WM_HSTNAICO, SNK_HS_TITLE L": Running", (elev_avail&&is_admin)?IDI_HSLTNAICO:IDI_HSTNAICO, L"SnK_HotkeySuite_IconClass", IDR_ICONMENU, IDM_STOP_START,
+		std::bind(IconMenuProc, std::ref(SnkHotkey), settings, &OnKeyTriplet, elev_avail&&is_admin, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(CloseEventHandler, settings, std::placeholders::_1),
 		std::bind(EndsessionTrueEventHandler, settings, std::placeholders::_1, std::placeholders::_2));
 	if (!SnkIcon->IsValid()) {
@@ -124,7 +124,7 @@ int SuiteMain(SuiteSettings *settings)
 	SnkIcon->ModifyIconMenu(IDM_SET_CUSTOM, MF_BYCOMMAND|MF_STRING|MF_UNCHECKED|MF_ENABLED, IDM_SET_CUSTOM, GetHotkeyString(settings->GetBindedKey(), L"Rebind ", L"...").c_str());
 	SnkIcon->ModifyIconMenu(POS_SETTINGS, MF_BYPOSITION|MF_STRING|MF_UNCHECKED|MF_ENABLED|MF_POPUP, (UINT_PTR)GetSubMenu(SnkIcon->GetIconMenu(), POS_SETTINGS), GetHotkeyString(settings->GetModKey(), settings->GetBindedKey()).c_str());
 	HBITMAP uac_bitmap=NULL;
-	if (elev_req) {
+	if (elev_avail) {
 		if ((uac_bitmap=GetUacShieldBitmap())) {
 			MENUINFO mi={sizeof(MENUINFO), MIM_STYLE};
 			if (SnkIcon->GetIconMenuInfo(&mi)) {
@@ -139,6 +139,9 @@ int SuiteMain(SuiteSettings *settings)
 		}
 	} else
 		SnkIcon->RemoveIconMenu(IDM_ELEVATE, MF_BYCOMMAND);
+	if (!CheckIfFileExists(SearchPathWrapper(L"cmd.exe", NULL, NULL))) {
+		SnkIcon->EnableIconMenuItem(IDM_CMDPRMPT, MF_BYCOMMAND|MF_GRAYED);
+	}
 
 	//It is possible to set initial stack commit size for hotkey hook thread
 	//By default it is 0 and this means that stack commit size is the same as defined in PE header (that is 4 KB for MinGW/Clang)
@@ -213,8 +216,7 @@ bool IconMenuProc(HotkeyEngine* &hk_engine, SuiteSettings *settings, KeyTriplet 
 				
 				std::wstring cfg_path=LOWORD(wParam)==IDM_EDIT_SHK?settings->GetShkCfgPath():settings->GetLhkCfgPath();
 				
-				DWORD dwAttrib=GetFileAttributes(cfg_path.c_str());
-				if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+				if (!CheckIfFileExists(cfg_path)) {
 					std::wstring msg_text=L"File \""+cfg_path+L"\" doesn't exist.\n\nDo you want it to be created?";
 					bool create_file=false;
 					if (fnTaskDialog) {
@@ -378,7 +380,7 @@ void CloseEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender)
 void EndsessionTrueEventHandler(SuiteSettings *settings, TskbrNtfAreaIcon *sender, bool critical)
 {}
 
-bool CheckIfElevationRequired()
+bool CheckIfElevationAvailable()
 {
 	HANDLE hOwnToken;
 	bool required=false;

@@ -664,33 +664,26 @@ void SuiteExtRel::RestartApplication(const wchar_t* cmdline, bool elevate)
 
 int SuiteExtRel::LaunchCommandPrompt(const SuiteSettings *settings, bool check_snk)
 {
-	std::wstring snk_path=settings->GetSnkPath();
+	//SnK path can be relative
+	std::wstring snk_path=GetFullPathNameWrapper(settings->GetSnkPath());
 
-	if (check_snk) {
-		DWORD dwAttrib=GetFileAttributes(snk_path.c_str());
-		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
-			ErrorMessage(L"Path to SnK is not valid!");
-			return ERR_SUITEEXTREL+9;
-		}
+	if (check_snk&&!CheckIfFileExists(snk_path)) {
+		ErrorMessage(L"Path to SnK is not valid!");
+		return ERR_SUITEEXTREL+9;
 	}
 
-	if (DWORD env_len=GetEnvironmentVariable(L"ComSpec", NULL, 0)) {
-		std::wstring dir=QuoteArgument(GetDirPath(GetFullPathNameWrapper(snk_path)).c_str());
-		wchar_t env_buf[env_len];
-		if (GetEnvironmentVariable(L"ComSpec", env_buf, env_len)) {
-			std::wstring cd_cmd=L"/s /k title SnK Shell && set Path=";
-			cd_cmd.append(dir);
-			cd_cmd.append(L";%Path% && pushd ");
-			cd_cmd.append(dir);
-			SHELLEXECUTEINFO sei={sizeof(sei)}; 
-			sei.lpVerb=L"open"; 
-			sei.lpFile=env_buf; 
-			sei.lpParameters=cd_cmd.c_str(); 
-			sei.hwnd=NULL; 
-			sei.nShow=SW_NORMAL;
-			ShellExecuteEx(&sei);
-		}
-	}
+	std::wstring dir=QuoteArgument(GetDirPath(snk_path).c_str());
+	std::wstring cd_cmd=L"/s /k title SnK Shell && set Path=";
+	cd_cmd.append(dir);
+	cd_cmd.append(L";%Path% && pushd ");
+	cd_cmd.append(dir);
+	SHELLEXECUTEINFO sei={sizeof(sei)}; 
+	sei.lpVerb=L"open"; 
+	sei.lpFile=L"cmd.exe"; 
+	sei.lpParameters=cd_cmd.c_str(); 
+	sei.hwnd=NULL; 
+	sei.nShow=SW_NORMAL;
+	ShellExecuteEx(&sei);
 	
 	return 0;
 }
@@ -704,9 +697,9 @@ int SuiteExtRel::FireEvent(bool long_press, const SuiteSettings *settings)
 		else
 			snk_cmdline=settings->GetCustomShk();
 	} else {
-		snk_cmdline=settings->GetSnkPath();
-		DWORD dwAttrib=GetFileAttributes(snk_cmdline.c_str());
-		if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY)) {
+		//SnK path can be relative
+		snk_cmdline=GetFullPathNameWrapper(settings->GetSnkPath());
+		if (!CheckIfFileExists(snk_cmdline)) {
 			ErrorMessage(L"Path to SnK is not valid!");
 			return ERR_SUITEEXTREL+9;
 		}

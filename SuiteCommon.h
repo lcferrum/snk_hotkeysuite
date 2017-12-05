@@ -51,6 +51,8 @@ std::wstring GetExecutableFileName(const wchar_t* replace_fname=NULL);	//If repl
 std::wstring GetFullPathNameWrapper(const std::wstring &rel_path);
 std::wstring GetDirPath(const std::wstring &trg_pth);	//Returned path doesn't contain trailing backslash (if it's not a disc root)
 std::wstring QuoteArgument(const wchar_t* arg);
+std::wstring SearchPathWrapper(const wchar_t* fname, const wchar_t* spath, const wchar_t* ext);
+bool CheckIfFileExists(const std::wstring &fpath);
 bool CreateDirTreeForFile(const std::wstring trg_pth);	//Allowed trg_pth: absolute file path, absolute directory path w/ trailing backslash or empty string
 void ErrorMessage(const wchar_t* err_msg);
 

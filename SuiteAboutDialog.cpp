@@ -27,6 +27,12 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 				SetDlgItemText(hwndDlg, IDC_SNK_LOC, ad_dlgprc_param->settings->GetSnkPath().c_str());
 				SetDlgItemText(hwndDlg, IDC_CFG_LOC, ad_dlgprc_param->settings->GetStoredLocation().c_str());
 				
+				if (!CheckIfFileExists(SearchPathWrapper(L"explorer.exe", NULL, NULL))) {
+					EnableWindow(GetDlgItem(hwndDlg, IDC_EXE_OPEN), FALSE);
+					EnableWindow(GetDlgItem(hwndDlg, IDC_SNK_OPEN), FALSE);
+					EnableWindow(GetDlgItem(hwndDlg, IDC_CFG_OPEN), FALSE);
+				}
+				
 				//Using LR_SHARED so not to bother with destroying icon when dialog is destroyed
 				HICON hIcon=(HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_HSTNAICO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_DEFAULTCOLOR|LR_SHARED);
 				if (hIcon) {
@@ -102,15 +108,20 @@ INT_PTR CALLBACK AboutDialog::DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
 			if (HIWORD(wParam)==BN_CLICKED) {
 				switch (LOWORD(wParam)) {
 					case IDC_EXE_OPEN:
-						ShellExecute(NULL, L"open", GetExecutableFileName(L"").c_str(), NULL, NULL, SW_SHOWNORMAL);
-						return TRUE;
 					case IDC_CFG_OPEN:
 					case IDC_SNK_OPEN:
 						{
+							//Opening path via explorer and not directly with ShellExecute(open) so to get error if path is not available
 							//SnK path can be relative
-							MessageBox(NULL, GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), L"EXPLORE", MB_OK);
-							//ShellExecute(NULL, L"explore", GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str(), NULL, NULL, SW_SHOWNORMAL);
-							ShellExecute(NULL, L"open", L"explorer.exe", QuoteArgument(GetDirPath(LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation()).c_str()).c_str(), NULL, SW_SHOWNORMAL);
+							
+							std::wstring file_to_select;
+							if (LOWORD(wParam)==IDC_EXE_OPEN)
+								file_to_select=GetExecutableFileName();
+							else
+								file_to_select=LOWORD(wParam)==IDC_SNK_OPEN?GetFullPathNameWrapper(ad_dlgprc_param->settings->GetSnkPath()):ad_dlgprc_param->settings->GetStoredLocation();
+							file_to_select=L"/select,"+QuoteArgument(file_to_select.c_str());
+							
+							ShellExecute(NULL, L"open", L"explorer.exe", file_to_select.c_str(), NULL, SW_SHOWNORMAL);
 							
 							return TRUE;
 						}

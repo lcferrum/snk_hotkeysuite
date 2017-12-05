@@ -78,6 +78,44 @@ std::wstring GetFullPathNameWrapper(const std::wstring &rel_path)
 	return L"";
 }
 
+bool CheckIfFileExists(const std::wstring &fpath)
+{
+	DWORD dwAttrib=GetFileAttributes(fpath.c_str());
+	if (dwAttrib!=INVALID_FILE_ATTRIBUTES&&!(dwAttrib&FILE_ATTRIBUTE_DIRECTORY))
+		return true;
+	else
+		return false;
+}
+
+std::wstring SearchPathWrapper(const wchar_t* fname, const wchar_t* spath, const wchar_t* ext)
+{
+	//SearchPath uses the following algorithm
+	//First it checks if supplied filename is relative path (completely relative - to both current drive and directory)
+	//If it's not relative - it applies GetFullPathName to filename and returns resulting path (whatever it might be)
+	//If it's relative, real search commences
+	//It searches supplied search path or, in case it is missing, searches these paths:
+	//	- Current image directory
+	//	- Current working directory (if SafeProcessSearchMode is 0 or not supported by OS)
+	//	- Windows system directory (GetSystemDirectory())
+	//	- Windows 16-bit system directory (GetWindowsDirectory()+"\system", NT only)
+	//	- Windows directory (GetWindowsDirectory())
+	//	- Directories listed in the PATH environment variable
+	//	- Current working directory (if SafeProcessSearchMode is 1)
+	//Supplying extension (should start with period character, '.') changes behavior in the following way:
+	//If non relative filename, before applying GetFullPathName function checks if file exists and if not - appends extension and tries this way
+	//If relative filename and filename lacks extension, it is appended before the search commences
+	
+	if (DWORD buflen=SearchPath(spath, fname, ext, 0, NULL, NULL)) {
+		wchar_t full_path[buflen];
+		if (DWORD cpylen=SearchPath(spath, fname, ext, buflen, full_path, NULL)) {
+			if (cpylen<buflen)
+				return full_path;
+		}
+	}
+
+	return L"";
+}
+
 std::wstring GetExecutableFileName(const wchar_t* replace_fname)
 {
 	wchar_t exe_path[MAX_PATH];

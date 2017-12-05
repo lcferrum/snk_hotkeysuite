@@ -299,9 +299,7 @@ bool SuiteSettingsIni::IniDwordQueryValue(const wchar_t* key_name, DWORD &var) c
 bool SuiteSettingsIni::CheckIfIniStored(const std::wstring &path, const std::wstring &section)
 {
 	//Check if file exists
-	DWORD dwAttrib=GetFileAttributes(path.c_str());
-	if (dwAttrib==INVALID_FILE_ATTRIBUTES||(dwAttrib&FILE_ATTRIBUTE_DIRECTORY))
-		return false;
+	if (!CheckIfFileExists(path)) return false;
 	
 	//Check if section exists
 	//If lpKeyName is NULL GetPrivateProfileString copies all keys for lpAppName section to lpReturnedString buffer

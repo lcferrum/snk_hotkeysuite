@@ -84,7 +84,7 @@ int SuiteMain(SuiteSettings *settings)
 	//So it's safe to drop const qualifier
 	KeyTriplet OnKeyTriplet(const_cast<wchar_t*>(snk_cmdline_s.c_str()), const_cast<wchar_t*>(snk_cmdline_l.c_str()));
 	
-	//Check if we elevated rights may be required
+	//Check if elevated rights are available
 	bool elev_avail=CheckIfElevationAvailable();
 	bool is_admin=CheckIfAdmin();
 	

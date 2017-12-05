@@ -56,7 +56,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 	//	/i [INI_PATH]                   - launch application and store settings in ini file pointed by INI_PATH argument or, if absent, in HotkeySuite.ini located in application directory
 	//	/a [machine|user]               - launch application and store settings in ini file located in per-user (user) or all-user (machine) AppData directory (automatically selected if argument is absent)
 	//	NO ARGUMENTS GIVEN              - launch application and automatically select ini file location
-	//	/s ...                          - immidiately run sungle press event and exit (used with /i and /a options or w/o arguments)
+	//	/s ...                          - immidiately run single press event and exit (used with /i and /a options or w/o arguments)
 	//	/l ...                          - immidiately run long press event and exit (used with /i and /a options or w/o arguments)
 	//	/p ...                          - launch SnK shell and exit (used with /i and /a options or w/o arguments)
 	

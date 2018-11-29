@@ -500,7 +500,7 @@ bool SuiteExtRel::EnvQueryValue(HKEY reg_key, const wchar_t* key_name, std::wstr
 	
 	//Returned buffer length is in bytes and because we use unicode build actual returned buffer type is wchar_t
 	//+1 is for possible missing NULL-terminator
-	wchar_t data_buf[(buf_len+1)/sizeof(wchar_t)];
+	wchar_t data_buf[buf_len/sizeof(wchar_t)+1];
 	
 	//If key not found - return empty string
 	//If for some other reason we get read error or key of unsuitable type - return false
